@@ -5,6 +5,7 @@ import { UserTierProvider } from "@/components/context/UserTierContext";
 import CookieConsent from "@/components/shared/CookieConsent";
 import TierSwitcherBar from "@/components/shared/TierSwitcherBar";
 import EncryptedChatPopup from "@/components/chat/EncryptedChatPopup";
+import OnboardingWrapper from "@/components/onboarding/OnboardingWrapper";
 
 export const metadata: Metadata = {
   title: "Gestalt Arena | Window-Shopping Marketplace for Investors & Startups",
@@ -26,6 +27,7 @@ export default function RootLayout({
             <CookieConsent />
             <TierSwitcherBar />
             <EncryptedChatPopup />
+            <OnboardingWrapper />
           </UserTierProvider>
         </AuthProvider>
       </body>

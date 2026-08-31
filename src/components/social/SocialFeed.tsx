@@ -1,65 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PostComposer from "./PostComposer";
-import PostCard, { Post } from "./PostCard";
-import { MessageSquare, Sparkles, Filter } from "lucide-react";
+import PostCard from "./PostCard";
+import { MessageSquare } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
+import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 
 export default function SocialFeed() {
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: "p1",
-      authorName: "Sarah Jenkins",
-      authorRole: "VC Partner",
-      tier: "platinum",
-      timestamp: "2 hours ago",
-      content: "Evaluating AI infrastructure startups specializing in local agentic orchestration. We are seeing major shifts away from centralized LLM endpoints toward localized edge deployment for compliance & zero latency. DMs open for founders in Seed stage!",
-      likesCount: 24,
-      repostsCount: 5,
-      commentsCount: 8,
-      tags: ["VentureCapital", "AgenticAI", "DeepTech"],
-    },
-    {
-      id: "p2",
-      authorName: "Alex Rivera",
-      authorRole: "Startup Founder",
-      tier: "gold",
-      timestamp: "5 hours ago",
-      content: "Just crossed $15k MRR on NexusAI SDK with 45 Enterprise accounts! Huge milestone for our founding team. Raising our $250k Seed allocation on Gestalt Arena now.",
-      likesCount: 42,
-      repostsCount: 12,
-      commentsCount: 14,
-      tags: ["Milestone", "B2BSaaS", "Fundraising"],
-    },
-    {
-      id: "p3",
-      authorName: "David Sterling",
-      authorRole: "Investor",
-      tier: "freemium",
-      timestamp: "1 day ago",
-      content: "Excited to join Gestalt Arena window-shopping marketplace. Looking to connect with healthcare robotics and telemetry founders.",
-      likesCount: 11,
-      repostsCount: 2,
-      commentsCount: 3,
-      tags: ["AngelInvestor", "HealthTech"],
-    },
-  ]);
+  const { session, loading: authLoading } = useAuth();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handlePostCreated = (newContent: string) => {
-    const newPost: Post = {
-      id: `p-${Date.now()}`,
-      authorName: "You (Active User)",
-      authorRole: "Startup Founder",
-      tier: "gold",
-      timestamp: "Just now",
+  async function fetchPosts() {
+    const { data, error } = await supabase
+      .from("posts")
+      .select(`
+        *,
+        author:profiles(*),
+        likes(id, user_id),
+        comments(count)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setPosts(data);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (!authLoading && session) {
+      fetchPosts();
+    }
+  }, [authLoading, session]);
+
+  const handlePostCreated = async (newContent: string) => {
+    if (!session?.user) return;
+    
+    // Insert into Supabase
+    const { error } = await supabase.from("posts").insert({
+      author_id: session.user.id,
       content: newContent,
-      likesCount: 0,
-      repostsCount: 0,
-      commentsCount: 0,
-      tags: ["GestaltArena"],
-    };
-    setPosts([newPost, ...posts]);
+    });
+
+    if (!error) {
+      fetchPosts();
+    }
   };
+
+  if (authLoading || loading) {
+    return <RoleRoutingLoader message="Loading Live Feed..." />;
+  }
 
   return (
     <div className="space-y-6">
@@ -76,9 +69,28 @@ export default function SocialFeed() {
 
       {/* Posts Stream */}
       <div className="space-y-4">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {posts.map((post) => {
+          // Map DB schema to PostCard expected props
+          const formattedPost = {
+            id: post.id,
+            authorName: post.author?.nickname || post.author?.company_name || "Unknown User",
+            authorRole: post.author?.role === "investor" ? "Investor" : "Startup Founder",
+            tier: "gold" as any, // Hardcoded tier or map from DB if available
+            timestamp: new Date(post.created_at).toLocaleDateString(),
+            content: post.content,
+            likesCount: post.likes?.length || 0,
+            repostsCount: 0,
+            commentsCount: post.comments?.[0]?.count || 0,
+            tags: [],
+          };
+          return <PostCard key={post.id} post={formattedPost as any} dbPost={post} currentUserId={session?.user?.id} onUpdate={fetchPosts} />;
+        })}
+
+        {posts.length === 0 && (
+          <div className="text-center p-12 border border-white/10 bg-white/5 rounded-3xl backdrop-blur-xl">
+            <p className="text-zinc-400">No posts yet. Be the first to enter the arena.</p>
+          </div>
+        )}
       </div>
     </div>
   );

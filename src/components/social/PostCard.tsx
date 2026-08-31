@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, MessageSquare, Repeat, Share2, ShieldCheck, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, MessageSquare, Repeat, Share2, ShieldCheck, Sparkles, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase/client";
 
 export interface Post {
   id: string;
   authorName: string;
-  authorRole: "Investor" | "Startup Founder" | "VC Partner" | "Researcher";
+  authorRole: string;
   authorAvatar?: string;
   tier: "freemium" | "gold" | "platinum";
   timestamp: string;
@@ -20,15 +21,57 @@ export interface Post {
 
 interface PostCardProps {
   post: Post;
+  dbPost?: any;
+  currentUserId?: string;
+  onUpdate?: () => void;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, dbPost, currentUserId, onUpdate }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [bookmarked, setBookmarked] = useState(false);
 
-  const toggleLike = () => {
-    setLiked(!liked);
-    setLikesCount((prev) => (liked ? prev - 1 : prev + 1));
+  useEffect(() => {
+    if (dbPost && currentUserId) {
+      const hasLiked = dbPost.likes?.some((like: any) => like.user_id === currentUserId);
+      setLiked(!!hasLiked);
+    }
+  }, [dbPost, currentUserId]);
+
+  const toggleLike = async () => {
+    if (!currentUserId || !dbPost) return;
+
+    if (liked) {
+      setLiked(false);
+      setLikesCount((prev) => prev - 1);
+      await supabase.from("likes").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+    } else {
+      setLiked(true);
+      setLikesCount((prev) => prev + 1);
+      await supabase.from("likes").insert({ post_id: dbPost.id, user_id: currentUserId });
+      
+      if (dbPost.author_id !== currentUserId) {
+        await supabase.from("notifications").insert({
+          user_id: dbPost.author_id,
+          actor_id: currentUserId,
+          type: "like",
+          post_id: dbPost.id
+        });
+      }
+    }
+    
+    if (onUpdate) onUpdate();
+  };
+
+  const toggleBookmark = async () => {
+    if (!currentUserId || !dbPost) return;
+    if (bookmarked) {
+      setBookmarked(false);
+      await supabase.from("bookmarks").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+    } else {
+      setBookmarked(true);
+      await supabase.from("bookmarks").insert({ post_id: dbPost.id, user_id: currentUserId });
+    }
   };
 
   const tierBadges = {
@@ -41,7 +84,7 @@ export default function PostCard({ post }: PostCardProps) {
     <motion.article
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-white/20 transition"
+      className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-white/20 transition relative"
     >
       {/* Author Header */}
       <div className="flex items-center justify-between">
@@ -63,9 +106,14 @@ export default function PostCard({ post }: PostCardProps) {
           </div>
         </div>
 
-        <button className="text-slate-500 hover:text-cyan-400 transition" aria-label="Share">
-          <Share2 size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={toggleBookmark} className={`transition ${bookmarked ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"}`} aria-label="Save">
+            <Bookmark size={16} className={bookmarked ? "fill-cyan-400" : ""} />
+          </button>
+          <button className="text-slate-500 hover:text-cyan-400 transition" aria-label="Share">
+            <Share2 size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Post Text Content */}

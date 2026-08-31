@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, MessageSquare, Repeat, Share2, ShieldCheck, Sparkles, Bookmark } from "lucide-react";
+import { Heart, MessageSquare, Repeat, Share2, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
+import Link from "next/link";
+import CommentBox from "./CommentBox";
 
 export interface Post {
   id: string;
@@ -30,6 +32,26 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [bookmarked, setBookmarked] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
+
+  // Share post using Web Share API or clipboard fallback
+  const sharePost = async () => {
+    try {
+      const shareData = {
+        title: "Check out this post",
+        text: post.content,
+        url: `${window.location.origin}/post/${post.id}`,
+      };
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        setErrorMsg("Link copied to clipboard");
+      }
+    } catch (e) {
+      setErrorMsg("Failed to share post");
+    }
+  };
 
   useEffect(() => {
     if (dbPost && currentUserId) {
@@ -49,7 +71,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       setLiked(true);
       setLikesCount((prev) => prev + 1);
       await supabase.from("likes").insert({ post_id: dbPost.id, user_id: currentUserId });
-      
+
       if (dbPost.author_id !== currentUserId) {
         await supabase.from("notifications").insert({
           user_id: dbPost.author_id,
@@ -59,7 +81,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
         });
       }
     }
-    
+
     if (onUpdate) onUpdate();
   };
 
@@ -86,6 +108,8 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       animate={{ opacity: 1, y: 0 }}
       className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-white/20 transition relative"
     >
+      {errorMsg && <p className="text-xs text-rose-500">{errorMsg}</p>}
+
       {/* Author Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -95,7 +119,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="font-bold text-sm text-white">{post.authorName}</h4>
+              <Link href={`/profile/${dbPost?.author_id}`} className="font-bold text-sm text-white hover:underline">{post.authorName}</Link>
               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${tierBadges[post.tier]}`}>
                 {post.tier}
               </span>
@@ -110,7 +134,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           <button onClick={toggleBookmark} className={`transition ${bookmarked ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"}`} aria-label="Save">
             <Bookmark size={16} className={bookmarked ? "fill-cyan-400" : ""} />
           </button>
-          <button className="text-slate-500 hover:text-cyan-400 transition" aria-label="Share">
+          <button onClick={sharePost} className="text-slate-500 hover:text-cyan-400 transition" aria-label="Share">
             <Share2 size={16} />
           </button>
         </div>
@@ -155,6 +179,9 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           <span>{post.repostsCount}</span>
         </button>
       </div>
+
+      {/* Comment Box */}
+      {onUpdate && <CommentBox postId={post.id} currentUserId={currentUserId} onCommentAdded={onUpdate} />}
     </motion.article>
   );
 }

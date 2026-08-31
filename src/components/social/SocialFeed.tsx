@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PostComposer from "./PostComposer";
 import PostCard from "./PostCard";
 import { MessageSquare } from "lucide-react";
@@ -13,7 +13,8 @@ export default function SocialFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchPosts() {
+  // 1. Wrap in useCallback to prevent stale closures in the real-time subscription
+  const fetchPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from("posts")
       .select(`
@@ -28,25 +29,42 @@ export default function SocialFeed() {
       setPosts(data);
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && session) {
       fetchPosts();
+
+      // Subscribe to real-time inserts on the posts table
+      const channel = supabase
+        .channel('public:posts')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+          // Re-fetch posts when a new one is inserted
+          fetchPosts();
+        })
+        .subscribe();
+
+      // Cleanup on unmount
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [authLoading, session]);
+  }, [authLoading, session, fetchPosts]);
 
   const handlePostCreated = async (newContent: string) => {
     if (!session?.user) return;
-    
-    // Insert into Supabase
+
+    // 2. Add .select() so PostgREST forces the DB to wait for the row to be fully inserted and readable
     const { error } = await supabase.from("posts").insert({
       author_id: session.user.id,
       content: newContent,
-    });
+    }).select();
 
     if (!error) {
-      fetchPosts();
+      // 3. Await the fetch to ensure sequential state updates
+      await fetchPosts();
+    } else {
+      console.error("Failed to post to feed:", error.message);
     }
   };
 
@@ -83,7 +101,15 @@ export default function SocialFeed() {
             commentsCount: post.comments?.[0]?.count || 0,
             tags: [],
           };
-          return <PostCard key={post.id} post={formattedPost as any} dbPost={post} currentUserId={session?.user?.id} onUpdate={fetchPosts} />;
+          return (
+            <PostCard
+              key={post.id}
+              post={formattedPost as any}
+              dbPost={post}
+              currentUserId={session?.user?.id}
+              onUpdate={fetchPosts}
+            />
+          );
         })}
 
         {posts.length === 0 && (

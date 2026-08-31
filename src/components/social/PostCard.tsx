@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Heart, MessageSquare, Repeat, Share2, Bookmark } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import CommentBox from "./CommentBox";
@@ -32,26 +32,9 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [bookmarked, setBookmarked] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
-
-  // Share post using Web Share API or clipboard fallback
-  const sharePost = async () => {
-    try {
-      const shareData = {
-        title: "Check out this post",
-        text: post.content,
-        url: `${window.location.origin}/post/${post.id}`,
-      };
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(shareData.url);
-        setErrorMsg("Link copied to clipboard");
-      }
-    } catch (e) {
-      setErrorMsg("Failed to share post");
-    }
-  };
+  const [successMsg, setSuccessMsg] = useState<string>("");
 
   useEffect(() => {
     if (dbPost && currentUserId) {
@@ -59,6 +42,54 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       setLiked(!!hasLiked);
     }
   }, [dbPost, currentUserId]);
+
+  const sharePost = async () => {
+    try {
+      const shareData = {
+        title: "Check out this post on Gestalt ARENA",
+        text: post.content,
+        url: `${window.location.origin}/post/${post.id}`,
+      };
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        setSuccessMsg("Link copied to clipboard!");
+        setTimeout(() => setSuccessMsg(""), 3000);
+      }
+    } catch (e) {
+      setErrorMsg("Failed to share post");
+      setTimeout(() => setErrorMsg(""), 3000);
+    }
+  };
+
+  // NEW: Handle Resharing (Reposting)
+  const handleRepost = async () => {
+    if (!currentUserId) {
+      setErrorMsg("You must be logged in to reshare.");
+      setTimeout(() => setErrorMsg(""), 3000);
+      return;
+    }
+
+    try {
+      const reshareContent = `🔄 **Reshared from ${post.authorName}:**\n\n${post.content}`;
+
+      const { error } = await supabase.from("posts").insert({
+        author_id: currentUserId,
+        content: reshareContent,
+      });
+
+      if (error) throw error;
+
+      setSuccessMsg("Post reshared to your feed!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+
+      if (onUpdate) onUpdate(); // Refresh the feed to show the new post
+    } catch (e) {
+      setErrorMsg("Failed to reshare post.");
+      setTimeout(() => setErrorMsg(""), 3000);
+    }
+  };
 
   const toggleLike = async () => {
     if (!currentUserId || !dbPost) return;
@@ -108,7 +139,9 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       animate={{ opacity: 1, y: 0 }}
       className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-white/20 transition relative"
     >
-      {errorMsg && <p className="text-xs text-rose-500">{errorMsg}</p>}
+      {/* Toast Messages */}
+      {errorMsg && <p className="text-xs font-semibold text-rose-500">{errorMsg}</p>}
+      {successMsg && <p className="text-xs font-semibold text-cyan-400">{successMsg}</p>}
 
       {/* Author Header */}
       <div className="flex items-center justify-between">
@@ -169,19 +202,37 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           <span>{likesCount}</span>
         </button>
 
-        <button className="flex items-center gap-1.5 hover:text-cyan-400 transition">
-          <MessageSquare size={16} />
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className={`flex items-center gap-1.5 transition ${showComments ? "text-cyan-400" : "hover:text-cyan-400"}`}
+        >
+          <MessageSquare size={16} className={showComments ? "fill-cyan-400/20" : ""} />
           <span>{post.commentsCount}</span>
         </button>
 
-        <button className="flex items-center gap-1.5 hover:text-violet-400 transition">
+        {/* FIX: Added onClick handleRepost to the Repeat button */}
+        <button
+          onClick={handleRepost}
+          className="flex items-center gap-1.5 hover:text-violet-400 transition"
+        >
           <Repeat size={16} />
           <span>{post.repostsCount}</span>
         </button>
       </div>
 
-      {/* Comment Box */}
-      {onUpdate && <CommentBox postId={post.id} currentUserId={currentUserId} onCommentAdded={onUpdate} />}
+      {/* Comment Box Dropdown (Animated) */}
+      <AnimatePresence>
+        {showComments && onUpdate && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <CommentBox postId={post.id} currentUserId={currentUserId} onCommentAdded={onUpdate} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.article>
   );
 }

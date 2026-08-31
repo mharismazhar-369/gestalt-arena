@@ -14,7 +14,7 @@ export default function OnboardingModal({ user, profile }: { user: any, profile:
 
   // Shared
   const [bio, setBio] = useState(profile.bio || "");
-  
+
   // Startup
   const [companyName, setCompanyName] = useState(profile.company_name || "");
   const [elevatorPitch, setElevatorPitch] = useState(profile.elevator_pitch || "");
@@ -50,8 +50,8 @@ export default function OnboardingModal({ user, profile }: { user: any, profile:
     } else if (profile.role === "investor") {
       updateData.investment_thesis = investmentThesis;
       updateData.ticket_size = ticketSize;
-      updateData.preferred_stages = preferredStages.split(",").map((s) => s.trim());
-      updateData.industries_of_interest = industries.split(",").map((s) => s.trim());
+      updateData.preferred_stages = preferredStages.split(",").map((s: string) => s.trim());
+      updateData.industries_of_interest = industries.split(",").map((s: string) => s.trim());
       updateData.firm_details = firmDetails;
     }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUserTier } from "@/components/context/UserTierContext";
-import { X, BookOpen, AlertTriangle, ShieldCheck, Sparkles, Image, Lock, Check } from "lucide-react";
+import { X, BookOpen, AlertTriangle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ArticlePublishModalProps {
@@ -12,8 +12,8 @@ interface ArticlePublishModalProps {
 }
 
 export default function ArticlePublishModal({ isOpen, onClose, onArticlePublished }: ArticlePublishModalProps) {
-  const { capabilities, articlesToday, incrementArticleCount, canPublishArticleMore } = useUserTier();
-  
+  const { capabilities, articlesToday, incrementArticleCount, canPublishArticle } = useUserTier();
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Market Analysis");
   const [summary, setSummary] = useState("");
@@ -23,7 +23,7 @@ export default function ArticlePublishModal({ isOpen, onClose, onArticlePublishe
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !canPublishArticleMore) return;
+    if (!title.trim() || !content.trim() || !canPublishArticle) return;
 
     const success = incrementArticleCount();
     if (success) {
@@ -33,11 +33,13 @@ export default function ArticlePublishModal({ isOpen, onClose, onArticlePublishe
       setTitle("");
       setSummary("");
       setContent("");
-      onClose();
+      // onClose is intentionally NOT called here, it should be handled by the parent component after successful DB insertion
     }
   };
 
   if (!isOpen) return null;
+
+  const userCanPublish = capabilities.maxArticlesPerDay > 0;
 
   return (
     <AnimatePresence>
@@ -69,7 +71,7 @@ export default function ArticlePublishModal({ isOpen, onClose, onArticlePublishe
           </div>
 
           {/* Tier Capability Check Banner */}
-          {!capabilities.canPublishArticles ? (
+          {!userCanPublish ? (
             <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-5 space-y-3 text-rose-200">
               <div className="flex items-center gap-2 text-sm font-bold text-rose-400">
                 <Lock size={18} /> Article Publishing Locked on Freemium Tier
@@ -84,7 +86,7 @@ export default function ArticlePublishModal({ isOpen, onClose, onArticlePublishe
                 Upgrade to Gold Tier
               </button>
             </div>
-          ) : !canPublishArticleMore ? (
+          ) : !canPublishArticle ? (
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-5 space-y-2 text-amber-200">
               <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
                 <AlertTriangle size={18} /> Daily Article Publishing Quota Reached
@@ -101,7 +103,7 @@ export default function ArticlePublishModal({ isOpen, onClose, onArticlePublishe
           )}
 
           {/* Form */}
-          {capabilities.canPublishArticles && canPublishArticleMore && (
+          {userCanPublish && canPublishArticle && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">

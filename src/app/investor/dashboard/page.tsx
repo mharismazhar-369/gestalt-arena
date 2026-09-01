@@ -45,7 +45,7 @@ export default async function InvestorDashboardPage() {
     );
   }
 
-  const displayName = profile?.nickname || profile?.company_name || user.email?.split("@")[0] || "Investor Partner";
+  const displayName = profile?.nickname || profile?.company_name || startupProfile?.company_name || user.email?.split("@")[0] || "Investor Partner";
   const displayLocation = profile?.city ? `${profile.city}, ${profile.state || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
 

@@ -72,7 +72,7 @@ export default async function StartupDashboardPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  const displayName = profile?.company_name || startupProfile?.company_name || profile?.nickname || user.email?.split("@")[0] || "Founder Partner";
+  const displayName = profile?.nickname || profile?.company_name || startupProfile?.company_name || user.email?.split("@")[0] || "Founder Partner";
   const displayLocation = profile?.city ? `${profile.city}, ${profile.state || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
   const targetRaise = profile?.funding_goal || "Flexible";

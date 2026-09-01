@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase/client";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/feed";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,21 +22,34 @@ export default function LoginForm() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
       return;
     }
 
-    // Redirect to dashboard role resolver
-    router.push(redirectPath);
-    router.refresh();
+    if (authData.user) {
+      // Fetch the user's profile to check their role
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", authData.user.id)
+        .single();
+
+      // Determine the destination based on role
+      const rolePath = profile?.role === "investor" ? "/investor/dashboard" : "/startup/dashboard";
+
+      // Respect the redirect query parameter if it exists, otherwise use the role path
+      const finalPath = searchParams.get("redirect") || rolePath;
+
+      router.push(finalPath);
+      router.refresh();
+    }
   }
 
   async function handleGoogleLogin() {
@@ -59,7 +71,6 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl">
-
       <h1 className="mb-8 text-center text-4xl font-black text-white">
         Login
       </h1>
@@ -75,16 +86,11 @@ export default function LoginForm() {
 
       <div className="mb-6 flex items-center gap-4">
         <div className="h-px flex-1 bg-white/10" />
-
-        <span className="text-sm text-zinc-500">
-          OR
-        </span>
-
+        <span className="text-sm text-zinc-500">OR</span>
         <div className="h-px flex-1 bg-white/10" />
       </div>
 
       <form onSubmit={handleLogin} className="space-y-6">
-
         <input
           type="email"
           required
@@ -116,7 +122,6 @@ export default function LoginForm() {
         >
           {loading ? "Signing In..." : "Login"}
         </button>
-
       </form>
 
       <p className="mt-8 text-center text-zinc-400">
@@ -128,7 +133,6 @@ export default function LoginForm() {
           Register
         </Link>
       </p>
-
     </div>
   );
 }

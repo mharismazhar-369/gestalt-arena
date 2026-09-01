@@ -49,10 +49,19 @@ export default async function InvestorDashboardPage() {
   const displayLocation = profile?.city ? `${profile.city}, ${profile.country || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
 
-  // Fetch active bid decks for this investor
+  // Fetch active bid decks AND their nested submissions
   const { data: bidDecks } = await supabase
     .from("investor_bid_decks")
-    .select("*")
+    .select(`
+      *,
+      investor_bid_submissions (
+        id,
+        status,
+        created_at,
+        pitch_deck_id,
+        profiles:startup_id (company_name, nickname)
+      )
+    `)
     .eq("investor_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -157,6 +166,36 @@ export default async function InvestorDashboardPage() {
                     <div className="flex gap-4 text-xs font-mono text-cyan-300 pt-2 border-t border-white/5">
                       <span>Max Alloc: ${deck.max_allocation?.toLocaleString()}</span>
                       <span>Min ARR: ${deck.min_arr?.toLocaleString()}</span>
+                    </div>
+
+                    {/* Render Submissions Pipeline */}
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        Deal Flow Pipeline
+                        <span className="bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded-full">{deck.investor_bid_submissions?.length || 0}</span>
+                      </h4>
+
+                      {deck.investor_bid_submissions && deck.investor_bid_submissions.length > 0 ? (
+                        <div className="space-y-2">
+                          {deck.investor_bid_submissions.map((sub: any) => {
+                            const startupProfile = Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles;
+                            const startupName = startupProfile?.company_name || startupProfile?.nickname || "Startup";
+                            return (
+                              <div key={sub.id} className="flex items-center justify-between bg-black/40 rounded-lg p-2.5 border border-white/5">
+                                <span className="text-xs font-bold text-white line-clamp-1">{startupName}</span>
+                                <Link
+                                  href={`/startup/${sub.pitch_deck_id}/pitch`}
+                                  className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition px-2 py-1 bg-cyan-500/10 rounded-md"
+                                >
+                                  Review
+                                </Link>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic">No pitch submissions yet.</p>
+                      )}
                     </div>
                   </div>
                 ))}

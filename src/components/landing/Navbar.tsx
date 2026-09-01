@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -11,7 +11,13 @@ import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare } from "lu
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { session, loading } = useAuth();
+
+  // Hydration safety check
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const navLinks = [
     { href: "/browse/investors", label: "Investors", icon: Compass },
@@ -66,40 +72,42 @@ export default function Navbar() {
 
         {/* Dynamic Action Buttons (Logged In vs Logged Out) */}
         <div className="hidden items-center gap-3 md:flex">
-          {!loading && session ? (
-            <div className="flex items-center gap-3">
-              <NotificationDropdown />
-              <div className="h-6 w-px bg-white/10 mx-1"></div>
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition"
-              >
-                <User size={14} className="text-cyan-400" />
-                <span>{userDisplayName}</span>
-              </Link>
-              <LogoutButton />
-            </div>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-xs font-bold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-400 hover:text-black shadow-lg shadow-cyan-500/10"
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2 text-xs font-bold text-black transition hover:scale-105 shadow-lg shadow-violet-500/20"
-              >
-                Register
-              </Link>
-            </>
+          {isMounted && (
+            !loading && session ? (
+              <div className="flex items-center gap-3">
+                <NotificationDropdown />
+                <div className="h-6 w-px bg-white/10 mx-1"></div>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition"
+                >
+                  <User size={14} className="text-cyan-400" />
+                  <span>{userDisplayName}</span>
+                </Link>
+                <LogoutButton />
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-xs font-bold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-400 hover:text-black shadow-lg shadow-cyan-500/10"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2 text-xs font-bold text-black transition hover:scale-105 shadow-lg shadow-violet-500/20"
+                >
+                  Register
+                </Link>
+              </>
+            )
           )}
         </div>
 
         {/* Mobile Toggle & Notifications */}
         <div className="flex items-center gap-2 md:hidden">
-          {!loading && session && <NotificationDropdown />}
+          {isMounted && !loading && session && <NotificationDropdown />}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300 hover:text-white"
@@ -141,7 +149,7 @@ export default function Navbar() {
               })}
 
               <div className="mt-2 border-t border-white/10 pt-4 flex flex-col gap-3">
-                {!loading && session ? (
+                {isMounted && (!loading && session ? (
                   <>
                     <Link
                       href="/dashboard"
@@ -171,7 +179,7 @@ export default function Navbar() {
                       Register
                     </Link>
                   </>
-                )}
+                ))}
               </div>
             </div>
           </motion.div>

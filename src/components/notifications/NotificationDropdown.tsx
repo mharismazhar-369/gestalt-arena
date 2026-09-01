@@ -8,11 +8,16 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function NotificationDropdown() {
   const { session } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -33,8 +38,11 @@ export default function NotificationDropdown() {
 
     fetchNotifications();
 
+    // Generate a strictly unique channel name using crypto.randomUUID()
+    const uniqueChannelName = `notifications-${session.user.id}-${crypto.randomUUID()}`;
+
     const channel = supabase
-      .channel("realtime-notifications")
+      .channel(uniqueChannelName)
       .on(
         "postgres_changes",
         {
@@ -44,7 +52,7 @@ export default function NotificationDropdown() {
           filter: `user_id=eq.${session.user.id}`,
         },
         () => {
-          fetchNotifications(); // Refetch to pull in relation data (actor name)
+          fetchNotifications();
         }
       )
       .subscribe();
@@ -54,7 +62,6 @@ export default function NotificationDropdown() {
     };
   }, [session]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -91,7 +98,7 @@ export default function NotificationDropdown() {
     }
   };
 
-  if (!session?.user) return null;
+  if (!isMounted || !session?.user) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>

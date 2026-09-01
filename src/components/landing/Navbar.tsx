@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutButton from "@/components/auth/LogoutButton";
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare } from "lucide-react";
 
 export default function Navbar() {
@@ -31,7 +32,7 @@ export default function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6"
     >
       <div className="mx-auto mt-4 flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-slate-950/70 px-6 py-3.5 backdrop-blur-2xl shadow-2xl shadow-cyan-950/20">
-        
+
         {/* Brand & Beta Badge */}
         <div className="flex items-center gap-3">
           <Link
@@ -67,6 +68,8 @@ export default function Navbar() {
         <div className="hidden items-center gap-3 md:flex">
           {!loading && session ? (
             <div className="flex items-center gap-3">
+              <NotificationDropdown />
+              <div className="h-6 w-px bg-white/10 mx-1"></div>
               <Link
                 href="/dashboard"
                 className="flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition"
@@ -94,14 +97,17 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Hamburger Toggle */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300 md:hidden hover:text-white"
-          aria-label="Toggle Navigation Menu"
-        >
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        {/* Mobile Toggle & Notifications */}
+        <div className="flex items-center gap-2 md:hidden">
+          {!loading && session && <NotificationDropdown />}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300 hover:text-white"
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}

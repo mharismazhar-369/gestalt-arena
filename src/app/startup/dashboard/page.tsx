@@ -7,7 +7,7 @@ import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import {
   Rocket, Compass, BookOpen, ShieldCheck, User, Sparkles,
-  Folder, FileText, Activity, MessageSquare, Radio
+  Folder, FileText, Activity, MessageSquare, Radio, Presentation
 } from "lucide-react";
 import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
 
@@ -168,6 +168,23 @@ export default async function StartupDashboardPage() {
             </p>
           </Link>
         </div>
+
+        {/* Dedicated Pitch Deck Link */}
+        <Link
+          href={`/startup/${user.id}/pitch`}
+          className="trionn-glass-card rounded-3xl border border-violet-500/50 p-6 flex items-center justify-between hover:bg-violet-500/10 transition shadow-xl"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-violet-500/20 text-violet-400">
+              <Presentation size={28} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">View My Pitch Deck</h3>
+              <p className="text-xs text-slate-400">See how investors view your profile</p>
+            </div>
+          </div>
+          <span className="text-violet-400 font-bold">Open →</span>
+        </Link>
 
         {/* Founder Metrics Section */}
         <div className="grid md:grid-cols-2 gap-6">

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Rocket, MapPin, Users, TrendingUp, ShieldCheck, ArrowUpRight, Target } from "lucide-react";
+import { Rocket, MapPin, Users, TrendingUp, ShieldCheck, ArrowUpRight, Target, Presentation } from "lucide-react";
 
 export interface Startup {
   id?: string;
@@ -26,6 +26,7 @@ interface StartupProfileCardProps {
 
 export default function StartupProfileCard({ startup }: StartupProfileCardProps) {
   // If no startup prop is passed, render a sleek structural layout placeholder
+  const startupId = startup?.id || "demo-id";
   const name = startup?.name || "DeepTech AI Platform";
   const tagline = startup?.tagline || "Autonomous agent architecture for enterprise workflows";
   const industry = startup?.industry || "Artificial Intelligence";
@@ -114,22 +115,25 @@ export default function StartupProfileCard({ startup }: StartupProfileCardProps)
       </div>
 
       {/* Footer Ask & Valuation */}
-      <div className="mt-6 border-t border-white/10 pt-4 flex items-center justify-between">
-        <div>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-            Target Raise Ask
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-black text-cyan-300">{requiredFunding}</span>
-            <span className="text-[10px] text-slate-400">({valuation})</span>
+      <div className="mt-6 border-t border-white/10 pt-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
+              Target Raise Ask
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-black text-cyan-300">{requiredFunding}</span>
+              <span className="text-[10px] text-slate-400">({valuation})</span>
+            </div>
           </div>
         </div>
 
         <Link
-          href="/login"
-          className="rounded-xl border border-violet-400/40 bg-violet-400/10 px-4 py-2 text-xs font-bold text-violet-300 transition hover:bg-violet-500 hover:text-white shadow-lg shadow-violet-500/10"
+          href={`/startup/${startupId}/pitch`}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500 p-3 text-xs font-bold text-white transition hover:bg-violet-600 shadow-lg shadow-violet-500/20"
         >
-          View Pitch
+          <Presentation size={16} />
+          View Pitch Deck
         </Link>
       </div>
     </motion.div>

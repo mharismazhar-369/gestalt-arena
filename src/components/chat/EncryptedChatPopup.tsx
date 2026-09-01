@@ -18,8 +18,8 @@ export default function EncryptedChatPopup({
   recipientName = "Strategic Partner",
   recipientInitials = "SP"
 }: EncryptedChatPopupProps) {
-  const [isMounted, setIsMounted] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(true); // Ensures it opens when triggered
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [conversation, setConversation] = useState<any>(null);
@@ -126,11 +126,17 @@ export default function EncryptedChatPopup({
     let currentConvId = conversation?.id;
 
     if (!currentConvId) {
-      const { data: newConv } = await supabase
+      // FIX: Status must be "approved" or "pending" to satisfy DB CHECK constraints.
+      const { data: newConv, error: convError } = await supabase
         .from("conversations")
-        .insert([{ initiator_id: currentUserId, recipient_id: recipientId, status: "active" }])
+        .insert([{ initiator_id: currentUserId, recipient_id: recipientId, status: "approved" }])
         .select()
         .single();
+
+      if (convError) {
+        console.error("Failed to create conversation:", convError.message);
+        return;
+      }
 
       if (newConv) {
         setConversation(newConv);
@@ -140,15 +146,17 @@ export default function EncryptedChatPopup({
 
     if (currentConvId) {
       const msgContent = messageInput;
-      setMessageInput("");
+      setMessageInput(""); // Clear UI instantly for good UX
 
-      const { error } = await supabase.from("messages").insert([{
+      const { error: msgError } = await supabase.from("messages").insert([{
         conversation_id: currentConvId,
         sender_id: currentUserId,
         content: msgContent,
       }]);
 
-      if (!error) {
+      if (msgError) {
+        console.error("Failed to send message:", msgError.message);
+      } else {
         await supabase.from("notifications").insert({
           user_id: recipientId,
           actor_id: currentUserId,
@@ -160,7 +168,6 @@ export default function EncryptedChatPopup({
     }
   };
 
-  // Renders the wrapper identically on server and client to fix hydration mismatch
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-auto">
       {isMounted && (

@@ -29,7 +29,7 @@ export default function BrowseStartupsPage() {
 
       if (data && !error) {
         const liveStartups: Startup[] = data.map((pitch) => ({
-          id: pitch.user_id, // Routes to /startup/[user_id]/pitch
+          id: pitch.id, // FIX: Crucially maps to the pitch.id, not the user_id
           name: pitch.company_name || "Undisclosed Startup",
           tagline: pitch.title || "Pitch Deck",
           industry: "Technology", // Fallback category
@@ -126,8 +126,8 @@ export default function BrowseStartupsPage() {
                       key={ind}
                       onClick={() => setSelectedIndustry(ind)}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedIndustry === ind
-                          ? "bg-violet-500/20 border border-violet-400/50 text-violet-300"
-                          : "bg-white/5 border border-transparent text-slate-400 hover:text-white hover:bg-white/10"
+                        ? "bg-violet-500/20 border border-violet-400/50 text-violet-300"
+                        : "bg-white/5 border border-transparent text-slate-400 hover:text-white hover:bg-white/10"
                         }`}
                     >
                       <span>{ind}</span>
@@ -148,8 +148,8 @@ export default function BrowseStartupsPage() {
                       key={stg}
                       onClick={() => setSelectedStage(stg)}
                       className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition ${selectedStage === stg
-                          ? "bg-cyan-500/20 border border-cyan-400/50 text-cyan-300"
-                          : "bg-white/5 border border-transparent text-slate-400 hover:text-white"
+                        ? "bg-cyan-500/20 border border-cyan-400/50 text-cyan-300"
+                        : "bg-white/5 border border-transparent text-slate-400 hover:text-white"
                         }`}
                     >
                       {stg}

@@ -21,6 +21,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/browse/investors", label: "Investors", icon: Compass },
     { href: "/browse/startups", label: "Startups", icon: Rocket },
+    { href: "/browse/bids", label: "Active Bids", icon: Tag },
     { href: "/research", label: "Research", icon: BookOpen },
     { href: "/pricing", label: "Pricing", icon: Tag },
     { href: "/feed", label: "Arena Feed", icon: MessageSquare },

@@ -5,7 +5,7 @@ import LogoutButton from "@/components/auth/LogoutButton";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
-import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings, MapPin, DollarSign, Building2, Briefcase } from "lucide-react";
+import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings, MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText } from "lucide-react";
 import InvestorProfileBuilder from "@/components/investor/InvestorProfileBuilder";
 
 export default async function InvestorDashboardPage() {
@@ -46,8 +46,15 @@ export default async function InvestorDashboardPage() {
   }
 
   const displayName = profile?.nickname || profile?.company_name || user.email?.split("@")[0] || "Investor Partner";
-  const displayLocation = profile?.city ? `${profile.city}, ${profile.state || ""}` : "Global Network";
+  const displayLocation = profile?.city ? `${profile.city}, ${profile.country || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
+
+  // Fetch active bid decks for this investor
+  const { data: bidDecks } = await supabase
+    .from("investor_bid_decks")
+    .select("*")
+    .eq("investor_id", user.id)
+    .order("created_at", { ascending: false });
 
   // STANDARD DASHBOARD VIEW
   return (
@@ -113,6 +120,59 @@ export default async function InvestorDashboardPage() {
           </div>
         </div>
 
+        {/* Reverse Pitching / Active Bids Section */}
+        <div className="trionn-glass-card rounded-3xl border border-cyan-500/30 p-8 shadow-2xl relative overflow-hidden mt-8">
+          <div className="absolute top-0 right-0 p-6 text-cyan-500/5 pointer-events-none">
+            <Target size={120} />
+          </div>
+
+          <div className="flex items-center justify-between border-b border-white/10 pb-4 relative z-10">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Target size={18} className="text-cyan-400" /> Capital Mandates & Bid Decks
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">Broadcast your thesis and allow startups to pitch directly to your criteria.</p>
+            </div>
+
+            <Link
+              href="/investor/bids/create"
+              className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-xs font-bold text-black shadow-lg hover:scale-105 hover:bg-cyan-400 transition"
+            >
+              <Plus size={16} /> Create Bid Deck
+            </Link>
+          </div>
+
+          <div className="pt-6 relative z-10">
+            {bidDecks && bidDecks.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {bidDecks.map((deck) => (
+                  <div key={deck.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-white text-lg">{deck.title}</h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        {deck.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 line-clamp-2">{deck.thesis}</p>
+                    <div className="flex gap-4 text-xs font-mono text-cyan-300 pt-2 border-t border-white/5">
+                      <span>Max Alloc: ${deck.max_allocation?.toLocaleString()}</span>
+                      <span>Min ARR: ${deck.min_arr?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
+                <FileText size={32} className="text-slate-500 mb-3" />
+                <p className="text-sm font-bold text-slate-300">No Active Mandates</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                  You haven't published any Bid Decks yet. Create one to start receiving targeted startup submissions.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Action Cards Grid */}
         <div className="grid md:grid-cols-3 gap-6">
           <Link
@@ -164,48 +224,6 @@ export default async function InvestorDashboardPage() {
           </Link>
         </div>
 
-        {/* Detailed Profile Data Card */}
-        <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 opacity-5 pointer-events-none">
-            <Building2 size={300} />
-          </div>
-
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 relative z-10">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <User size={18} className="text-cyan-400" /> Investor Profile Record
-            </h3>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 relative z-10">
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">User Account Email</span>
-                <p className="font-mono text-white text-sm">{user.email}</p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">System Role</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-1 font-bold text-cyan-300 capitalize text-xs mt-1">
-                  <ShieldCheck size={12} /> {profile?.role || "investor"}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Investment Thesis</span>
-                <p className="text-slate-300 text-sm leading-relaxed line-clamp-3">
-                  {profile?.investment_thesis || profile?.bio || "No investment thesis explicitly provided in your database record yet."}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Supabase UUID</span>
-                <p className="font-mono text-cyan-400/50 text-[10px] break-all">{user.id}</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
 
       <Footer />

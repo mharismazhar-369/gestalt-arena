@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function createClient() {
+  // NEXT.JS 15 FIX: cookies() must be awaited before reading
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -12,16 +13,14 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(
-              ({ name, value, options }) => {
-                cookieStore.set(name, value, options);
-              }
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
             );
           } catch {
-            // Server Component cookie writes may be ignored.
+            // The `setAll` method was called from a Server Component.
+            // This is safely ignored because our middleware handles the actual refreshing.
           }
         },
       },

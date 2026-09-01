@@ -1,130 +1,92 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Building2, MapPin, DollarSign, ShieldCheck, Tag, ArrowUpRight, Sparkles, Award } from "lucide-react";
+import { CheckCircle, MapPin, Briefcase, ExternalLink, ShieldCheck } from "lucide-react";
 
 export interface Investor {
-  id?: string;
-  name?: string;
-  type?: string;
-  description?: string;
-  location?: string;
-  investmentRange?: string;
-  stageFocus?: string[];
-  sectors?: string[];
-  portfolioCount?: number;
-  tier?: "freemium" | "gold" | "platinum";
-  verified?: boolean;
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  location: string;
+  investmentRange: string;
+  stageFocus: string[];
+  sectors: string[];
+  portfolioCount: number;
+  tier: string;
+  verified: boolean;
 }
 
-interface InvestorProfileCardProps {
-  investor?: Investor;
-}
-
-export default function InvestorProfileCard({ investor }: InvestorProfileCardProps) {
-  // If no investor prop is passed, render a sleek structural layout placeholder
-  const name = investor?.name || "Strategic Capital Partner";
-  const type = investor?.type || "VC Fund";
-  const description = investor?.description || "Active early-stage investor supporting scalable technology, SaaS, and deep-tech founders with capital and global strategic guidance.";
-  const location = investor?.location || "Global Network";
-  const range = investor?.investmentRange || "$25,000 – $250,000";
-  const stages = investor?.stageFocus || ["Seed", "Pre-Series A"];
-  const sectors = investor?.sectors || ["Fintech", "AI/ML", "B2B SaaS"];
-  const portfolioCount = investor?.portfolioCount ?? 12;
-  const tier = investor?.tier || "gold";
-  const isVerified = investor?.verified ?? true;
-
-  const tierColors = {
-    freemium: "text-slate-400 border-slate-500/30 bg-slate-500/10",
-    gold: "text-amber-400 border-amber-500/40 bg-amber-500/10",
-    platinum: "text-violet-400 border-violet-500/50 bg-violet-500/10",
-  };
-
+export default function InvestorProfileCard({ investor }: { investor: Investor }) {
   return (
-    <motion.div
-      whileHover={{ y: -6, scale: 1.01 }}
-      transition={{ duration: 0.3 }}
-      className="group relative rounded-3xl trionn-glass-card border border-white/10 p-6 flex flex-col justify-between overflow-hidden shadow-xl"
-    >
-      {/* Background Subtle Ambient Glow on Hover */}
-      <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl group-hover:bg-cyan-500/25 transition duration-500 pointer-events-none" />
+    <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-cyan-400/50 transition group flex flex-col justify-between h-full relative overflow-hidden">
 
-      <div>
-        {/* Top Badges Header */}
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">
-              {type}
-            </span>
-            {isVerified && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                <ShieldCheck size={12} /> Verified
-              </span>
-            )}
-          </div>
-
-          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold capitalize ${tierColors[tier]}`}>
-            {tier} Tier
+      {/* Top Header Row - Tags and Tier */}
+      <div className="flex justify-between items-start relative z-10">
+        <div className="flex gap-2">
+          <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            {investor.type}
           </span>
+          {investor.verified && (
+            <span className="flex items-center gap-1 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <ShieldCheck size={12} /> Verified
+            </span>
+          )}
+        </div>
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border border-white/10 px-3 py-1 rounded-full">
+          {investor.tier} Tier
+        </span>
+      </div>
+
+      {/* Main Content - Name, Location, Description */}
+      <div className="space-y-3 relative z-10 flex-grow">
+        <div className="flex justify-between items-start group">
+          <h3 className="text-xl md:text-2xl font-black text-white group-hover:text-cyan-300 transition line-clamp-1">
+            {investor.name}
+          </h3>
+          <ExternalLink size={16} className="text-slate-600 group-hover:text-cyan-400 transition flex-shrink-0 mt-1" />
         </div>
 
-        {/* Investor Name & Location */}
-        <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition flex items-center justify-between">
-          <span>{name}</span>
-          <ArrowUpRight size={18} className="text-slate-500 group-hover:text-cyan-400 transition transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </h3>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-slate-400">
+          <span className="flex items-center gap-1"><MapPin size={12} className="text-cyan-400" /> {investor.location}</span>
+          <span>•</span>
+          <span className="flex items-center gap-1"><Briefcase size={12} className="text-violet-400" /> {investor.portfolioCount} Investments</span>
+        </div>
 
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-          <MapPin size={13} className="text-cyan-400" /> {location}
-          <span className="text-slate-600">•</span>
-          <Building2 size={13} className="text-violet-400" /> {portfolioCount} Investments
+        <p className="text-sm text-slate-300 leading-relaxed line-clamp-3">
+          {investor.description}
         </p>
 
-        {/* Bio / Description */}
-        <p className="mt-4 text-xs leading-relaxed text-slate-300 line-clamp-3">
-          {description}
-        </p>
-
-        {/* Hover-Reveal Tag Chips */}
-        <div className="mt-4 flex flex-wrap gap-1.5 pt-2">
-          {sectors.map((sector) => (
-            <span
-              key={sector}
-              className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 transition group-hover:border-cyan-400/30 group-hover:bg-cyan-400/5 group-hover:text-cyan-200"
-            >
-              {sector}
+        {/* Sector / Stage Pills */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          {[...investor.sectors, ...investor.stageFocus].slice(0, 4).map((tag, i) => (
+            <span key={i} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold text-slate-300 whitespace-nowrap">
+              {tag}
             </span>
           ))}
-          {stages.map((stage) => (
-            <span
-              key={stage}
-              className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-400 transition group-hover:border-violet-400/30 group-hover:text-violet-300"
-            >
-              {stage}
+          {investor.sectors.length + investor.stageFocus.length > 4 && (
+            <span className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold text-slate-500">
+              +{investor.sectors.length + investor.stageFocus.length - 4}
             </span>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Footer Details & Action Button */}
-      <div className="mt-6 border-t border-white/10 pt-4 flex items-center justify-between">
-        <div>
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-            Ticket Size Range
-          </span>
-          <span className="text-sm font-extrabold text-white flex items-center gap-1">
-            <DollarSign size={14} className="text-cyan-400 -mr-1" /> {range}
-          </span>
+      {/* Bottom Action Bar */}
+      <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-4 relative z-10">
+        <div className="space-y-1">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Ticket Size Range</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-cyan-400 font-black">$</span>
+            <span className="text-sm font-black text-white">{investor.investmentRange.replace(/[^0-9.-]+/g, "")}</span>
+          </div>
         </div>
 
         <Link
-          href="/login"
+          href={`/profile/${investor.id}`}
           className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 transition hover:bg-cyan-400 hover:text-black shadow-lg shadow-cyan-500/10"
         >
           Connect Profile
         </Link>
       </div>
-    </motion.div>
+    </div>
   );
 }

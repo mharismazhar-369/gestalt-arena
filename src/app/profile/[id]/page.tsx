@@ -12,7 +12,8 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import {
   UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2,
   Share2, Users, MessageSquare, Edit3, Save, X, Globe, Link as LinkIcon,
-  Briefcase, TrendingUp, Calendar, FileText
+  Briefcase, TrendingUp, Calendar, FileText,
+  Plane
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -173,7 +174,7 @@ export default function PublicProfilePage() {
 
         <div className={`trionn-glass-card rounded-3xl border border-${themeColor}-500/30 p-8 md:p-10 relative overflow-hidden shadow-2xl space-y-6`}>
           <div className={`absolute top-0 right-0 p-8 text-${themeColor}-500/5 pointer-events-none`}>
-            {isStartup ? <Rocket size={240} /> : <Building2 size={240} />}
+            {isStartup ? <Plane size={240} /> : <Building2 size={240} />}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">

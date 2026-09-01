@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
-import OnboardingModal from "./OnboardingModal";
 import { UserProfile } from "@/types/user";
 
 export default function OnboardingWrapper() {
   const { session, loading } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -33,20 +34,18 @@ export default function OnboardingWrapper() {
     }
 
     fetchProfile();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [session, loading]);
 
-  if (loading || profileLoading || !session?.user || !profile) {
-    return null; // or a tiny loading indicator
-  }
-
-  // If profile isn't completed, show the modal
-  if (!(profile as any).profile_completed) {
-    return <OnboardingModal user={session.user} profile={profile} />;
-  }
+  useEffect(() => {
+    if (!profileLoading && profile && !profile.profile_completed) {
+      if (profile.role === "investor") {
+        router.push("/investor/dashboard"); // Route to dedicated investor builder
+      } else if (profile.role === "startup") {
+        router.push("/startup/dashboard"); // Route to dedicated startup builder
+      }
+    }
+  }, [profile, profileLoading, router]);
 
   return null;
 }

@@ -5,7 +5,8 @@ import LogoutButton from "@/components/auth/LogoutButton";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
-import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, SlidersHorizontal, Plus } from "lucide-react";
+import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles } from "lucide-react";
+import InvestorProfileBuilder from "@/components/investor/InvestorProfileBuilder";
 
 export default async function InvestorDashboardPage() {
   const supabase = await createClient();
@@ -26,12 +27,31 @@ export default async function InvestorDashboardPage() {
     .eq("id", user.id)
     .single();
 
+  // Redirect non-investors attempting to access this route
+  if (profile?.role === "startup") {
+    redirect("/startup/dashboard");
+  }
+
+  // INTERCEPTOR: If profile is not completed, show the dedicated builder
+  if (!profile?.profile_completed) {
+    return (
+      <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+        <Navbar />
+        <main className="pt-32 pb-24 px-6 mx-auto max-w-3xl w-full relative z-10 space-y-10">
+          <InvestorProfileBuilder profile={profile} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // STANDARD DASHBOARD VIEW (Only visible after profile completion)
   return (
     <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10 space-y-10">
-        
+
         {/* Header Banner */}
         <div className="trionn-glass-card rounded-3xl border border-cyan-500/30 p-8 md:p-10 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 p-8 text-cyan-500/10 pointer-events-none">
@@ -61,7 +81,6 @@ export default async function InvestorDashboardPage() {
 
         {/* Action Cards Grid */}
         <div className="grid md:grid-cols-3 gap-6">
-          
           <Link
             href="/browse/startups"
             className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-4 hover:border-cyan-400/50 transition group shadow-xl"
@@ -109,7 +128,6 @@ export default async function InvestorDashboardPage() {
               Manage investment transaction caps, post quotas, and verified investor badges.
             </p>
           </Link>
-
         </div>
 
         {/* Real User Profile Card */}
@@ -145,7 +163,6 @@ export default async function InvestorDashboardPage() {
             </div>
           </div>
         </div>
-
       </main>
 
       <Footer />

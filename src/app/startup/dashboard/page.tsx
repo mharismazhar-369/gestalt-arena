@@ -9,6 +9,7 @@ import {
   Rocket, Compass, BookOpen, ShieldCheck, User, Sparkles,
   Folder, FileText, Activity, MessageSquare, Radio
 } from "lucide-react";
+import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
 
 export default async function StartupDashboardPage() {
   const supabase = await createClient();
@@ -29,6 +30,25 @@ export default async function StartupDashboardPage() {
     .eq("id", user.id)
     .single();
 
+  // Redirect investors attempting to access this route
+  if (profile?.role === "investor") {
+    redirect("/investor/dashboard");
+  }
+
+  // INTERCEPTOR: If profile is not completed, show the dedicated startup builder
+  if (!profile?.profile_completed) {
+    return (
+      <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+        <Navbar />
+        <main className="pt-32 pb-24 px-6 mx-auto max-w-3xl w-full relative z-10 space-y-10">
+          <StartupProfileBuilder profile={profile} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // STANDARD DASHBOARD VIEW (Only queries data if profile is complete)
   // Fetch aggregate counts for projects and pitch decks
   const { count: projectsCount } = await supabase
     .from("projects")

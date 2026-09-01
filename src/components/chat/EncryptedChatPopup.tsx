@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Lock, ChevronDown, Send, ShieldCheck, UserX } from "lucide-react";
+import { MessageSquare, Lock, ChevronDown, Send, ShieldCheck, UserX, UserPlus, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 
@@ -25,10 +25,30 @@ export default function EncryptedChatPopup({
   const [conversation, setConversation] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const loadConversationData = async () => {
+    const { data: convData } = await supabase
+      .from("conversations")
+      .select("*")
+      .or(`and(initiator_id.eq.${currentUserId},recipient_id.eq.${recipientId}),and(initiator_id.eq.${recipientId},recipient_id.eq.${currentUserId})`)
+      .single();
+
+    if (convData) {
+      setConversation(convData);
+      const { data: msgData } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", convData.id)
+        .order("created_at", { ascending: true });
+
+      if (msgData) setMessages(msgData);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !currentUserId || !recipientId) return;
@@ -37,43 +57,26 @@ export default function EncryptedChatPopup({
       setIsLoading(true);
 
       // 1. Verify Network Connection (Follows Table)
-      const { data: followData } = await supabase
+      const { data: followData, error: followError } = await supabase
         .from("follows")
         .select("*")
         .or(`and(follower_id.eq.${currentUserId},following_id.eq.${recipientId}),and(follower_id.eq.${recipientId},following_id.eq.${currentUserId})`);
 
       // If no follow relationship exists in either direction, lock the chat
-      if (!followData || followData.length === 0) {
+      if (!followData || followData.length === 0 || followError) {
         setIsConnected(false);
         setIsLoading(false);
         return;
       }
 
       setIsConnected(true);
-
-      // 2. Fetch or Init Conversation
-      const { data: convData } = await supabase
-        .from("conversations")
-        .select("*")
-        .or(`and(initiator_id.eq.${currentUserId},recipient_id.eq.${recipientId}),and(initiator_id.eq.${recipientId},recipient_id.eq.${currentUserId})`)
-        .single();
-
-      if (convData) {
-        setConversation(convData);
-        const { data: msgData } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", convData.id)
-          .order("created_at", { ascending: true });
-
-        if (msgData) setMessages(msgData);
-      }
+      await loadConversationData();
       setIsLoading(false);
     };
 
     initializeChatEnvironment();
 
-    // 3. Subscribe to Real-time Updates (Using unique channel ID to prevent collision)
+    // 3. Subscribe to Real-time Updates
     const uniqueChannelName = `chat-${currentUserId}-${recipientId}-${crypto.randomUUID()}`;
     const channel = supabase
       .channel(uniqueChannelName)
@@ -81,7 +84,6 @@ export default function EncryptedChatPopup({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          // Verify message belongs to this specific conversation
           setMessages((prev) => {
             if (prev.find(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new];
@@ -94,6 +96,33 @@ export default function EncryptedChatPopup({
       supabase.removeChannel(channel);
     };
   }, [isOpen, currentUserId, recipientId]);
+
+  // NEW: Directly establish the connection from the locked screen
+  const handleEstablishConnection = async () => {
+    setIsConnecting(true);
+
+    const { error } = await supabase.from("follows").insert({
+      follower_id: currentUserId,
+      following_id: recipientId
+    });
+
+    if (!error) {
+      // Trigger Notification to recipient
+      await supabase.from("notifications").insert({
+        user_id: recipientId,
+        actor_id: currentUserId,
+        type: "follow",
+        message: "added you to their network to initiate a secure chat.",
+      });
+
+      setIsConnected(true);
+      await loadConversationData();
+    } else {
+      console.error("Failed to connect:", error.message);
+    }
+
+    setIsConnecting(false);
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +145,7 @@ export default function EncryptedChatPopup({
 
     if (currentConvId) {
       const msgContent = messageInput;
-      setMessageInput(""); // Optimistic UI clear
+      setMessageInput("");
 
       const { error } = await supabase.from("messages").insert([{
         conversation_id: currentConvId,
@@ -125,7 +154,6 @@ export default function EncryptedChatPopup({
       }]);
 
       if (!error) {
-        // Trigger notification to recipient
         await supabase.from("notifications").insert({
           user_id: recipientId,
           actor_id: currentUserId,
@@ -173,7 +201,6 @@ export default function EncryptedChatPopup({
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg transition"
-                aria-label="Close Chat"
               >
                 <ChevronDown size={18} />
               </button>
@@ -181,7 +208,7 @@ export default function EncryptedChatPopup({
 
             {/* Network Lock OR Chat Interface */}
             {!isConnected && !isLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 bg-slate-900/50">
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6 bg-slate-900/50">
                 <div className="h-16 w-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
                   <UserX size={28} />
                 </div>
@@ -191,6 +218,15 @@ export default function EncryptedChatPopup({
                     End-to-End Encrypted Chat is strictly isolated to your active network. You must add <strong>{recipientName}</strong> to your network before initiating a secure channel.
                   </p>
                 </div>
+
+                <button
+                  onClick={handleEstablishConnection}
+                  disabled={isConnecting}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-bold text-xs transition hover:scale-105 disabled:opacity-50 shadow-lg shadow-cyan-500/20"
+                >
+                  {isConnecting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                  Add to Network & Connect
+                </button>
               </div>
             ) : (
               <>
@@ -237,7 +273,6 @@ export default function EncryptedChatPopup({
                     type="submit"
                     disabled={!messageInput.trim()}
                     className="p-2 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-bold disabled:opacity-40 transition hover:scale-105"
-                    aria-label="Send Message"
                   >
                     <Send size={14} />
                   </button>
@@ -248,7 +283,6 @@ export default function EncryptedChatPopup({
         )}
       </AnimatePresence>
 
-      {/* Floating Launcher Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}

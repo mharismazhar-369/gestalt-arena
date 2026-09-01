@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useChat } from "@/components/context/ChatContext"; // NEW: Import Chat Context
+import { useChat } from "@/components/context/ChatContext";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
@@ -13,9 +13,10 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 
 export default function PublicProfilePage() {
   const params = useParams();
-  const profileId = params?.id ? String(params.id) : null;
+  // FIX: Fallback to empty string instead of null to satisfy strict TypeScript requirements
+  const profileId = params?.id ? String(params.id) : "";
   const { session } = useAuth();
-  const { openChat } = useChat(); // NEW: Initialize chat hook
+  const { openChat } = useChat();
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -169,8 +170,7 @@ export default function PublicProfilePage() {
                   )}
                 </button>
 
-                {/* NEW: Message Button injected via ChatContext */}
-                {following && (
+                {following && profileId && (
                   <button
                     onClick={() => openChat(profileId, displayName, displayName.slice(0, 2))}
                     className="flex items-center gap-2 rounded-2xl px-6 py-3 text-xs font-bold transition shadow-xl bg-cyan-500 text-black hover:bg-cyan-400 hover:scale-105 shadow-cyan-500/20"

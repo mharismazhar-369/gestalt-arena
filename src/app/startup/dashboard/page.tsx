@@ -170,21 +170,32 @@ export default async function StartupDashboardPage() {
         </div>
 
         {/* Dedicated Pitch Deck Link */}
-        <Link
-          href={`/startup/${user.id}/pitch`}
-          className="trionn-glass-card rounded-3xl border border-violet-500/50 p-6 flex items-center justify-between hover:bg-violet-500/10 transition shadow-xl"
-        >
+        <div className="trionn-glass-card rounded-3xl border border-violet-500/50 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-violet-500/20 text-violet-400">
               <Presentation size={28} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">View My Pitch Deck</h3>
-              <p className="text-xs text-slate-400">See how investors view your profile</p>
+              <h3 className="text-xl font-bold text-white">Deal Flow & Pitch Deck</h3>
+              <p className="text-xs text-slate-400">Manage how investors view and bid on your profile</p>
             </div>
           </div>
-          <span className="text-violet-400 font-bold">Open →</span>
-        </Link>
+
+          <div className="flex gap-3">
+            <Link
+              href="/startup/pitch/build"
+              className="flex-1 text-center rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-bold text-violet-300 transition hover:bg-violet-500 hover:text-white"
+            >
+              Edit Deck
+            </Link>
+            <Link
+              href={`/startup/${user.id}/pitch`}
+              className="flex-1 text-center rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-violet-600"
+            >
+              View Showcase
+            </Link>
+          </div>
+        </div>
 
         {/* Founder Metrics Section */}
         <div className="grid md:grid-cols-2 gap-6">

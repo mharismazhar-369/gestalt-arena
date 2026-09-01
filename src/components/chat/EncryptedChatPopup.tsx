@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Lock, ChevronDown, Send, ShieldCheck, UserX, UserPlus, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -19,13 +19,27 @@ export default function EncryptedChatPopup({
   recipientInitials = "SP"
 }: EncryptedChatPopupProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [isOpen, setIsOpen] = useState(true); // Ensures it opens when triggered
+  const [isOpen, setIsOpen] = useState(true);
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [conversation, setConversation] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // REFS: For auto-scrolling and preventing stale closures in the realtime listener
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeConvIdRef = useRef<string | null>(null);
+
+  // Auto-scroll to the newest message whenever the messages array changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isOpen]);
+
+  // Keep the ref synced with the active conversation ID
+  useEffect(() => {
+    activeConvIdRef.current = conversation?.id || null;
+  }, [conversation]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -81,10 +95,13 @@ export default function EncryptedChatPopup({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          setMessages((prev) => {
-            if (prev.find(m => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
+          // Use the ref to ensure we only capture messages for the current chat
+          if (activeConvIdRef.current && payload.new.conversation_id === activeConvIdRef.current) {
+            setMessages((prev) => {
+              if (prev.find(m => m.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
+            });
+          }
         }
       )
       .subscribe();
@@ -126,7 +143,6 @@ export default function EncryptedChatPopup({
     let currentConvId = conversation?.id;
 
     if (!currentConvId) {
-      // FIX: Status must be "approved" or "pending" to satisfy DB CHECK constraints.
       const { data: newConv, error: convError } = await supabase
         .from("conversations")
         .insert([{ initiator_id: currentUserId, recipient_id: recipientId, status: "approved" }])
@@ -141,6 +157,7 @@ export default function EncryptedChatPopup({
       if (newConv) {
         setConversation(newConv);
         currentConvId = newConv.id;
+        activeConvIdRef.current = newConv.id;
       }
     }
 
@@ -148,15 +165,22 @@ export default function EncryptedChatPopup({
       const msgContent = messageInput;
       setMessageInput(""); // Clear UI instantly for good UX
 
-      const { error: msgError } = await supabase.from("messages").insert([{
+      // Include .select().single() to return the newly generated row immediately
+      const { data: insertedMsg, error: msgError } = await supabase.from("messages").insert([{
         conversation_id: currentConvId,
         sender_id: currentUserId,
         content: msgContent,
-      }]);
+      }]).select().single();
 
       if (msgError) {
         console.error("Failed to send message:", msgError.message);
-      } else {
+      } else if (insertedMsg) {
+        // Push the new message directly into the state so the sender sees it immediately
+        setMessages((prev) => {
+          if (prev.find(m => m.id === insertedMsg.id)) return prev;
+          return [...prev, insertedMsg];
+        });
+
         await supabase.from("notifications").insert({
           user_id: recipientId,
           actor_id: currentUserId,
@@ -259,6 +283,8 @@ export default function EncryptedChatPopup({
                           </span>
                         </div>
                       ))}
+                      {/* Invisible element to anchor the auto-scroll */}
+                      <div ref={messagesEndRef} />
                     </div>
 
                     <form onSubmit={handleSend} className="border-t border-white/10 p-3 bg-slate-900/50 flex items-center gap-2">

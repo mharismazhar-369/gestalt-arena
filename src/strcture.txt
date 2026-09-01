@@ -1,0 +1,161 @@
+Folder PATH listing for volume MHM - Personal
+Volume serial number is 000000E6 90F3:714E
+E:.
+¦   strcture.txt
+¦   
++---app
+¦   ¦   favicon.ico
+¦   ¦   globals.css
+¦   ¦   layout.tsx
+¦   ¦   page.tsx
+¦   ¦   
+¦   +---(public)
+¦   +---about
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---admin
+¦   ¦   +---dashboard
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---api
+¦   ¦   +---health
+¦   ¦           route.ts
+¦   ¦           
+¦   +---auth
+¦   ¦   +---callback
+¦   ¦           route.ts
+¦   ¦           
+¦   +---browse
+¦   ¦   +---investors
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   +---startups
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---dashboard
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---disclaimer
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---feed
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---investor
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---dashboard
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---login
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---pricing
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---privacy
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---profile
+¦   ¦   +---[id]
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---register
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---research
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---settings
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---startup
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---dashboard
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---terms
+¦           page.tsx
+¦           
++---components
+¦   +---admin
+¦   +---aninamtions
+¦   +---auth
+¦   ¦       AuthProvider.tsx
+¦   ¦       LoginForm.tsx
+¦   ¦       LogoutButton.tsx
+¦   ¦       RegisterForm.tsx
+¦   ¦       
+¦   +---chat
+¦   ¦       EncryptedChatPopup.tsx
+¦   ¦       
+¦   +---context
+¦   ¦       UserTierContext.tsx
+¦   ¦       
+¦   +---dashboard
+¦   +---directory
+¦   ¦       InvestorProfileCard.tsx
+¦   ¦       StartupProfileCard.tsx
+¦   ¦       
+¦   +---investor
+¦   +---landing
+¦   ¦       Background.tsx
+¦   ¦       CameraRig.tsx
+¦   ¦       ChoiceCard.tsx
+¦   ¦       FeatureCards.tsx
+¦   ¦       Footer.tsx
+¦   ¦       Hero.tsx
+¦   ¦       HeroSection.tsx
+¦   ¦       LandingPage.tsx
+¦   ¦       Navbar.tsx
+¦   ¦       StatsSection.tsx
+¦   ¦       Universe.tsx
+¦   ¦       
+¦   +---notifications
+¦   ¦       NotificationDropdown.tsx
+¦   ¦       
+¦   +---onboarding
+¦   ¦       OnboardingModal.tsx
+¦   ¦       OnboardingWrapper.tsx
+¦   ¦       
+¦   +---research
+¦   ¦       ArticlePublishModal.tsx
+¦   ¦       
+¦   +---shared
+¦   ¦       BetaBadge.tsx
+¦   ¦       CookieConsent.tsx
+¦   ¦       RoleRoutingLoader.tsx
+¦   ¦       TierSwitcherBar.tsx
+¦   ¦       
+¦   +---social
+¦   ¦       CommentBox.tsx
+¦   ¦       PostCard.tsx
+¦   ¦       PostComposer.tsx
+¦   ¦       SocialFeed.tsx
+¦   ¦       
+¦   +---startup
+¦   +---ui
++---hooks
++---lib
+¦   +---auth
+¦   +---constants
+¦   ¦       site.ts
+¦   ¦       
+¦   +---security
+¦   +---supabase
+¦   ¦       client.ts
+¦   ¦       server.ts
+¦   ¦       
+¦   +---utils
+¦   ¦       cn.ts
+¦   ¦       
+¦   +---validators
++---middleware
++---services
+¦       auth.service.ts
+¦       
++---store
++---types
+        user.ts
+        

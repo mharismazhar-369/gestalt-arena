@@ -1,116 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import StartupProfileCard, { Startup } from "@/components/directory/StartupProfileCard";
 import BetaBadge from "@/components/shared/BetaBadge";
 import { Search, SlidersHorizontal, Rocket, Check, RefreshCw } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function BrowseStartupsPage() {
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState<string>("All");
   const [selectedStage, setSelectedStage] = useState<string>("All");
 
-  const industries = ["All", "Artificial Intelligence", "B2B SaaS", "Fintech", "HealthTech", "Web3", "CleanTech"];
-  const stages = ["All", "Idea Stage", "Pre-Seed", "Seed Stage", "Series A"];
+  const industries = ["All", "Artificial Intelligence", "B2B SaaS", "Fintech", "HealthTech", "Web3", "CleanTech", "Technology"];
+  const stages = ["All", "Idea Stage", "Pre-Seed", "Seed", "Series A"];
 
-  // Placeholder directory data array (structural)
-  const initialStartups: Startup[] = [
-    {
-      id: "startup-1",
-      name: "NexusAI SDK",
-      tagline: "Autonomous agent orchestrator for enterprise multi-cloud pipelines",
-      industry: "Artificial Intelligence",
-      stage: "Seed Stage",
-      requiredFunding: "$250,000",
-      valuation: "$3.5M Valuation",
-      location: "San Francisco, CA",
-      teamSize: 6,
-      pitchSummary: "Developer platform enabling autonomous multi-agent orchestration across AWS, GCP, and Azure with zero-latency fallback routing.",
-      tags: ["Agentic AI", "Developer Tools", "Cloud Architecture"],
-      verified: true,
-      tier: "platinum",
-    },
-    {
-      id: "startup-2",
-      name: "Solace Health",
-      tagline: "AI-driven remote patient monitoring and diagnostic telemetry",
-      industry: "HealthTech",
-      stage: "Pre-Seed",
-      requiredFunding: "$100,000",
-      valuation: "$1.8M Valuation",
-      location: "Boston, MA",
-      teamSize: 4,
-      pitchSummary: "Clinical-grade sensor fusion software providing continuous cardiac and metabolic telemetry directly to physician dashboards.",
-      tags: ["HealthTech", "IoT Telemetry", "Medical AI"],
-      verified: true,
-      tier: "gold",
-    },
-    {
-      id: "startup-3",
-      name: "VoltGrid Clean Energy",
-      tagline: "Distributed micro-grid energy balancing and battery optimization",
-      industry: "CleanTech",
-      stage: "Series A",
-      requiredFunding: "$500,000",
-      valuation: "$8.0M Valuation",
-      location: "Berlin, Germany",
-      teamSize: 12,
-      pitchSummary: "Smart grid software reducing commercial battery degradation by 35% through predictive thermal AI models.",
-      tags: ["CleanTech", "Energy Grid", "Sustainability"],
-      verified: true,
-      tier: "platinum",
-    },
-    {
-      id: "startup-4",
-      name: "AetherPay Protocol",
-      tagline: "Cross-border algorithmic settlement and treasury management",
-      industry: "Fintech",
-      stage: "Seed Stage",
-      requiredFunding: "$200,000",
-      valuation: "$4.0M Valuation",
-      location: "London, UK",
-      teamSize: 8,
-      pitchSummary: "Instant foreign exchange liquidity protocol reducing global settlement transaction fees for international B2B merchants.",
-      tags: ["Fintech", "Cross-Border Pay", "Treasury"],
-      verified: true,
-      tier: "gold",
-    },
-    {
-      id: "startup-5",
-      name: "DataPulse Analytics",
-      tagline: "Real-time user cohort segmentation and predictive churn engine",
-      industry: "B2B SaaS",
-      stage: "Pre-Seed",
-      requiredFunding: "$50,000",
-      valuation: "$1.2M Valuation",
-      location: "Toronto, Canada",
-      teamSize: 3,
-      pitchSummary: "Lightweight analytics library providing instant churn prediction metrics for subscription-based mobile apps.",
-      tags: ["Analytics", "B2B SaaS", "User Cohorts"],
-      verified: false,
-      tier: "freemium",
-    },
-    {
-      id: "startup-6",
-      name: "Krypton Cyber Security",
-      tagline: "Post-quantum cryptographic key distribution for enterprise storage",
-      industry: "B2B SaaS",
-      stage: "Seed Stage",
-      requiredFunding: "$300,000",
-      valuation: "$5.0M Valuation",
-      location: "Tel Aviv, Israel",
-      teamSize: 7,
-      pitchSummary: "Quantum-resistant data encryption middleware safeguarding cloud object storage against future decryption vectors.",
-      tags: ["Cybersecurity", "Post-Quantum", "Encryption"],
-      verified: true,
-      tier: "platinum",
-    },
-  ];
+  // Fetch live pitch decks from Supabase
+  useEffect(() => {
+    async function fetchPitches() {
+      const { data, error } = await supabase
+        .from("pitch_decks")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  // UI Filtering
-  const filteredStartups = initialStartups.filter((s) => {
+      if (data && !error) {
+        const liveStartups: Startup[] = data.map((pitch) => ({
+          id: pitch.user_id, // Routes to /startup/[user_id]/pitch
+          name: pitch.company_name || "Undisclosed Startup",
+          tagline: pitch.title || "Pitch Deck",
+          industry: "Technology", // Fallback category
+          stage: pitch.stage || "Seed",
+          requiredFunding: pitch.funding_goal || "TBD",
+          valuation: pitch.valuation || "TBD",
+          location: "Global Network",
+          teamSize: 1,
+          pitchSummary: pitch.elevator_pitch || "",
+          tags: ["Live Pitch"],
+          verified: true,
+          tier: (pitch.tier_required as "freemium" | "gold" | "platinum") || "freemium",
+        }));
+        setStartups(liveStartups);
+      }
+      setLoading(false);
+    }
+    fetchPitches();
+  }, []);
+
+  // UI Filtering using dynamic state
+  const filteredStartups = startups.filter((s) => {
     const matchesSearch =
       s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.tagline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,7 +75,7 @@ export default function BrowseStartupsPage() {
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10">
-        
+
         {/* Header */}
         <div className="space-y-4 mb-10">
           <div className="flex items-center gap-3">
@@ -157,11 +98,11 @@ export default function BrowseStartupsPage() {
 
         {/* Main Search & Sidebar Layout */}
         <div className="grid lg:grid-cols-4 gap-8">
-          
+
           {/* Filter Sidebar */}
           <aside className="lg:col-span-1 space-y-6">
             <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-6">
-              
+
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
                   <SlidersHorizontal size={16} className="text-violet-400" /> Filter Criteria
@@ -184,11 +125,10 @@ export default function BrowseStartupsPage() {
                     <button
                       key={ind}
                       onClick={() => setSelectedIndustry(ind)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${
-                        selectedIndustry === ind
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedIndustry === ind
                           ? "bg-violet-500/20 border border-violet-400/50 text-violet-300"
                           : "bg-white/5 border border-transparent text-slate-400 hover:text-white hover:bg-white/10"
-                      }`}
+                        }`}
                     >
                       <span>{ind}</span>
                       {selectedIndustry === ind && <Check size={14} className="text-violet-400" />}
@@ -207,11 +147,10 @@ export default function BrowseStartupsPage() {
                     <button
                       key={stg}
                       onClick={() => setSelectedStage(stg)}
-                      className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition ${
-                        selectedStage === stg
+                      className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition ${selectedStage === stg
                           ? "bg-cyan-500/20 border border-cyan-400/50 text-cyan-300"
                           : "bg-white/5 border border-transparent text-slate-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       {stg}
                     </button>
@@ -224,7 +163,7 @@ export default function BrowseStartupsPage() {
 
           {/* Startups Grid */}
           <div className="lg:col-span-3 space-y-6">
-            
+
             {/* Search Bar */}
             <div className="relative">
               <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
@@ -244,7 +183,11 @@ export default function BrowseStartupsPage() {
             </div>
 
             {/* Cards Grid */}
-            {filteredStartups.length > 0 ? (
+            {loading ? (
+              <div className="trionn-glass-card rounded-3xl border border-white/10 p-12 text-center text-slate-400 text-sm">
+                Loading live startups network...
+              </div>
+            ) : filteredStartups.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {filteredStartups.map((startup) => (
                   <StartupProfileCard key={startup.id} startup={startup} />

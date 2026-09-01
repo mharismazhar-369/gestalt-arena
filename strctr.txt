@@ -1,0 +1,192 @@
+Folder PATH listing for volume MHM - Personal
+Volume serial number is 000001C4 90F3:714E
+E:\01. GESTALT TECHNOLOGIES PRIVATE LIMITED (SAAS)\GESTALT-ARENA\SRC
+¦   strcture.txt
+¦   
++---app
+¦   ¦   favicon.ico
+¦   ¦   globals.css
+¦   ¦   layout.tsx
+¦   ¦   page.tsx
+¦   ¦   
+¦   +---(public)
+¦   +---about
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---admin
+¦   ¦   +---dashboard
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---api
+¦   ¦   +---health
+¦   ¦           route.ts
+¦   ¦           
+¦   +---auth
+¦   ¦   +---callback
+¦   ¦           route.ts
+¦   ¦           
+¦   +---browse
+¦   ¦   +---investors
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   +---startups
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---dashboard
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---preferences
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---disclaimer
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---feed
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---investor
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---dashboard
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   +---[id]
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---login
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---opportunities
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---[id]
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---pricing
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---privacy
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---profile
+¦   ¦   +---[id]
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---register
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---research
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---settings
+¦   ¦       page.tsx
+¦   ¦       
+¦   +---startup
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---dashboard
+¦   ¦   ¦       page.tsx
+¦   ¦   ¦       
+¦   ¦   +---pitch
+¦   ¦   ¦   +---build
+¦   ¦   ¦           page.tsx
+¦   ¦   ¦           
+¦   ¦   +---[id]
+¦   ¦       ¦   page.tsx
+¦   ¦       ¦   
+¦   ¦       +---pitch
+¦   ¦               page.tsx
+¦   ¦               
+¦   +---terms
+¦           page.tsx
+¦           
++---components
+¦   +---admin
+¦   +---aninamtions
+¦   +---auth
+¦   ¦       AuthProvider.tsx
+¦   ¦       LoginForm.tsx
+¦   ¦       LogoutButton.tsx
+¦   ¦       RegisterForm.tsx
+¦   ¦       
+¦   +---chat
+¦   ¦       EncryptedChatPopup.tsx
+¦   ¦       
+¦   +---context
+¦   ¦       ChatContext.tsx
+¦   ¦       UserTierContext.tsx
+¦   ¦       
+¦   +---dashboard
+¦   +---directory
+¦   ¦       InvestorProfileCard.tsx
+¦   ¦       StartupProfileCard.tsx
+¦   ¦       
+¦   +---investor
+¦   ¦       InvestorProfileBuilder.tsx
+¦   ¦       
+¦   +---landing
+¦   ¦       Background.tsx
+¦   ¦       CameraRig.tsx
+¦   ¦       ChoiceCard.tsx
+¦   ¦       FeatureCards.tsx
+¦   ¦       Footer.tsx
+¦   ¦       Hero.tsx
+¦   ¦       HeroSection.tsx
+¦   ¦       LandingPage.tsx
+¦   ¦       Navbar.tsx
+¦   ¦       StatsSection.tsx
+¦   ¦       Universe.tsx
+¦   ¦       
+¦   +---notifications
+¦   ¦       NotificationDropdown.tsx
+¦   ¦       
+¦   +---onboarding
+¦   ¦       OnboardingWrapper.tsx
+¦   ¦       
+¦   +---pitch
+¦   ¦       PitchActionBar.tsx
+¦   ¦       
+¦   +---research
+¦   ¦       ArticlePublishModal.tsx
+¦   ¦       
+¦   +---shared
+¦   ¦       BetaBadge.tsx
+¦   ¦       CookieConsent.tsx
+¦   ¦       RoleRoutingLoader.tsx
+¦   ¦       TierSwitcherBar.tsx
+¦   ¦       
+¦   +---social
+¦   ¦       CommentBox.tsx
+¦   ¦       PostCard.tsx
+¦   ¦       PostComposer.tsx
+¦   ¦       SocialFeed.tsx
+¦   ¦       
+¦   +---startup
+¦   ¦       PitchDeckBuilder.tsx
+¦   ¦       StartupProfileBuilder.tsx
+¦   ¦       
+¦   +---ui
++---hooks
++---lib
+¦   +---auth
+¦   +---constants
+¦   ¦       site.ts
+¦   ¦       
+¦   +---security
+¦   +---supabase
+¦   ¦       client.ts
+¦   ¦       server.ts
+¦   ¦       
+¦   +---utils
+¦   ¦       cn.ts
+¦   ¦       
+¦   +---validators
++---middleware
++---services
+¦       auth.service.ts
+¦       
++---store
++---types
+        schema.ts
+        user.ts
+        

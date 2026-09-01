@@ -4,16 +4,18 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useChat } from "@/components/context/ChatContext"; // NEW: Import Chat Context
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
-import { UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2, Share2, Sparkles, Users } from "lucide-react";
+import { UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2, Share2, Sparkles, Users, MessageSquare } from "lucide-react";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 
 export default function PublicProfilePage() {
   const params = useParams();
   const profileId = params?.id ? String(params.id) : null;
   const { session } = useAuth();
+  const { openChat } = useChat(); // NEW: Initialize chat hook
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,6 @@ export default function PublicProfilePage() {
     if (!profileId) return;
 
     async function fetchProfileData() {
-      // 1. Fetch Target User Profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -33,7 +34,6 @@ export default function PublicProfilePage() {
 
       if (profileData) setProfile(profileData);
 
-      // 2. Fetch Network Stats (Follower Count)
       const { count } = await supabase
         .from("follows")
         .select("*", { count: "exact", head: true })
@@ -41,7 +41,6 @@ export default function PublicProfilePage() {
 
       setFollowerCount(count || 0);
 
-      // 3. Check if current logged-in user is already following this profile
       if (session?.user) {
         const { data: followData } = await supabase
           .from("follows")
@@ -65,7 +64,6 @@ export default function PublicProfilePage() {
       return;
     }
 
-    // Prevent following yourself
     if (session.user.id === profileId) return;
 
     if (following) {
@@ -82,7 +80,6 @@ export default function PublicProfilePage() {
         .from("follows")
         .insert({ follower_id: session.user.id, following_id: profileId });
 
-      // Trigger Global Notification
       await supabase.from("notifications").insert({
         user_id: profileId,
         actor_id: session.user.id,
@@ -103,7 +100,6 @@ export default function PublicProfilePage() {
     </div>
   );
 
-  // Map dynamic fields
   const displayName = profile.nickname || profile.company_name || "Arena Member";
   const displayRole = profile.role === "investor" ? "Investor / Capital Partner" : "Startup Founder";
   const displayLocation = profile.city ? `${profile.city}, ${profile.state || ""}` : "Global Network";
@@ -117,7 +113,6 @@ export default function PublicProfilePage() {
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-5xl w-full relative z-10 space-y-8">
 
-        {/* Profile Header Card */}
         <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 md:p-10 relative overflow-hidden shadow-2xl space-y-6">
           <div className="absolute top-0 right-0 p-8 text-cyan-500/5 pointer-events-none">
             <Building2 size={240} />
@@ -154,7 +149,6 @@ export default function PublicProfilePage() {
               </div>
             </div>
 
-            {/* Stylized Follow / Add to Network Button */}
             {!isOwnProfile && (
               <div className="flex items-center gap-3">
                 <button
@@ -175,6 +169,16 @@ export default function PublicProfilePage() {
                   )}
                 </button>
 
+                {/* NEW: Message Button injected via ChatContext */}
+                {following && (
+                  <button
+                    onClick={() => openChat(profileId, displayName, displayName.slice(0, 2))}
+                    className="flex items-center gap-2 rounded-2xl px-6 py-3 text-xs font-bold transition shadow-xl bg-cyan-500 text-black hover:bg-cyan-400 hover:scale-105 shadow-cyan-500/20"
+                  >
+                    <MessageSquare size={16} /> Message
+                  </button>
+                )}
+
                 <button className="p-3 rounded-2xl border border-white/10 bg-white/5 text-slate-300 hover:text-white transition" aria-label="Share">
                   <Share2 size={16} />
                 </button>
@@ -182,7 +186,6 @@ export default function PublicProfilePage() {
             )}
           </div>
 
-          {/* Profile Bio */}
           <div className="border-t border-white/10 pt-6 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Overview & Mandate
@@ -192,7 +195,6 @@ export default function PublicProfilePage() {
             </p>
           </div>
 
-          {/* Tags */}
           <div className="flex flex-wrap gap-2 pt-2">
             {displayTags.map((tag: string) => (
               <span key={tag} className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200">
@@ -202,7 +204,6 @@ export default function PublicProfilePage() {
           </div>
         </div>
 
-        {/* Investment Range & Activity Grid */}
         <div className="grid md:grid-cols-3 gap-6">
           <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-2">
             <span className="text-[10px] uppercase font-bold text-slate-400 block">Target Size / Funding</span>
@@ -225,7 +226,6 @@ export default function PublicProfilePage() {
             </p>
           </div>
         </div>
-
       </main>
 
       <Footer />

@@ -14,7 +14,6 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
   const { session, loading } = useAuth();
 
-  // Hydration safety check
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -30,6 +29,9 @@ export default function Navbar() {
   const userEmail = session?.user?.email;
   const userDisplayName = userEmail ? userEmail.split("@")[0] : "My Profile";
 
+  // Intelligent routing: If logged in, clicking the logo takes you to your dashboard. If not, it goes to the marketing landing page.
+  const homeRoute = session?.user ? "/dashboard" : "/";
+
   return (
     <motion.header
       initial={{ y: -60, opacity: 0 }}
@@ -42,7 +44,7 @@ export default function Navbar() {
         {/* Brand & Beta Badge */}
         <div className="flex items-center gap-3">
           <Link
-            href="/"
+            href={homeRoute}
             className="text-xl font-black tracking-tight text-white hover:opacity-90 transition flex items-center gap-1.5"
           >
             <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">

@@ -38,7 +38,6 @@ export default function NotificationDropdown() {
 
     fetchNotifications();
 
-    // Generate a strictly unique channel name using crypto.randomUUID()
     const uniqueChannelName = `notifications-${session.user.id}-${crypto.randomUUID()}`;
 
     const channel = supabase
@@ -104,12 +103,16 @@ export default function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full transition border ${isOpen ? "bg-white/10 border-white/20 text-white" : "bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10"
+        className={`relative p-2 rounded-full transition-all duration-300 border ${isOpen
+            ? "bg-white/10 border-white/20 text-white"
+            : unreadCount > 0
+              ? "bg-cyan-500/10 border-cyan-400/50 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.4)] animate-pulse"
+              : "bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10"
           }`}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500 text-[9px] font-black text-black border-2 border-[#0a0a0a]">
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[10px] font-black text-black border-2 border-[#02040a]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

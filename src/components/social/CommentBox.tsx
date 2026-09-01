@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabase/client";
 interface CommentBoxProps {
   postId: string;
   currentUserId?: string;
+  postOwnerId?: string; // NEW: Required for notifications
   onCommentAdded?: () => void;
 }
 
-export default function CommentBox({ postId, currentUserId, onCommentAdded }: CommentBoxProps) {
+export default function CommentBox({ postId, currentUserId, postOwnerId, onCommentAdded }: CommentBoxProps) {
   const [comment, setComment] = useState("");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -22,37 +23,23 @@ export default function CommentBox({ postId, currentUserId, onCommentAdded }: Co
 
   const fetchComments = async () => {
     setLoadingComments(true);
-
-    // Fetch comments and left-join profiles safely
     const { data, error } = await supabase
       .from("comments")
       .select(`
-        id,
-        content,
-        created_at,
-        author_id,
+        id, content, created_at, author_id,
         author:profiles(nickname, company_name, role)
       `)
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
-    if (data && !error) {
-      setCommentsList(data);
-    } else {
-      console.error("Error fetching comments:", error?.message);
-    }
+    if (data && !error) setCommentsList(data);
     setLoadingComments(false);
   };
 
   const submitComment = async () => {
-    if (!currentUserId) {
-      setErrorMsg("You must be signed in to comment.");
-      return;
-    }
-    if (!comment.trim()) {
-      setErrorMsg("Comment cannot be empty.");
-      return;
-    }
+    if (!currentUserId) return setErrorMsg("You must be signed in to comment.");
+    if (!comment.trim()) return setErrorMsg("Comment cannot be empty.");
+
     setLoading(true);
     setErrorMsg("");
 
@@ -62,33 +49,41 @@ export default function CommentBox({ postId, currentUserId, onCommentAdded }: Co
       content: comment.trim(),
     });
 
-    setLoading(false);
-
     if (error) {
       setErrorMsg("Failed to post comment: " + error.message);
-    } else {
-      setComment("");
-      fetchComments();
-      if (onCommentAdded) onCommentAdded();
+      setLoading(false);
+      return;
     }
+
+    // Trigger Notification to Post Owner
+    if (postOwnerId && postOwnerId !== currentUserId) {
+      await supabase.from("notifications").insert({
+        user_id: postOwnerId,
+        actor_id: currentUserId,
+        type: "comment",
+        message: "commented on your post.",
+        reference_id: postId
+      });
+    }
+
+    setComment("");
+    fetchComments();
+    if (onCommentAdded) onCommentAdded();
+    setLoading(false);
   };
 
   return (
     <div className="mt-4 border-t border-white/10 pt-4 space-y-4">
-
-      {/* Display Existing Comments */}
       {loadingComments ? (
         <p className="text-xs text-slate-500">Loading comments...</p>
       ) : commentsList.length > 0 ? (
-        <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+        <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
           {commentsList.map((c) => {
             const authorName = c.author?.nickname || c.author?.company_name || "Arena Member";
             return (
               <div key={c.id} className="bg-white/5 rounded-xl p-3 text-sm border border-white/5 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">
-                    {authorName}
-                  </span>
+                  <span className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">{authorName}</span>
                   <span className="text-[10px] text-slate-500">
                     {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
@@ -102,7 +97,6 @@ export default function CommentBox({ postId, currentUserId, onCommentAdded }: Co
         <p className="text-xs text-slate-500 italic">No comments yet. Step into the arena and be the first!</p>
       )}
 
-      {/* Comment Input Form */}
       <div>
         {errorMsg && <p className="text-xs text-rose-500 mb-1 font-semibold">{errorMsg}</p>}
         <textarea

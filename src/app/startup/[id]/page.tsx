@@ -40,7 +40,7 @@ export default function StartupProfilePage({ params }: { params: { id: string } 
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-3xl font-bold">{profile.company_name}</h1>
                 {profile.verification_status === "verified" && (
-                  <BadgeCheck className="w-6 h-6 text-blue-500" title="Verified Startup" />
+                  <BadgeCheck className="w-6 h-6 text-blue-500" aria-label="Verified Startup" />
                 )}
               </div>
               <p className="text-lg text-muted-foreground">{profile.industry} &middot; {profile.business_model}</p>

@@ -36,7 +36,7 @@ export default function InvestorProfilePage({ params }: { params: { id: string }
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-3xl font-bold">{profile.firm_name}</h1>
                 {profile.verification_status === "verified" && (
-                  <BadgeCheck className="w-6 h-6 text-blue-500" title="Verified Investor" />
+                  <BadgeCheck className="w-6 h-6 text-blue-500" aria-label="Verified Investor" />
                 )}
               </div>
               <p className="text-lg text-muted-foreground">{profile.firm_type}</p>

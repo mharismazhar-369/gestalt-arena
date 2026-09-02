@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
 
 interface DeleteResourceButtonProps {
-    table: "pitch_decks" | "investor_bid_decks";
+    table: "pitch_decks" | "investor_bid_decks" | "deal_negotiations";
     recordId: string;
     itemName: string;
 }

@@ -43,9 +43,11 @@ export default function BidDeckBuilder({ investorId }: BidDeckBuilderProps) {
         });
 
         if (insertError) {
-            setError(insertError.message);
+            // Safe error property access
+            setError(insertError?.message || "Database execution failed.");
             setSaving(false);
         } else {
+            // Removed arbitrary setTimeout; guaranteed sequential execution
             router.push("/investor/dashboard");
             router.refresh();
         }

@@ -17,12 +17,10 @@ export default async function BidDetailsPage({
     params: Promise<{ id: string }>
 }) {
     const { id: bidId } = await params;
-
-    // The await is strictly required here for Next.js App Router SSR
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 1. Fetch the specific Bid Deck
+    // Fetch strictly the targeted Mandate
     const { data: bid } = await supabase
         .from("investor_bid_decks")
         .select("*")
@@ -33,19 +31,15 @@ export default async function BidDetailsPage({
 
     const isOwner = user?.id === bid.investor_id;
 
-    // 2. Check if current viewing user is a founder
     let isFounder = false;
     if (user && !isOwner) {
         const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
         isFounder = profile?.role === "startup";
     }
 
-    // 3. Contextual Data Fetching for Deal Negotiations
     let deals: any[] = [];
-
     if (user) {
         if (isOwner) {
-            // Investors see ALL pitches submitted to their mandate
             const { data: negotiations } = await supabase
                 .from("deal_negotiations")
                 .select(`
@@ -56,7 +50,6 @@ export default async function BidDetailsPage({
                 .order("created_at", { ascending: false });
             deals = negotiations || [];
         } else if (isFounder) {
-            // Founders see ONLY their own pitches submitted to this mandate
             const { data: myNegotiation } = await supabase
                 .from("deal_negotiations")
                 .select(`
@@ -77,8 +70,6 @@ export default async function BidDetailsPage({
             <Navbar />
 
             <main className="pt-32 pb-24 px-6 mx-auto max-w-5xl w-full relative z-10 space-y-8">
-
-                {/* Mandate Header */}
                 <div className="trionn-glass-card rounded-3xl border border-cyan-500/30 p-8 shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 text-cyan-500/5 pointer-events-none">
                         <Target size={180} />
@@ -104,7 +95,6 @@ export default async function BidDetailsPage({
                     </div>
                 </div>
 
-                {/* Founder View: Apply CTA (If haven't applied yet) */}
                 {isFounder && !hasApplied && (
                     <div className="trionn-glass-card rounded-3xl border border-violet-500/30 p-8 text-center space-y-4 bg-violet-500/5 shadow-xl">
                         <h3 className="text-xl font-bold text-white">Apply for this Mandate</h3>
@@ -118,13 +108,11 @@ export default async function BidDetailsPage({
                     </div>
                 )}
 
-                {/* Founder View: Active Deal Thread (If already applied) */}
                 {isFounder && hasApplied && (
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-white/10 pb-2">
                             <Rocket size={20} className="text-violet-400" /> Your Active Application
                         </h2>
-
                         <div className="space-y-4">
                             {deals.map((deal) => (
                                 <details key={deal.id} className="group bg-black/40 rounded-2xl border border-violet-500/30 overflow-hidden transition-all duration-300 shadow-lg">
@@ -138,7 +126,6 @@ export default async function BidDetailsPage({
                                                 {deal.pitch_decks?.title || "Untitled Pitch"}
                                             </h3>
                                         </div>
-
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs font-bold text-violet-300 bg-violet-500/10 border border-violet-500/30 px-4 py-2 rounded-xl group-open:hidden flex items-center gap-1">
                                                 <Eye size={14} /> Review Submission
@@ -148,13 +135,10 @@ export default async function BidDetailsPage({
                                             </span>
                                         </div>
                                     </summary>
-
                                     <div className="p-6 border-t border-violet-500/30 bg-[#02040a]">
                                         <Suspense fallback={<div className="text-sm text-violet-400 p-8 text-center animate-pulse">Loading Pitch Deck...</div>}>
                                             <PitchDeckViewer pitchId={deal.pitch_deck_id} />
                                         </Suspense>
-
-                                        {/* Action Bar for Founder */}
                                         <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-violet-500/30 pt-6">
                                             <span className="text-xs text-slate-400">Application Status: <strong className="text-amber-400">{deal.status}</strong></span>
                                             <div className="flex flex-wrap items-center gap-3">
@@ -174,13 +158,11 @@ export default async function BidDetailsPage({
                     </div>
                 )}
 
-                {/* Investor View: Private Deal Pipeline */}
                 {isOwner && (
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-white/10 pb-2">
                             <Building size={20} className="text-cyan-400" /> Received Pitches & Deal Threads
                         </h2>
-
                         {deals.length === 0 ? (
                             <div className="p-10 border border-dashed border-white/10 bg-white/5 rounded-3xl text-center space-y-2">
                                 <p className="text-sm font-bold text-slate-300">No pitches received yet.</p>
@@ -201,7 +183,6 @@ export default async function BidDetailsPage({
                                                 </h3>
                                                 <p className="text-xs text-cyan-400 font-mono mt-1">Requesting: ${deal.pitch_decks?.funding_goal?.toLocaleString()}</p>
                                             </div>
-
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl group-open:hidden flex items-center gap-1">
                                                     <Eye size={14} /> View Deck
@@ -211,23 +192,17 @@ export default async function BidDetailsPage({
                                                 </span>
                                             </div>
                                         </summary>
-
                                         <div className="p-6 border-t border-white/10 bg-[#02040a]">
                                             <Suspense fallback={<div className="text-sm text-cyan-400 p-8 text-center animate-pulse">Loading Pitch Deck...</div>}>
                                                 <PitchDeckViewer pitchId={deal.pitch_deck_id} />
                                             </Suspense>
-
-                                            {/* Action Bar for Investor */}
                                             <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-white/10 pt-6">
                                                 <span className="text-xs text-slate-400">Current Status: <strong className="text-amber-400">{deal.status}</strong></span>
                                                 <div className="flex gap-3">
                                                     <button className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition">
                                                         <XCircle size={14} /> Reject
                                                     </button>
-                                                    <Link
-                                                        href={`/negotiations/${deal.id}`}
-                                                        className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-black bg-cyan-500 hover:bg-cyan-400 hover:scale-105 rounded-xl transition shadow-lg shadow-cyan-500/20"
-                                                    >
+                                                    <Link href={`/negotiations/${deal.id}`} className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-black bg-cyan-500 hover:bg-cyan-400 hover:scale-105 rounded-xl transition shadow-lg shadow-cyan-500/20">
                                                         <CheckCircle2 size={14} /> Accept & Negotiate
                                                     </Link>
                                                 </div>
@@ -239,7 +214,6 @@ export default async function BidDetailsPage({
                         )}
                     </div>
                 )}
-
             </main>
             <Footer />
         </div>

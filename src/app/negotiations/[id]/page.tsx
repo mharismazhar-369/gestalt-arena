@@ -11,7 +11,7 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import {
     Handshake, FileText, Target, DollarSign, PieChart, Activity,
     CheckCircle2, XCircle, RefreshCw, MessageSquare, ShieldAlert,
-    ArrowLeft, Lock, Send, Loader2
+    ArrowLeft, Lock, Send, Loader2, Clock, AlertTriangle
 } from "lucide-react";
 
 export default function NegotiationRoomPage() {
@@ -24,6 +24,8 @@ export default function NegotiationRoomPage() {
     const [deal, setDeal] = useState<any>(null);
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [updating, setUpdating] = useState(false);
+    const [timeLeft, setTimeLeft] = useState("");
+    const [isFullyLocked, setIsFullyLocked] = useState(false);
 
     // Chat State
     const [messages, setMessages] = useState<any[]>([]);
@@ -42,7 +44,6 @@ export default function NegotiationRoomPage() {
         if (!dealId || !session?.user) return;
 
         async function fetchDealAndMessages() {
-            // 1. Fetch Deal Context
             const { data, error } = await supabase
                 .from("deal_negotiations")
                 .select(`
@@ -58,7 +59,6 @@ export default function NegotiationRoomPage() {
                 return;
             }
 
-            // Security Check
             if (session?.user.id === data.startup_id || session?.user.id === data.investor_id) {
                 setIsAuthorized(true);
                 setDeal(data);
@@ -68,7 +68,6 @@ export default function NegotiationRoomPage() {
                     ticket_size: data.ticket_size || data.pitch_decks?.funding_goal || 0,
                 });
 
-                // 2. Fetch Existing Messages
                 const { data: msgData } = await supabase
                     .from("deal_messages")
                     .select("*")
@@ -82,14 +81,12 @@ export default function NegotiationRoomPage() {
 
         fetchDealAndMessages();
 
-        // 3. Subscribe to Real-Time Chat Updates
         const channel = supabase
             .channel(`room_${dealId}`)
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "deal_messages", filter: `deal_id=eq.${dealId}` },
                 (payload) => {
-                    // Only append if it's not our own message (we optimistically add ours locally)
                     if (payload.new.sender_id !== session?.user.id) {
                         setMessages((prev) => [...prev, payload.new]);
                     }
@@ -102,7 +99,30 @@ export default function NegotiationRoomPage() {
         };
     }, [dealId, session]);
 
-    // Auto-scroll to bottom of chat
+    // 24-Hour Countdown Timer Logic
+    useEffect(() => {
+        if (deal?.status === "Pending Finalization" && deal?.accepted_at) {
+            const interval = setInterval(() => {
+                const acceptedTime = new Date(deal.accepted_at).getTime();
+                const targetTime = acceptedTime + 24 * 60 * 60 * 1000;
+                const now = new Date().getTime();
+                const difference = targetTime - now;
+
+                if (difference <= 0) {
+                    setTimeLeft("00:00:00");
+                    setIsFullyLocked(true);
+                    clearInterval(interval);
+                } else {
+                    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+                    setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                }
+            }, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [deal]);
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
@@ -118,18 +138,10 @@ export default function NegotiationRoomPage() {
             payload.status = "Negotiating";
         }
 
-        // 1. Update the Deal Status
         const { error } = await supabase.from("deal_negotiations").update(payload).eq("id", dealId);
 
         if (!error) {
             setDeal({ ...deal, ...payload });
-
-            // 2. Cascade Status to the active Bid Deck if the deal is accepted
-            if (newStatus === "Accepted" && deal.bid_deck_id) {
-                await supabase.from("investor_bid_decks").update({ status: "Closed" }).eq("id", deal.bid_deck_id);
-            }
-
-            // 3. Auto-post a system message to the chat noting the term sheet update
             const systemMessage = isCounterOffer
                 ? `has submitted a counter-offer for review.`
                 : `has updated the deal status to: ${newStatus}.`;
@@ -139,9 +151,30 @@ export default function NegotiationRoomPage() {
                 sender_id: session?.user.id,
                 content: `*System:* ${systemMessage}`
             });
+        }
+        setUpdating(false);
+    };
 
-        } else {
-            alert("Failed to update deal terms.");
+    const handleAcceptDeal = async () => {
+        setUpdating(true);
+        const now = new Date().toISOString();
+        const payload = { status: "Pending Finalization", accepted_at: now };
+
+        const { error } = await supabase.from("deal_negotiations").update(payload).eq("id", dealId);
+
+        if (!error) {
+            setDeal({ ...deal, ...payload });
+
+            // Auto-close public mandate
+            if (deal.bid_deck_id) {
+                await supabase.from("investor_bid_decks").update({ status: "Closed" }).eq("id", deal.bid_deck_id);
+            }
+
+            await supabase.from("deal_messages").insert({
+                deal_id: dealId,
+                sender_id: session?.user.id,
+                content: `*System:* has formally accepted the terms. The 24-hour grace period has begun.`
+            });
         }
         setUpdating(false);
     };
@@ -152,9 +185,8 @@ export default function NegotiationRoomPage() {
 
         setSendingMsg(true);
         const msgText = newMessage.trim();
-        setNewMessage(""); // Optimistic UI clear
+        setNewMessage("");
 
-        // Optimistically add to UI
         const tempMsg = {
             id: "temp-" + Date.now(),
             sender_id: session.user.id,
@@ -163,7 +195,6 @@ export default function NegotiationRoomPage() {
         };
         setMessages((prev) => [...prev, tempMsg]);
 
-        // Push to DB
         const { error } = await supabase.from("deal_messages").insert({
             deal_id: dealId,
             sender_id: session.user.id,
@@ -171,8 +202,6 @@ export default function NegotiationRoomPage() {
         });
 
         if (error) {
-            console.error("Failed to send message", error);
-            // Revert optimistic update on failure
             setMessages((prev) => prev.filter(m => m.id !== tempMsg.id));
             setNewMessage(msgText);
         }
@@ -199,7 +228,8 @@ export default function NegotiationRoomPage() {
     }
 
     const isFounder = session?.user.id === deal.startup_id;
-    const isReadOnly = deal.status === "Accepted" || deal.status === "Rejected";
+    const termsLocked = deal.status === "Pending Finalization" || deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
+    const chatLocked = deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
 
     return (
         <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
@@ -220,15 +250,22 @@ export default function NegotiationRoomPage() {
                         <p className="text-slate-400 text-sm mt-1">End-to-end encrypted negotiation thread.</p>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-black/40 border border-white/10 px-5 py-3 rounded-2xl">
-                        <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Deal Status:</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${deal.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                            deal.status === 'Rejected' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                                deal.status === 'Negotiating' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                    'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            }`}>
-                            {deal.status}
-                        </span>
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-3 bg-black/40 border border-white/10 px-5 py-3 rounded-2xl">
+                            <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Status:</span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${deal.status === 'Accepted' || isFullyLocked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                    deal.status === 'Pending Finalization' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                        deal.status === 'Rejected' || deal.status === 'Cancelled' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                }`}>
+                                {isFullyLocked ? "Finalized" : deal.status}
+                            </span>
+                        </div>
+                        {deal.status === "Pending Finalization" && !isFullyLocked && (
+                            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                                <Clock size={14} className="animate-pulse" /> Grace Period: {timeLeft}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -241,23 +278,22 @@ export default function NegotiationRoomPage() {
                                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                     <FileText size={18} className={isFounder ? "text-violet-400" : "text-cyan-400"} /> Live Term Sheet
                                 </h2>
-                                <Lock size={14} className="text-emerald-400" />
+                                {termsLocked ? <Lock size={14} className="text-rose-400" /> : <RefreshCw size={14} className="text-emerald-400" />}
                             </div>
 
                             <div className="space-y-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                        <DollarSign size={12} /> Investment Amount (Ticket)
+                                        <DollarSign size={12} /> Investment Amount
                                     </label>
                                     <input
                                         type="number"
                                         value={terms.ticket_size}
                                         onChange={(e) => setTerms({ ...terms, ticket_size: Number(e.target.value) })}
-                                        disabled={isReadOnly}
+                                        disabled={termsLocked}
                                         className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
                                     />
                                 </div>
-
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <Activity size={12} /> Pre-Money Valuation
@@ -266,11 +302,10 @@ export default function NegotiationRoomPage() {
                                         type="number"
                                         value={terms.valuation}
                                         onChange={(e) => setTerms({ ...terms, valuation: Number(e.target.value) })}
-                                        disabled={isReadOnly}
+                                        disabled={termsLocked}
                                         className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
                                     />
                                 </div>
-
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <PieChart size={12} /> Equity Stake (%)
@@ -279,14 +314,14 @@ export default function NegotiationRoomPage() {
                                         type="number"
                                         value={terms.equity}
                                         onChange={(e) => setTerms({ ...terms, equity: Number(e.target.value) })}
-                                        disabled={isReadOnly}
+                                        disabled={termsLocked}
                                         className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
                                     />
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            {!isReadOnly && (
+                            {/* Action Buttons: Negotiating Phase */}
+                            {!termsLocked && (
                                 <div className="mt-8 space-y-3 pt-6 border-t border-white/10">
                                     <button
                                         onClick={() => handleUpdateDeal("Negotiating", true)}
@@ -295,7 +330,6 @@ export default function NegotiationRoomPage() {
                                     >
                                         <RefreshCw size={14} className={updating ? "animate-spin" : ""} /> Submit Counter Offer
                                     </button>
-
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             onClick={() => handleUpdateDeal("Rejected")}
@@ -305,13 +339,30 @@ export default function NegotiationRoomPage() {
                                             <XCircle size={14} /> Reject
                                         </button>
                                         <button
-                                            onClick={() => handleUpdateDeal("Accepted")}
+                                            onClick={handleAcceptDeal}
                                             disabled={updating}
                                             className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 hover:scale-105 px-4 py-3 text-xs font-bold text-black transition shadow-lg shadow-emerald-500/20"
                                         >
-                                            <CheckCircle2 size={14} /> Accept Deal
+                                            <CheckCircle2 size={14} /> Accept Terms
                                         </button>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons: Pending Finalization (Grace Period) */}
+                            {deal.status === "Pending Finalization" && !isFullyLocked && (
+                                <div className="mt-8 space-y-4 pt-6 border-t border-amber-500/30">
+                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-2">
+                                        <h4 className="text-xs font-bold text-amber-400 flex items-center gap-1.5"><AlertTriangle size={14} /> Grace Period Active</h4>
+                                        <p className="text-[10px] text-amber-200/70">Terms are locked. You have {timeLeft} remaining to cancel the deal before it becomes permanently binding.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleUpdateDeal("Cancelled")}
+                                        disabled={updating}
+                                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 px-4 py-3 text-xs font-bold text-white transition shadow-lg shadow-rose-500/20"
+                                    >
+                                        <XCircle size={14} /> Cancel Deal
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -319,8 +370,6 @@ export default function NegotiationRoomPage() {
 
                     {/* RIGHT COLUMN: Context & Chat */}
                     <div className="lg:col-span-2 flex flex-col space-y-6">
-
-                        {/* Reference Documents */}
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-2">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
@@ -356,12 +405,10 @@ export default function NegotiationRoomPage() {
                                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                     <MessageSquare size={18} className="text-blue-400" /> Secure Discussion
                                 </h2>
+                                {chatLocked && <Lock size={14} className="text-rose-400" />}
                             </div>
 
-                            {/* Chat History Area */}
                             <div className="flex-grow bg-black/40 rounded-2xl border border-white/5 p-4 flex flex-col space-y-4 overflow-y-auto mb-4">
-
-                                {/* Genesis Timestamp */}
                                 <div className="flex justify-center mb-4">
                                     <span className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <Lock size={12} /> Deal Room Initiated • {new Date(deal.created_at).toLocaleDateString()}
@@ -371,7 +418,7 @@ export default function NegotiationRoomPage() {
                                 {messages.length === 0 ? (
                                     <div className="flex-grow flex flex-col items-center justify-center text-slate-500 space-y-2 opacity-50">
                                         <MessageSquare size={24} />
-                                        <p className="text-sm">No messages yet. Start the negotiation!</p>
+                                        <p className="text-sm">No messages yet. Discuss the terms here.</p>
                                     </div>
                                 ) : (
                                     messages.map((msg) => {
@@ -381,7 +428,7 @@ export default function NegotiationRoomPage() {
                                         if (isSystem) {
                                             return (
                                                 <div key={msg.id} className="flex justify-center py-2">
-                                                    <span className="text-xs italic text-slate-500 bg-white/[0.02] px-4 py-1 rounded-full border border-white/5">
+                                                    <span className="text-xs italic text-slate-500 bg-white/[0.02] px-4 py-1 rounded-full border border-white/5 text-center max-w-sm">
                                                         {msg.content.replace("*System:*", "")}
                                                     </span>
                                                 </div>
@@ -391,8 +438,8 @@ export default function NegotiationRoomPage() {
                                         return (
                                             <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-[75%] md:max-w-[60%] rounded-2xl px-5 py-3 text-sm shadow-md ${isMe
-                                                    ? 'bg-blue-600/90 text-white rounded-br-sm'
-                                                    : 'bg-white/10 text-slate-200 border border-white/5 rounded-bl-sm'
+                                                        ? 'bg-blue-600/90 text-white rounded-br-sm'
+                                                        : 'bg-white/10 text-slate-200 border border-white/5 rounded-bl-sm'
                                                     }`}>
                                                     {msg.content}
                                                     <div className={`text-[9px] mt-1 text-right ${isMe ? 'text-blue-200/70' : 'text-slate-500'}`}>
@@ -406,27 +453,24 @@ export default function NegotiationRoomPage() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Chat Input */}
                             <form onSubmit={handleSendMessage} className="relative flex items-center">
                                 <input
                                     type="text"
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
-                                    disabled={isReadOnly}
-                                    placeholder={isReadOnly ? "This deal has been closed." : "Type a message or discuss terms..."}
+                                    disabled={chatLocked}
+                                    placeholder={chatLocked ? "Deal finalized. Chat is locked." : "Type a message..."}
                                     className="w-full bg-slate-900/80 border border-white/10 focus:border-blue-500/50 rounded-2xl py-3.5 pl-5 pr-14 text-sm text-white placeholder-slate-500 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!newMessage.trim() || sendingMsg || isReadOnly}
+                                    disabled={!newMessage.trim() || sendingMsg || chatLocked}
                                     className="absolute right-2 p-2 bg-blue-500 hover:bg-blue-400 text-black rounded-xl transition disabled:opacity-50 disabled:bg-white/10 disabled:text-slate-500"
                                 >
                                     {sendingMsg ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                                 </button>
                             </form>
-
                         </div>
-
                     </div>
                 </div>
             </main>

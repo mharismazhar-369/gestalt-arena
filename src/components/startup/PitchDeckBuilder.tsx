@@ -53,6 +53,7 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
             traction: formData.traction,
             use_of_funds: formData.use_of_funds,
             deck_url: formData.deck_url,
+            target_bid_id: targetBidId || null, // FIX: Injects the linking ID
         };
 
         try {
@@ -100,7 +101,8 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
             router.refresh();
         } catch (err: any) {
             console.error("Submission Error:", err);
-            setError(err.message || "A database error occurred. Check the console for details.");
+            // Safe error property access
+            setError(err?.message || "A database error occurred. Check the console for details.");
         } finally {
             setLoading(false);
         }

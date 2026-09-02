@@ -10,7 +10,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
-import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings, MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText, ChevronDown, Eye, Folder, Radio } from "lucide-react";
+import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings, MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText, ChevronDown, Eye, Folder, Radio, MessageSquare, CheckCircle2, XCircle } from "lucide-react";
 import InvestorProfileBuilder from "@/components/investor/InvestorProfileBuilder";
 import PitchDeckViewer from "@/components/pitch/PitchDeckViewer";
 
@@ -26,19 +26,16 @@ export default async function InvestorDashboardPage() {
     redirect("/login");
   }
 
-  // Query real user profile from Supabase profiles table
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  // Redirect non-investors attempting to access this route
   if (profile?.role === "startup") {
     redirect("/startup/dashboard");
   }
 
-  // INTERCEPTOR: If profile is not completed, show the dedicated builder
   if (!profile?.profile_completed) {
     return (
       <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
@@ -56,7 +53,7 @@ export default async function InvestorDashboardPage() {
   const displayTier = profile?.tier || "freemium";
 
   // Fetch active bid decks AND their nested private deal negotiations
-  const { data: bidDecks } = await supabase
+  const { data: bidDecks, error: bidError } = await supabase
     .from("investor_bid_decks")
     .select(`
       *,
@@ -65,13 +62,17 @@ export default async function InvestorDashboardPage() {
         status,
         created_at,
         pitch_deck_id,
-        profiles:startup_id (company_name, nickname)
+        profiles!deal_negotiations_startup_id_fkey (company_name, nickname)
       )
     `)
     .eq("investor_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Fetch User's Live Feed Activity (from the 'posts' table)
+  if (bidError) {
+    console.error("Dashboard Fetch Error:", bidError);
+  }
+
+  // Fetch User's Live Feed Activity
   const { data: posts } = await supabase
     .from("posts")
     .select("id, content, created_at")
@@ -79,11 +80,9 @@ export default async function InvestorDashboardPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  // Calculate Metrics
   const totalMandates = bidDecks?.length || 0;
   const totalDeals = bidDecks?.reduce((acc, deck) => acc + (deck.deal_negotiations?.length || 0), 0) || 0;
 
-  // STANDARD DASHBOARD VIEW
   return (
     <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
       <Navbar />
@@ -224,7 +223,7 @@ export default async function InvestorDashboardPage() {
             {bidDecks && bidDecks.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
                 {bidDecks.map((deck) => (
-                  <div key={deck.id} className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4 shadow-xl">
+                  <div key={deck.id} className="rounded-2xl border border-white/10 bg-[#060a12] p-6 space-y-4 shadow-xl">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -244,12 +243,12 @@ export default async function InvestorDashboardPage() {
                         href={`/bids/${deck.id}`}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-cyan-300 border border-cyan-500/20 transition"
                       >
-                        <Eye size={14} /> View
+                        <Eye size={14} /> Public View
                       </Link>
                       <DeleteResourceButton table="investor_bid_decks" recordId={deck.id} itemName="Mandate" />
                     </div>
 
-                    {/* Render Private Negotiations Pipeline with Collapsible Viewer */}
+                    {/* Private Negotiations Pipeline with Live Chat Routing */}
                     <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                         Private Deal Threads
@@ -262,18 +261,20 @@ export default async function InvestorDashboardPage() {
                             const startupProfile = Array.isArray(deal.profiles) ? deal.profiles[0] : deal.profiles;
                             const startupName = startupProfile?.company_name || startupProfile?.nickname || "Startup";
                             return (
-                              <details key={deal.id} className="group bg-black/40 rounded-xl border border-white/5 overflow-hidden transition-all duration-300">
+                              <details key={deal.id} className="group bg-black/60 rounded-xl border border-cyan-500/20 overflow-hidden transition-all duration-300">
                                 <summary className="flex items-center justify-between p-3 cursor-pointer list-none hover:bg-white/5 transition-colors [&::-webkit-details-marker]:hidden">
                                   <div className="flex flex-col gap-1">
                                     <span className="text-sm font-bold text-white line-clamp-1 flex items-center gap-2">
                                       <ChevronDown size={14} className="text-slate-500 group-open:-rotate-180 transition-transform" />
                                       {startupName}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 ml-5">Status: {deal.status}</span>
+                                    <span className="text-[10px] font-bold text-amber-400 ml-5 flex items-center gap-1">
+                                      Status: {deal.status}
+                                    </span>
                                   </div>
                                   <div className="flex gap-2 shrink-0">
                                     <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-md group-open:hidden">
-                                      Expand Thread
+                                      Review Pitch
                                     </span>
                                     <span className="text-[10px] font-bold text-slate-400 bg-white/10 border border-white/10 px-3 py-1 rounded-md hidden group-open:block">
                                       Close
@@ -289,9 +290,16 @@ export default async function InvestorDashboardPage() {
                                   }>
                                     <PitchDeckViewer pitchId={deal.pitch_deck_id} />
                                   </Suspense>
-                                  {/* Negotiation Interface Hook (Phase 2) */}
-                                  <div className="mt-4 p-4 border border-violet-500/30 bg-violet-500/5 rounded-xl text-center">
-                                    <p className="text-xs text-violet-300 font-bold">Deal thread active. Negotiation interface launching soon.</p>
+
+                                  {/* Replaced Phase 2 placeholder with Actual Live Routing */}
+                                  <div className="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <span className="text-xs text-cyan-300 font-bold">Deal thread active.</span>
+                                    <Link
+                                      href={`/negotiations/${deal.id}`}
+                                      className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-black bg-cyan-500 hover:bg-cyan-400 hover:scale-105 rounded-xl transition shadow-lg shadow-cyan-500/20 w-full sm:w-auto"
+                                    >
+                                      <CheckCircle2 size={14} /> Enter Deal Room
+                                    </Link>
                                   </div>
                                 </div>
                               </details>

@@ -16,38 +16,56 @@ export default function BrowseStartupsPage() {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("All");
   const [selectedStage, setSelectedStage] = useState<string>("All");
 
-  const industries = ["All", "Artificial Intelligence", "B2B SaaS", "Fintech", "HealthTech", "Web3", "CleanTech", "Technology"];
+  const industries = ["All", "SaaS", "FinTech", "HealthTech", "AI/ML", "Web3", "E-commerce", "DeepTech", "Technology"];
   const stages = ["All", "Idea Stage", "Pre-Seed", "Seed", "Series A"];
 
-  // Fetch live pitch decks from Supabase
+  // Fetch live profiles instead of pitch decks
+  // Fetch live profiles and check for existing pitch decks
   useEffect(() => {
-    async function fetchPitches() {
+    async function fetchProfiles() {
+      // Query profiles and join both extended startup_profiles AND pitch_decks
       const { data, error } = await supabase
-        .from("pitch_decks")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from("profiles")
+        .select(`
+          *,
+          startup_profiles (*),
+          pitch_decks (id)
+        `)
+        .eq("role", "startup");
 
       if (data && !error) {
-        const liveStartups: Startup[] = data.map((pitch) => ({
-          id: pitch.id, // FIX: Crucially maps to the pitch.id, not the user_id
-          name: pitch.company_name || "Undisclosed Startup",
-          tagline: pitch.title || "Pitch Deck",
-          industry: "Technology", // Fallback category
-          stage: pitch.stage || "Seed",
-          requiredFunding: pitch.funding_goal || "TBD",
-          valuation: pitch.valuation || "TBD",
-          location: "Global Network",
-          teamSize: 1,
-          pitchSummary: pitch.elevator_pitch || "",
-          tags: ["Live Pitch"],
-          verified: true,
-          tier: (pitch.tier_required as "freemium" | "gold" | "platinum") || "freemium",
-        }));
+        const liveStartups: Startup[] = data.map((profile) => {
+          const startupData = Array.isArray(profile.startup_profiles)
+            ? profile.startup_profiles[0]
+            : profile.startup_profiles;
+
+          // Check if they have at least one active pitch deck
+          const activePitchDeck = Array.isArray(profile.pitch_decks) && profile.pitch_decks.length > 0
+            ? profile.pitch_decks[0].id
+            : null;
+
+          return {
+            id: profile.id, // Maps to the founder's user UUID for the Profile redirect
+            name: profile.company_name || profile.nickname || "Undisclosed Startup",
+            tagline: profile.services_offering ? `${profile.services_offering} Company` : "Startup Profile",
+            industry: profile.industry || startupData?.industry || "Technology",
+            stage: "Early Stage",
+            requiredFunding: profile.funding_goal || "Flexible",
+            valuation: "TBD",
+            location: profile.city ? `${profile.city}, ${profile.country || ""}` : "Global Network",
+            teamSize: startupData?.company_size || "1-10",
+            pitchSummary: profile.bio || profile.elevator_pitch || "No summary provided.",
+            tags: [profile.industry, startupData?.target_exit].filter(Boolean) as string[],
+            verified: profile.profile_completed || false,
+            tier: (profile.tier as "freemium" | "gold" | "platinum") || "freemium",
+            pitchDeckId: activePitchDeck, // Passes the ID to conditionally render the pitch button
+          };
+        });
         setStartups(liveStartups);
       }
       setLoading(false);
     }
-    fetchPitches();
+    fetchProfiles();
   }, []);
 
   // UI Filtering using dynamic state
@@ -92,7 +110,7 @@ export default function BrowseStartupsPage() {
           </div>
 
           <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-            Window-shop high-growth startup pitch cards, funding asks, and valuation metrics. Connect directly with founders when you are ready to invest.
+            Window-shop high-growth startup profiles, funding asks, and valuation metrics. Connect directly with founders when you are ready to invest.
           </p>
         </div>
 
@@ -179,7 +197,7 @@ export default function BrowseStartupsPage() {
             {/* Results Counter */}
             <div className="flex items-center justify-between text-xs text-slate-400 px-1">
               <span>Showing <strong>{filteredStartups.length}</strong> startup cards</span>
-              <span>Sorted by Valuation</span>
+              <span>Sorted by Most Recent</span>
             </div>
 
             {/* Cards Grid */}

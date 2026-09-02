@@ -1,141 +1,79 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Rocket, MapPin, Users, TrendingUp, ShieldCheck, ArrowUpRight, Target, Presentation } from "lucide-react";
+import { MapPin, Users, CheckCircle2, FileText, User } from "lucide-react";
 
 export interface Startup {
-  id?: string;
-  name?: string;
-  tagline?: string;
-  industry?: string;
-  stage?: string;
-  requiredFunding?: string;
-  valuation?: string;
-  location?: string;
-  teamSize?: number;
-  pitchSummary?: string;
-  tags?: string[];
-  verified?: boolean;
-  tier?: "freemium" | "gold" | "platinum";
+  id: string; // The User UUID
+  name: string;
+  tagline: string;
+  industry: string;
+  stage: string;
+  requiredFunding: string | number;
+  valuation: string | number;
+  location: string;
+  teamSize: string | number;
+  pitchSummary: string;
+  tags: string[];
+  verified: boolean;
+  tier: "freemium" | "gold" | "platinum";
+  pitchDeckId?: string | null; // Used to conditionally render the pitch button
 }
 
-interface StartupProfileCardProps {
-  startup?: Startup;
-}
-
-export default function StartupProfileCard({ startup }: StartupProfileCardProps) {
-  // If no startup prop is passed, render a sleek structural layout placeholder
-  const startupId = startup?.id || "demo-id";
-  const name = startup?.name || "DeepTech AI Platform";
-  const tagline = startup?.tagline || "Autonomous agent architecture for enterprise workflows";
-  const industry = startup?.industry || "Artificial Intelligence";
-  const stage = startup?.stage || "Seed Stage";
-  const requiredFunding = startup?.requiredFunding || "$150,000";
-  const valuation = startup?.valuation || "$2.5M Valuation";
-  const location = startup?.location || "San Francisco, CA";
-  const teamSize = startup?.teamSize ?? 5;
-  const pitchSummary = startup?.pitchSummary || "Building next-generation agent orchestration SDKs that automate complex multi-phase cloud infrastructure and business analytics.";
-  const tags = startup?.tags || ["GenAI", "Autonomous Agents", "Cloud Architecture"];
-  const isVerified = startup?.verified ?? true;
-  const tier = startup?.tier || "gold";
-
-  const tierColors = {
-    freemium: "text-slate-400 border-slate-500/30 bg-slate-500/10",
-    gold: "text-amber-400 border-amber-500/40 bg-amber-500/10",
-    platinum: "text-violet-400 border-violet-500/50 bg-violet-500/10",
-  };
-
+export default function StartupProfileCard({ startup }: { startup: Startup }) {
   return (
-    <motion.div
-      whileHover={{ y: -6, scale: 1.01 }}
-      transition={{ duration: 0.3 }}
-      className="group relative rounded-3xl trionn-glass-card border border-white/10 p-6 flex flex-col justify-between overflow-hidden shadow-xl"
-    >
-      {/* Ambient Gradient Blur */}
-      <div className="absolute -left-20 -top-20 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl group-hover:bg-violet-500/25 transition duration-500 pointer-events-none" />
-
-      <div>
-        {/* Header Tags */}
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-300 flex items-center gap-1.5">
-              <Rocket size={13} /> {industry}
+    <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-4 hover:border-violet-500/40 transition flex flex-col h-full shadow-lg bg-black/40">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-violet-500/20 text-violet-300 border border-violet-500/30">
+              {startup.industry}
             </span>
-            {isVerified && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                <ShieldCheck size={12} /> Verified Deck
+            {startup.verified && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                <CheckCircle2 size={12} /> Verified
               </span>
             )}
           </div>
-
-          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold capitalize ${tierColors[tier]}`}>
-            {tier} Tier
-          </span>
+          <h3 className="font-bold text-white text-lg line-clamp-1">{startup.name}</h3>
+          <p className="text-xs text-cyan-400 font-medium line-clamp-1">{startup.tagline}</p>
         </div>
-
-        {/* Startup Name & Tagline */}
-        <h3 className="text-xl font-bold text-white group-hover:text-violet-300 transition flex items-center justify-between">
-          <span>{name}</span>
-          <ArrowUpRight size={18} className="text-slate-500 group-hover:text-violet-400 transition transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </h3>
-
-        <p className="mt-1 text-xs font-semibold text-cyan-400 line-clamp-1">
-          {tagline}
-        </p>
-
-        <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
-          <span className="flex items-center gap-1">
-            <MapPin size={13} className="text-cyan-400" /> {location}
+        <div className="text-right shrink-0">
+          <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 block mb-1">
+            Ask: {typeof startup.requiredFunding === "number" ? `$${startup.requiredFunding.toLocaleString()}` : startup.requiredFunding}
           </span>
-          <span className="text-slate-600">•</span>
-          <span className="flex items-center gap-1">
-            <Users size={13} className="text-violet-400" /> {teamSize} Members
-          </span>
-          <span className="text-slate-600">•</span>
-          <span className="text-slate-300 font-bold">{stage}</span>
-        </div>
-
-        {/* Pitch Summary */}
-        <p className="mt-4 text-xs leading-relaxed text-slate-300 line-clamp-3">
-          {pitchSummary}
-        </p>
-
-        {/* Tags */}
-        <div className="mt-4 flex flex-wrap gap-1.5 pt-2">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 transition group-hover:border-violet-400/30 group-hover:bg-violet-400/5 group-hover:text-violet-200"
-            >
-              {tag}
-            </span>
-          ))}
         </div>
       </div>
 
-      {/* Footer Ask & Valuation */}
-      <div className="mt-6 border-t border-white/10 pt-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-              Target Raise Ask
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-black text-cyan-300">{requiredFunding}</span>
-              <span className="text-[10px] text-slate-400">({valuation})</span>
-            </div>
-          </div>
-        </div>
+      <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed flex-grow">
+        {startup.pitchSummary}
+      </p>
 
+      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10">
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">
+          <MapPin size={12} className="text-violet-400 shrink-0" /> {startup.location}
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">
+          <Users size={12} className="text-cyan-400 shrink-0" /> {startup.teamSize} Employees
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-white/10 mt-auto">
         <Link
-          href={`/startup/${startupId}/pitch`}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500 p-3 text-xs font-bold text-white transition hover:bg-violet-600 shadow-lg shadow-violet-500/20"
+          href={`/profile/${startup.id}`}
+          className="flex-1 flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white border border-white/10 transition"
         >
-          <Presentation size={16} />
-          View Pitch Deck
+          <User size={14} /> View Profile
         </Link>
+
+        {startup.pitchDeckId && (
+          <Link
+            href={`/startup/${startup.pitchDeckId}/pitch`}
+            className="flex-1 flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 text-xs font-bold text-violet-300 border border-violet-500/30 transition"
+          >
+            <FileText size={14} /> View Pitch Deck
+          </Link>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 }

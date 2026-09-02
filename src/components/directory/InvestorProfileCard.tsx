@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle, MapPin, Briefcase, ExternalLink, ShieldCheck } from "lucide-react";
+import { CheckCircle, MapPin, Briefcase, ExternalLink, ShieldCheck, User } from "lucide-react";
 
 export interface Investor {
   id: string;
@@ -17,7 +17,7 @@ export interface Investor {
 
 export default function InvestorProfileCard({ investor }: { investor: Investor }) {
   return (
-    <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-cyan-400/50 transition group flex flex-col justify-between h-full relative overflow-hidden">
+    <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-cyan-400/50 transition group flex flex-col justify-between h-full relative overflow-hidden bg-black/40">
 
       {/* Top Header Row - Tags and Tier */}
       <div className="flex justify-between items-start relative z-10">
@@ -74,17 +74,16 @@ export default function InvestorProfileCard({ investor }: { investor: Investor }
       <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-4 relative z-10">
         <div className="space-y-1">
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Ticket Size Range</span>
-          <div className="flex items-baseline gap-1">
-            <span className="text-cyan-400 font-black">$</span>
-            <span className="text-sm font-black text-white">{investor.investmentRange.replace(/[^0-9.-]+/g, "")}</span>
+          <div className="flex items-baseline gap-1 text-cyan-400 font-black text-sm">
+            {investor.investmentRange}
           </div>
         </div>
 
         <Link
           href={`/profile/${investor.id}`}
-          className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 transition hover:bg-cyan-400 hover:text-black shadow-lg shadow-cyan-500/10"
+          className="flex justify-center items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/10 shadow-lg"
         >
-          Connect Profile
+          <User size={14} /> View Profile
         </Link>
       </div>
     </div>

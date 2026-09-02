@@ -5,10 +5,11 @@ import LogoutButton from "@/components/auth/LogoutButton";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
+import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
 import {
   Rocket, Compass, BookOpen, ShieldCheck, User, Sparkles,
-  Folder, FileText, Activity, MessageSquare, Radio, Presentation,
-  Settings, MapPin, DollarSign, Building2, Briefcase
+  Folder, FileText, Radio, Presentation, Settings, MapPin,
+  DollarSign, Building2, Briefcase, Plus, Eye, Edit3
 } from "lucide-react";
 import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
 
@@ -47,7 +48,7 @@ export default async function StartupDashboardPage() {
     );
   }
 
-  // 2. Fetch Extended Startup Details & Metrics based on actual DB schema
+  // 2. Fetch Extended Startup Details & Metrics
   const { data: startupProfile } = await supabase
     .from("startup_profiles")
     .select("*")
@@ -59,12 +60,14 @@ export default async function StartupDashboardPage() {
     .select("*", { count: "exact", head: true })
     .eq("startup_id", user.id);
 
-  const { count: pitchDecksCount } = await supabase
+  // Fetch full pitch decks array for management
+  const { data: pitchDecks } = await supabase
     .from("pitch_decks")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
-  // 3. Fetch User's Live Feed Activity (from the 'posts' table)
+  // 3. Fetch User's Live Feed Activity
   const { data: posts } = await supabase
     .from("posts")
     .select("id, content, created_at")
@@ -75,7 +78,7 @@ export default async function StartupDashboardPage() {
   const displayName = profile?.nickname || profile?.company_name || startupProfile?.company_name || user.email?.split("@")[0] || "Founder Partner";
   const displayLocation = profile?.city ? `${profile.city}, ${profile.state || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
-  const targetRaise = profile?.funding_goal || "Flexible";
+  const targetRaise = profile?.funding_goal ? `$${profile.funding_goal.toLocaleString()}` : "Flexible";
   const primarySector = profile?.industries_of_interest?.[0] || startupProfile?.industry || "Technology";
 
   return (
@@ -192,31 +195,87 @@ export default async function StartupDashboardPage() {
           </Link>
         </div>
 
-        {/* Dedicated Pitch Deck Link */}
-        <div className="trionn-glass-card rounded-3xl border border-violet-500/50 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-violet-500/20 text-violet-400">
-              <Presentation size={28} />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Deal Flow & Pitch Deck</h3>
-              <p className="text-xs text-slate-400">Manage how investors view and bid on your profile</p>
-            </div>
+        {/* Pitch Deck Portfolio Management Section */}
+        <div className="trionn-glass-card rounded-3xl border border-violet-500/30 p-8 shadow-2xl relative overflow-hidden mt-8">
+          <div className="absolute top-0 right-0 p-6 text-violet-500/5 pointer-events-none">
+            <Presentation size={120} />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-4 relative z-10 gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Presentation size={20} className="text-violet-400" /> Deal Flow & Pitch Decks
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">Manage your active pitch cards, preview live decks, and update fundraising metrics.</p>
+            </div>
+
             <Link
               href="/startup/pitch/build"
-              className="flex-1 text-center rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-bold text-violet-300 transition hover:bg-violet-500 hover:text-white"
+              className="flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:scale-105 hover:bg-violet-600 transition shrink-0"
             >
-              Edit Deck
+              <Plus size={16} /> Create Pitch Deck
             </Link>
-            <Link
-              href={`/profile/${user.id}`}
-              className="flex-1 text-center rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-violet-600"
-            >
-              View Public Profile
-            </Link>
+          </div>
+
+          <div className="pt-6 relative z-10">
+            {pitchDecks && pitchDecks.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {pitchDecks.map((deck) => (
+                  <div key={deck.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4 shadow-lg hover:border-violet-500/40 transition">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                          {deck.stage || "Pre-Seed"}
+                        </span>
+                        <h3 className="font-bold text-white text-lg mt-2">{deck.title || "Untitled Pitch"}</h3>
+                      </div>
+                      <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                        ${deck.funding_goal ? deck.funding_goal.toLocaleString() : "Flexible"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                      {deck.elevator_pitch || deck.description || "No elevator pitch provided."}
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/startup/${deck.id}/pitch`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-cyan-300 border border-cyan-500/20 transition"
+                        >
+                          <Eye size={14} /> View
+                        </Link>
+                        <Link
+                          href={`/startup/pitch/build?pitch_id=${deck.id}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-violet-300 border border-violet-500/20 transition"
+                        >
+                          <Edit3 size={14} /> Edit
+                        </Link>
+                      </div>
+
+                      <DeleteResourceButton table="pitch_decks" recordId={deck.id} itemName="Pitch" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center space-y-3">
+                <Presentation size={36} className="text-slate-500" />
+                <div>
+                  <p className="text-sm font-bold text-slate-300">No Pitch Decks Created Yet</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    Create your master pitch deck to showcase your valuation, raise target, and traction metrics to investors.
+                  </p>
+                </div>
+                <Link
+                  href="/startup/pitch/build"
+                  className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-violet-600 transition"
+                >
+                  <Plus size={16} /> Create Your First Deck
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
@@ -238,7 +297,7 @@ export default async function StartupDashboardPage() {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pitch Decks Created</p>
-              <h4 className="text-3xl font-black text-white">{pitchDecksCount || 0}</h4>
+              <h4 className="text-3xl font-black text-white">{pitchDecks?.length || 0}</h4>
             </div>
           </div>
         </div>

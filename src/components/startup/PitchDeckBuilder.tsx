@@ -3,130 +3,168 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Rocket, Save } from "lucide-react";
+import { Save, Loader2, AlertCircle, Target } from "lucide-react";
 
-export default function PitchDeckBuilder({ existingDeck, userId }: { existingDeck?: any, userId: string }) {
+interface PitchDeckBuilderProps {
+    existingDeck?: any;
+    userId: string;
+    targetBidId?: string;
+}
+
+export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: PitchDeckBuilderProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState<string | null>(null);
 
+    // Form State
     const [formData, setFormData] = useState({
         title: existingDeck?.title || "",
-        company_name: existingDeck?.company_name || "",
+        stage: existingDeck?.stage || "Pre-Seed",
         elevator_pitch: existingDeck?.elevator_pitch || "",
-        stage: existingDeck?.stage || "",
         funding_goal: existingDeck?.funding_goal || "",
         min_ticket: existingDeck?.min_ticket || "",
         valuation: existingDeck?.valuation || "",
+        equity_offered: existingDeck?.equity_offered || "",
         traction: existingDeck?.traction || "",
+        use_of_funds: existingDeck?.use_of_funds || "",
         deck_url: existingDeck?.deck_url || "",
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    async function handleSubmit(e: React.FormEvent) {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError("");
+        setError(null);
 
-        if (existingDeck?.id) {
-            // Update existing pitch deck
-            const { error: updateError } = await supabase
-                .from("pitch_decks")
-                .update(formData)
-                .eq("id", existingDeck.id)
-                .eq("user_id", userId);
+        let currentPitchId = existingDeck?.id;
 
-            if (updateError) setError(updateError.message);
-        } else {
-            // Create new pitch deck
-            const { error: insertError } = await supabase
-                .from("pitch_decks")
-                .insert([{ ...formData, user_id: userId }]);
+        const payload = {
+            user_id: userId,
+            title: formData.title,
+            stage: formData.stage,
+            elevator_pitch: formData.elevator_pitch,
+            funding_goal: Number(formData.funding_goal) || 0,
+            min_ticket: Number(formData.min_ticket) || 0,
+            valuation: Number(formData.valuation) || 0,
+            equity_offered: Number(formData.equity_offered) || 0,
+            traction: formData.traction,
+            use_of_funds: formData.use_of_funds,
+            deck_url: formData.deck_url,
+        };
 
-            if (insertError) setError(insertError.message);
-        }
+        try {
+            // 1. Save or Update the Pitch Deck
+            if (currentPitchId) {
+                const { error: updateError } = await supabase.from("pitch_decks").update(payload).eq("id", currentPitchId);
+                if (updateError) throw updateError;
+            } else {
+                const { data: newDeck, error: insertError } = await supabase.from("pitch_decks").insert(payload).select().single();
+                if (insertError) throw insertError;
+                currentPitchId = newDeck.id;
+            }
 
-        setLoading(false);
+            // 2. INTERCEPTOR: If targetBidId exists, initiate the Deal Thread instantly
+            if (targetBidId && currentPitchId) {
+                const { data: bidData, error: bidError } = await supabase.from("investor_bid_decks").select("investor_id").eq("id", targetBidId).single();
+                if (bidError) throw bidError;
 
-        if (!error) {
-            // Route back to the showcase view to see the final result
-            router.push(`/startup/${userId}/pitch`);
+                if (bidData) {
+                    const { error: dealError } = await supabase.from("deal_negotiations").insert({
+                        startup_id: userId,
+                        investor_id: bidData.investor_id,
+                        pitch_deck_id: currentPitchId,
+                        bid_deck_id: targetBidId,
+                        status: "Pending",
+                        proposed_valuation: payload.valuation,
+                        proposed_equity: payload.equity_offered,
+                        ticket_size: payload.funding_goal,
+                        ai_action_suggestions: ["Review Pitch", "Schedule Meeting", "Reject"],
+                    });
+
+                    if (dealError) throw dealError;
+
+                    await supabase.from("notifications").insert({
+                        user_id: bidData.investor_id,
+                        actor_id: userId,
+                        type: "deal_initiated",
+                        message: "submitted a tailored pitch deck to your mandate.",
+                        reference_id: targetBidId,
+                    });
+                }
+            }
+
+            router.push("/startup/dashboard");
             router.refresh();
+        } catch (err: any) {
+            console.error("Submission Error:", err);
+            setError(err.message || "A database error occurred. Check the console for details.");
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
     return (
-        <div className="trionn-glass-card rounded-3xl border border-violet-500/30 bg-[#0a0a0a]/90 p-8 md:p-10 shadow-2xl">
-            <div className="mb-8 flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-violet-500/20 text-violet-400">
-                    <Rocket size={28} />
+        <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 shadow-xl">
+            {targetBidId && (
+                <div className="mb-8 flex items-center gap-3 bg-cyan-500/10 border border-cyan-500/30 p-4 rounded-2xl">
+                    <Target className="text-cyan-400" size={24} />
+                    <div>
+                        <h3 className="text-sm font-bold text-cyan-300">Targeted Mandate Application</h3>
+                        <p className="text-xs text-slate-400">Saving this pitch will instantly submit it and open a private deal negotiation thread.</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-3xl font-black text-white">
-                        {existingDeck ? "Edit Pitch Deck" : "Create Pitch Deck"}
-                    </h2>
-                    <p className="text-zinc-400 mt-1">
-                        Publish your deal to the Investor Bidding Engine.
-                    </p>
-                </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                    <div className="flex items-center gap-2 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-3">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span className="break-all">{error}</span>
+                    </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Project / Deal Title *</label>
-                        <input required name="title" value={formData.title} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="e.g., AI Deal Flow Automation" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pitch Title</label>
+                        <input required type="text" name="title" value={formData.title} onChange={handleChange} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition" />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Company Name *</label>
-                        <input required name="company_name" value={formData.company_name} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Startup Stage</label>
+                        <select name="stage" value={formData.stage} onChange={handleChange} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition">
+                            <option>Idea</option>
+                            <option>Pre-Seed</option>
+                            <option>Seed</option>
+                            <option>Series A</option>
+                        </select>
                     </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">Elevator Pitch *</label>
-                    <textarea required name="elevator_pitch" value={formData.elevator_pitch} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none min-h-[80px]" placeholder="1-2 sentences describing the core value proposition..." />
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Stage</label>
-                        <input name="stage" value={formData.stage} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="e.g., Seed" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Raise ($)</label>
+                        <input required type="number" name="funding_goal" value={formData.funding_goal} onChange={handleChange} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition" />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Target Raise ($)</label>
-                        <input name="funding_goal" value={formData.funding_goal} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="$500,000" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valuation ($)</label>
+                        <input type="number" name="valuation" value={formData.valuation} onChange={handleChange} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition" />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Valuation</label>
-                        <input name="valuation" value={formData.valuation} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="$4M Post-money" />
-                    </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Traction Summary</label>
-                        <input name="traction" value={formData.traction} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="$10k MRR, 1000 Users" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-zinc-300">Minimum Ticket Size</label>
-                        <input name="min_ticket" value={formData.min_ticket} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="$25,000" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Equity Offered (%)</label>
+                        <input type="number" name="equity_offered" value={formData.equity_offered} onChange={handleChange} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition" />
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">External Pitch Deck URL (PDF/Drive)</label>
-                    <input name="deck_url" type="url" value={formData.deck_url} onChange={handleChange} className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:border-violet-400 outline-none" placeholder="https://..." />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Elevator Pitch</label>
+                    <textarea required name="elevator_pitch" value={formData.elevator_pitch} onChange={handleChange} rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-cyan-400 focus:outline-none transition"></textarea>
                 </div>
 
-                {error && <p className="text-sm text-red-400 font-bold">{error}</p>}
-
-                <button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 rounded-xl bg-violet-500 p-4 font-bold text-white transition hover:bg-violet-600 disabled:opacity-60">
-                    <Save size={20} />
-                    {loading ? "Publishing to Network..." : (existingDeck ? "Update Pitch Deck" : "Publish to Bidding Engine")}
+                <button disabled={loading} type="submit" className="flex items-center justify-center gap-2 w-full rounded-xl bg-cyan-500 px-6 py-4 text-sm font-black text-black shadow-lg hover:bg-cyan-400 transition disabled:opacity-50">
+                    {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    {targetBidId ? "Save Pitch & Submit Application" : "Save Pitch Deck"}
                 </button>
             </form>
         </div>

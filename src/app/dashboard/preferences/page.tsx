@@ -7,7 +7,8 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import {
   Save, AlertCircle, User, Globe, Target, DollarSign,
-  Briefcase, Activity, MapPin, Link as LinkIcon, Loader2, Rocket
+  Briefcase, Activity, MapPin, Link as LinkIcon, Loader2, Rocket,
+  Building, Hash
 } from "lucide-react";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 
@@ -17,17 +18,29 @@ export default function GlobalPreferencesPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
 
+  // Expanded Global Profile State
   const [profile, setProfile] = useState({
     role: "investor",
     nickname: "",
     bio: "",
+    gender: "",
+    dob: "",
+    company_name: "",
+    ownership_type: "solo",
+    services_offering: "products",
+    industry: "",
+    interested_in: "founders",
+    interested_market: "global",
     city: "",
+    state: "",
     country: "",
     timezone: "UTC",
     visibility: "public",
     linkedin_url: "",
+    website_url: "",
   });
 
+  // Expanded Investor Preferences
   const [investorPrefs, setInvestorPrefs] = useState({
     min_ticket: 50000,
     max_ticket: 500000,
@@ -39,15 +52,21 @@ export default function GlobalPreferencesPage() {
     risk_tolerance: "balanced",
     board_involvement: "observer",
     deal_velocity: "3-5",
+    target_company_size: "1-10",
+    target_operational_locations: "",
   });
 
+  // Expanded Startup Preferences
   const [startupPrefs, setStartupPrefs] = useState({
     current_arr: 0,
     monthly_burn: 0,
+    operational_costs: 0,
     runway_months: 12,
     technical_moat: "",
     target_exit: "acquisition",
     industry: "",
+    company_size: "1-10",
+    operational_locations: "",
   });
 
   useEffect(() => {
@@ -56,7 +75,7 @@ export default function GlobalPreferencesPage() {
     const fetchSettings = async () => {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("role, nickname, bio, city, country, timezone, visibility, linkedin_url")
+        .select("*")
         .eq("id", session.user.id)
         .single();
 
@@ -65,11 +84,21 @@ export default function GlobalPreferencesPage() {
           role: profileData.role || "investor",
           nickname: profileData.nickname || "",
           bio: profileData.bio || "",
+          gender: profileData.gender || "",
+          dob: profileData.dob || "",
+          company_name: profileData.company_name || "",
+          ownership_type: profileData.ownership_type || "solo",
+          services_offering: profileData.services_offering || "products",
+          industry: profileData.industry || "",
+          interested_in: profileData.interested_in || "founders",
+          interested_market: profileData.interested_market || "global",
           city: profileData.city || "",
+          state: profileData.state || "",
           country: profileData.country || "",
           timezone: profileData.timezone || "UTC",
           visibility: profileData.visibility || "public",
           linkedin_url: profileData.linkedin_url || "",
+          website_url: profileData.website_url || "",
         });
 
         if (profileData.role === "investor") {
@@ -81,16 +110,8 @@ export default function GlobalPreferencesPage() {
 
           if (prefData) {
             setInvestorPrefs({
-              min_ticket: prefData.min_ticket || 50000,
-              max_ticket: prefData.max_ticket || 500000,
-              preferred_stages: prefData.preferred_stages || [],
-              industries: prefData.industries || [],
-              geographies: prefData.geographies || [],
-              lead_investment: prefData.lead_investment || false,
-              follow_on: prefData.follow_on || false,
-              risk_tolerance: prefData.risk_tolerance || "balanced",
-              board_involvement: prefData.board_involvement || "observer",
-              deal_velocity: prefData.deal_velocity || "3-5",
+              ...investorPrefs,
+              ...prefData,
             });
           }
         } else {
@@ -102,12 +123,8 @@ export default function GlobalPreferencesPage() {
 
           if (startupData) {
             setStartupPrefs({
-              current_arr: startupData.current_arr || 0,
-              monthly_burn: startupData.monthly_burn || 0,
-              runway_months: startupData.runway_months || 12,
-              technical_moat: startupData.technical_moat || "",
-              target_exit: startupData.target_exit || "acquisition",
-              industry: startupData.industry || "",
+              ...startupPrefs,
+              ...startupData,
             });
           }
         }
@@ -185,8 +202,7 @@ export default function GlobalPreferencesPage() {
         </div>
 
         {message && (
-          <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border shadow-xl ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-rose-500/10 border-rose-500/30 text-rose-400"
-            }`}>
+          <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border shadow-xl ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-rose-500/10 border-rose-500/30 text-rose-400"}`}>
             <AlertCircle size={18} /> {message.text}
           </div>
         )}
@@ -203,11 +219,22 @@ export default function GlobalPreferencesPage() {
               <User size={18} className={`text-${themeColor}-400`} /> Identity & Public Profile
             </h2>
 
-            <div className="grid md:grid-cols-2 gap-6 relative z-10">
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  {isStartup ? "Company Name / Founder Alias" : "Display Name"}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              {/* Core Identifiers */}
+              <div className="space-y-2 lg:col-span-3 bg-black/20 p-4 rounded-xl border border-white/5">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block flex items-center gap-1">
+                  <Hash size={12} /> System User ID (Read-Only)
                 </label>
+                <input
+                  type="text"
+                  value={session?.user?.id || ""}
+                  disabled
+                  className="w-full px-4 py-2 rounded-lg bg-black/40 text-xs text-slate-500 font-mono cursor-not-allowed border border-white/5"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Display / Alias Name</label>
                 <input
                   type="text"
                   value={profile.nickname}
@@ -218,18 +245,162 @@ export default function GlobalPreferencesPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Profile Visibility</label>
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Gender</label>
                 <select
-                  value={profile.visibility}
-                  onChange={e => setProfile({ ...profile, visibility: e.target.value })}
+                  value={profile.gender}
+                  onChange={e => setProfile({ ...profile, gender: e.target.value })}
                   className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
                 >
-                  <option value="public">Public (Visible in Directory & Feed)</option>
-                  <option value="private">Private (Stealth Mode / Direct Link Only)</option>
+                  <option value="">Select...</option>
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                  <option value="O">Prefer not to say</option>
                 </select>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Date of Birth (Age Verification)</label>
+                <input
+                  type="date"
+                  value={profile.dob}
+                  onChange={e => setProfile({ ...profile, dob: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition [&::-webkit-calendar-picker-indicator]:invert`}
+                />
+              </div>
+
+              {/* Company & Services */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Company Name</label>
+                <input
+                  type="text"
+                  value={profile.company_name}
+                  onChange={e => setProfile({ ...profile, company_name: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                  placeholder="Legal Entity Name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Ownership / Role Type</label>
+                <select
+                  value={profile.ownership_type}
+                  onChange={e => setProfile({ ...profile, ownership_type: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="solo">Solo Founder</option>
+                  <option value="co-founder">Co-Founder</option>
+                  <option value="investor">Angel / VC Investor</option>
+                  <option value="corporate">Corporate / Enterprise</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Service Offering Type</label>
+                <select
+                  value={profile.services_offering}
+                  onChange={e => setProfile({ ...profile, services_offering: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="products">Digital / Physical Products</option>
+                  <option value="services">B2B / B2C Services</option>
+                  <option value="ideas">Pre-Product Ideas / Research</option>
+                  <option value="hybrid">Hybrid (Product & Service)</option>
+                </select>
+              </div>
+
+              {/* Networks & Interests */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Primary Industry</label>
+                <select
+                  value={profile.industry}
+                  onChange={e => setProfile({ ...profile, industry: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="">Select Industry...</option>
+                  <option value="SaaS">B2B SaaS</option>
+                  <option value="FinTech">FinTech</option>
+                  <option value="HealthTech">HealthTech</option>
+                  <option value="AI/ML">AI / Machine Learning</option>
+                  <option value="Web3">Web3 / Crypto</option>
+                  <option value="E-commerce">E-commerce</option>
+                  <option value="DeepTech">DeepTech</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Interested In Connecting With</label>
+                <select
+                  value={profile.interested_in}
+                  onChange={e => setProfile({ ...profile, interested_in: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="investors">Investors Only</option>
+                  <option value="founders">Founders Only</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Target Market / Region</label>
+                <select
+                  value={profile.interested_market}
+                  onChange={e => setProfile({ ...profile, interested_market: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="global">Global Markets</option>
+                  <option value="north_america">North America</option>
+                  <option value="europe">Europe</option>
+                  <option value="asia_pacific">Asia Pacific</option>
+                  <option value="mena">Middle East & North Africa (MENA)</option>
+                  <option value="latam">Latin America</option>
+                </select>
+              </div>
+
+              {/* Location Data */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Country</label>
+                <select
+                  value={profile.country}
+                  onChange={e => setProfile({ ...profile, country: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="">Select Country...</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Pakistan">Pakistan</option>
+                  <option value="India">India</option>
+                  <option value="Germany">Germany</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Singapore">Singapore</option>
+                  <option value="UAE">United Arab Emirates</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">State / Province</label>
+                <input
+                  type="text"
+                  value={profile.state}
+                  onChange={e => setProfile({ ...profile, state: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                  placeholder="e.g. California, Punjab"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">City / Hub</label>
+                <input
+                  type="text"
+                  value={profile.city}
+                  onChange={e => setProfile({ ...profile, city: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                  placeholder="e.g. San Francisco, Lahore"
+                />
+              </div>
+
+              <div className="space-y-2 lg:col-span-3">
                 <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Professional Biography / Elevator Pitch</label>
                 <textarea
                   rows={3}
@@ -240,8 +411,20 @@ export default function GlobalPreferencesPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block flex items-center gap-1"><LinkIcon size={12} /> LinkedIn URL</label>
+              <div className="space-y-2 lg:col-span-1">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Profile Visibility</label>
+                <select
+                  value={profile.visibility}
+                  onChange={e => setProfile({ ...profile, visibility: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                >
+                  <option value="public">Public (Directory & Feed)</option>
+                  <option value="private">Private (Direct Link Only)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 lg:col-span-1">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1"><LinkIcon size={12} /> LinkedIn URL</label>
                 <input
                   type="url"
                   value={profile.linkedin_url}
@@ -250,57 +433,22 @@ export default function GlobalPreferencesPage() {
                   placeholder="https://linkedin.com/in/..."
                 />
               </div>
-            </div>
-          </div>
 
-          {/* SECTION 2: LOCATION & REGION */}
-          <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 shadow-2xl space-y-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 text-white/5 pointer-events-none">
-              <Globe size={120} />
-            </div>
-
-            <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-white/10 pb-4 relative z-10">
-              <Globe size={18} className="text-emerald-400" /> Location & Timezone
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-6 relative z-10">
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">City / Hub</label>
+              <div className="space-y-2 lg:col-span-1">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1"><LinkIcon size={12} /> Website / Product URL</label>
                 <input
-                  type="text"
-                  value={profile.city}
-                  onChange={e => setProfile({ ...profile, city: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-emerald-400 focus:outline-none transition"
-                  placeholder="e.g. San Francisco"
+                  type="url"
+                  value={profile.website_url}
+                  onChange={e => setProfile({ ...profile, website_url: e.target.value })}
+                  className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                  placeholder="https://yourcompany.com"
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Country</label>
-                <input
-                  type="text"
-                  value={profile.country}
-                  onChange={e => setProfile({ ...profile, country: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-emerald-400 focus:outline-none transition"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Timezone</label>
-                <select
-                  value={profile.timezone}
-                  onChange={e => setProfile({ ...profile, timezone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-emerald-400 focus:outline-none transition appearance-none"
-                >
-                  <option value="UTC">UTC (GMT)</option>
-                  <option value="EST">Eastern Time (EST)</option>
-                  <option value="PST">Pacific Time (PST)</option>
-                  <option value="CET">Central European Time (CET)</option>
-                  <option value="PKT">Pakistan Standard Time (PKT)</option>
-                </select>
               </div>
             </div>
           </div>
 
-          {/* SECTION 3: DYNAMIC AI MATCHING MANDATE */}
+
+          {/* SECTION 2: DYNAMIC AI MATCHING MANDATE */}
           <div className={`trionn-glass-card rounded-3xl border border-${themeColor}-500/30 p-8 shadow-2xl space-y-8 relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 p-6 text-${themeColor}-500/10 pointer-events-none`}>
               {isStartup ? <Rocket size={140} /> : <Target size={140} />}
@@ -318,8 +466,35 @@ export default function GlobalPreferencesPage() {
                 <>
                   <div className="space-y-6">
                     <h3 className={`text-xs font-bold text-${themeColor}-300 uppercase tracking-wider flex items-center gap-1.5 border-b border-${themeColor}-500/20 pb-2`}>
-                      <Activity size={14} /> Financial Health & Runway
+                      <Building size={14} /> Operations & Scale
                     </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">COMPANY SIZE (EMPLOYEES)</label>
+                        <select
+                          value={startupPrefs.company_size}
+                          onChange={e => setStartupPrefs({ ...startupPrefs, company_size: e.target.value })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                        >
+                          <option value="1-10">1 - 10</option>
+                          <option value="11-50">11 - 50</option>
+                          <option value="51-200">51 - 200</option>
+                          <option value="201+">201+</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">OPERATIONAL LOCATIONS</label>
+                        <input
+                          type="text"
+                          value={startupPrefs.operational_locations}
+                          onChange={e => setStartupPrefs({ ...startupPrefs, operational_locations: e.target.value })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                          placeholder="e.g. US, UK, Remote"
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-400 block">CURRENT ARR ($)</label>
@@ -331,7 +506,19 @@ export default function GlobalPreferencesPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 block">MONTHLY BURN ($)</label>
+                        <label className="text-[10px] font-bold text-slate-400 block">RUNWAY (MONTHS)</label>
+                        <input
+                          type="number"
+                          value={startupPrefs.runway_months}
+                          onChange={e => setStartupPrefs({ ...startupPrefs, runway_months: Number(e.target.value) })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition font-mono`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">TOTAL MONTHLY BURN ($)</label>
                         <input
                           type="number"
                           value={startupPrefs.monthly_burn}
@@ -339,16 +526,16 @@ export default function GlobalPreferencesPage() {
                           className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition font-mono`}
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">RUNWAY (MONTHS)</label>
-                      <input
-                        type="number"
-                        value={startupPrefs.runway_months}
-                        onChange={e => setStartupPrefs({ ...startupPrefs, runway_months: Number(e.target.value) })}
-                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition font-mono`}
-                      />
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">OPERATIONAL COSTS ($)</label>
+                        <input
+                          type="number"
+                          value={startupPrefs.operational_costs}
+                          onChange={e => setStartupPrefs({ ...startupPrefs, operational_costs: Number(e.target.value) })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition font-mono`}
+                          placeholder="Current Expenses"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -356,28 +543,6 @@ export default function GlobalPreferencesPage() {
                     <h3 className={`text-xs font-bold text-${themeColor}-300 uppercase tracking-wider flex items-center gap-1.5 border-b border-${themeColor}-500/20 pb-2`}>
                       <Briefcase size={14} /> Strategy & Moat
                     </h3>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">PRIMARY SECTOR</label>
-                      <input
-                        type="text"
-                        value={startupPrefs.industry}
-                        onChange={e => setStartupPrefs({ ...startupPrefs, industry: e.target.value })}
-                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
-                        placeholder="e.g. AI, HealthTech"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">TECHNICAL MOAT SUMMARY</label>
-                      <textarea
-                        rows={2}
-                        value={startupPrefs.technical_moat}
-                        onChange={e => setStartupPrefs({ ...startupPrefs, technical_moat: e.target.value })}
-                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition resize-none`}
-                        placeholder="Proprietary models, network effects, patents..."
-                      />
-                    </div>
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-400 block">TARGET EXIT STRATEGY</label>
@@ -391,6 +556,17 @@ export default function GlobalPreferencesPage() {
                         <option value="pe_buyout">Private Equity Buyout</option>
                         <option value="undecided">Undecided / Growth Focus</option>
                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 block">TECHNICAL MOAT SUMMARY</label>
+                      <textarea
+                        rows={6}
+                        value={startupPrefs.technical_moat}
+                        onChange={e => setStartupPrefs({ ...startupPrefs, technical_moat: e.target.value })}
+                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition resize-none`}
+                        placeholder="Proprietary models, network effects, patents..."
+                      />
                     </div>
                   </div>
                 </>
@@ -469,10 +645,37 @@ export default function GlobalPreferencesPage() {
 
                   <div className="space-y-6">
                     <h3 className={`text-xs font-bold text-${themeColor}-300 uppercase tracking-wider flex items-center gap-1.5 border-b border-${themeColor}-500/20 pb-2`}>
-                      <Briefcase size={14} /> Focus & Mandate
+                      <Building size={14} /> AI Targeting & Scale
                     </h3>
 
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">TARGET COMPANY SIZE</label>
+                        <select
+                          value={investorPrefs.target_company_size}
+                          onChange={e => setInvestorPrefs({ ...investorPrefs, target_company_size: e.target.value })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition appearance-none`}
+                        >
+                          <option value="1-10">1 - 10 Employees</option>
+                          <option value="11-50">11 - 50 Employees</option>
+                          <option value="51-200">51 - 200 Employees</option>
+                          <option value="201+">201+ Employees</option>
+                          <option value="agnostic">Agnostic</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">TARGET OPS LOCATIONS</label>
+                        <input
+                          type="text"
+                          value={investorPrefs.target_operational_locations}
+                          onChange={e => setInvestorPrefs({ ...investorPrefs, target_operational_locations: e.target.value })}
+                          className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
+                          placeholder="e.g. US, Remote"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
                       <label className="text-[10px] font-bold text-slate-400 block">PREFERRED STAGES</label>
                       <div className="flex flex-wrap gap-2">
                         {STAGE_OPTIONS.map(stage => {
@@ -488,8 +691,8 @@ export default function GlobalPreferencesPage() {
                                 setInvestorPrefs({ ...investorPrefs, preferred_stages: newStages });
                               }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${isSelected
-                                  ? `bg-${themeColor}-500/20 border-${themeColor}-500/50 text-${themeColor}-300`
-                                  : "bg-white/5 border-white/10 text-slate-400 hover:border-white/30 hover:text-white"
+                                ? `bg-${themeColor}-500/20 border-${themeColor}-500/50 text-${themeColor}-300`
+                                : "bg-white/5 border-white/10 text-slate-400 hover:border-white/30 hover:text-white"
                                 }`}
                             >
                               {stage}
@@ -497,28 +700,6 @@ export default function GlobalPreferencesPage() {
                           );
                         })}
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">INDUSTRIES (COMMA SEPARATED)</label>
-                      <input
-                        type="text"
-                        value={investorPrefs.industries.join(", ")}
-                        onChange={e => setInvestorPrefs({ ...investorPrefs, industries: e.target.value.split(",").map(i => i.trim()) })}
-                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
-                        placeholder="e.g. AI, HealthTech, B2B SaaS"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">TARGET GEOGRAPHIES (COMMA SEPARATED)</label>
-                      <input
-                        type="text"
-                        value={investorPrefs.geographies.join(", ")}
-                        onChange={e => setInvestorPrefs({ ...investorPrefs, geographies: e.target.value.split(",").map(i => i.trim()) })}
-                        className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-slate-950/50 text-sm text-white focus:border-${themeColor}-400 focus:outline-none transition`}
-                        placeholder="e.g. North America, Europe, MENA"
-                      />
                     </div>
                   </div>
                 </>

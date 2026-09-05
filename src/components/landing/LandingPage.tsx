@@ -1,22 +1,23 @@
 "use client";
 
-import Universe from "./Universe";
 import Navbar from "./Navbar";
-import HeroSection from "./HeroSection";
+import Hero from "./Hero";
 import FeatureCards from "./FeatureCards";
 import StatsSection from "./StatsSection";
 import Footer from "./Footer";
 
 export default function LandingPage() {
   return (
-    <main className="theme-investor relative overflow-hidden min-h-screen">
+    <main className="relative overflow-hidden min-h-screen bg-[#F8FAFC]">
 
-      {/* Background Aether Engine */}
-      <Universe />
-
-      {/* UI Components */}
       <Navbar />
-      <HeroSection />
+
+      {/* 
+        This unified Hero now renders both the Universe canvas 
+        and the Frosted Glass card. 
+      */}
+      <Hero />
+
       <FeatureCards />
       <StatsSection />
       <Footer />

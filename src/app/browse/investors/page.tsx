@@ -111,24 +111,24 @@ export default function BrowseInvestorsPage() {
                 </button>
               </div>
 
-              {/* Sidebar Filters */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">Investment Type</label>
-                <div className="space-y-1.5">
-                  {investmentTypes.map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setSelectedType(type)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedType === type
-                          ? "neu-pressed-base text-[var(--accent)] shadow-inner"
-                          : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
-                        }`}
-                    >
-                      <span>{type}</span>
-                      {selectedType === type && <Check size={14} className="text-[var(--accent)]" />}
-                    </button>
-                  ))}
-                </div>
+              {/* Sidebar Filters - Updated Spacing & Padding */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">
+                  Investment Type
+                </label>
+                {investmentTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedType(type)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition flex items-center justify-between ${selectedType === type
+                        ? "neu-pressed-base text-[var(--accent)] shadow-inner"
+                        : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
+                      }`}
+                  >
+                    <span>{type}</span>
+                    {selectedType === type && <Check size={14} className="text-[var(--accent)]" />}
+                  </button>
+                ))}
               </div>
             </div>
           </aside>

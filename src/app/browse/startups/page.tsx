@@ -136,47 +136,43 @@ export default function BrowseStartupsPage() {
                 </button>
               </div>
 
-              {/* Industry */}
-              <div className="space-y-2">
+              {/* Industry Sector List */}
+              <div className="space-y-3">
                 <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">
                   Industry Sector
                 </label>
-                <div className="space-y-1.5">
-                  {industries.map((ind) => (
-                    <button
-                      key={ind}
-                      onClick={() => setSelectedIndustry(ind)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedIndustry === ind
+                {industries.map((ind) => (
+                  <button
+                    key={ind}
+                    onClick={() => setSelectedIndustry(ind)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition flex items-center justify-between ${selectedIndustry === ind
                         ? "neu-pressed-base text-[var(--accent)] shadow-inner"
                         : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
-                        }`}
-                    >
-                      <span>{ind}</span>
-                      {selectedIndustry === ind && <Check size={14} className="text-[var(--accent)]" />}
-                    </button>
-                  ))}
-                </div>
+                      }`}
+                  >
+                    <span>{ind}</span>
+                    {selectedIndustry === ind && <Check size={14} className="text-[var(--accent)]" />}
+                  </button>
+                ))}
               </div>
 
-              {/* Funding Stage */}
-              <div className="space-y-2">
+              {/* Funding Stage List */}
+              <div className="space-y-3 mt-4">
                 <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">
                   Funding Stage
                 </label>
-                <div className="space-y-1.5">
-                  {stages.map((stg) => (
-                    <button
-                      key={stg}
-                      onClick={() => setSelectedStage(stg)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition ${selectedStage === stg
+                {stages.map((stg) => (
+                  <button
+                    key={stg}
+                    onClick={() => setSelectedStage(stg)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition ${selectedStage === stg
                         ? "neu-pressed-base text-[var(--accent)] shadow-inner"
                         : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
-                        }`}
-                    >
-                      {stg}
-                    </button>
-                  ))}
-                </div>
+                      }`}
+                  >
+                    {stg}
+                  </button>
+                ))}
               </div>
 
             </div>

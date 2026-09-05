@@ -1,92 +1,115 @@
 @import "tailwindcss";
 
 @layer base {
+
+  :root,
+  [data-theme="secure"] {
+    /* DEFAULT (Investor): The Rock-Solid Secure */
+    --primary: #ECEFF1;
+    --secondary: #263238;
+    --accent: #2E7D32;
+    --shadow-light: #ffffff;
+    --shadow-dark: #cdd0d2;
+  }
+
+  [data-theme="innovator"] {
+    /* The Corporate Innovator */
+    --primary: #FFFFFF;
+    --secondary: #002D62;
+    --accent: #00C4CC;
+    --shadow-light: #ffffff;
+    --shadow-dark: #e6e6e6;
+  }
+
+  [data-theme="integrator"] {
+    /* The Dynamic Integrator (Dark Mode) */
+    --primary: #1A1A1A;
+    --secondary: #E0E0E0;
+    --accent: #FF5722;
+    --shadow-light: #262626;
+    --shadow-dark: #0e0e0e;
+  }
+
+  [data-theme="holistic"] {
+    /* The Intelligent Holistic */
+    --primary: #F4F7F6;
+    --secondary: #4A148C;
+    --accent: #81D4FA;
+    --shadow-light: #ffffff;
+    --shadow-dark: #d5d8d7;
+  }
+
+  [data-theme="humanistic"] {
+    /* The Humanistic Tech (Startup Default) */
+    --primary: #FFFFFF;
+    --secondary: #424242;
+    --accent: #AD1457;
+    --shadow-light: #ffffff;
+    --shadow-dark: #e6e6e6;
+  }
+
   html,
-  body,
-  :root {
+  body {
     width: 100%;
     height: 100%;
-    background-color: #02040a;
-    color: #f8fafc;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  }
-
-  body {
     margin: 0;
     overflow-x: hidden;
-    background-color: #02040a;
+    background-color: var(--primary);
+    color: var(--secondary);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* TRIONN Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
+
   ::-webkit-scrollbar-track {
-    background: #030712;
+    background: transparent;
   }
+
   ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: var(--secondary);
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    opacity: 0.5;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: #06b6d4;
+    background: var(--accent);
   }
 }
 
-/* Glassmorphism & Neon Utilities */
-.trionn-glass {
-  background: rgba(10, 15, 30, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Unified Neumorphism Structural Classes */
+.neu-flat-base {
+  background: var(--primary);
+  box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(128, 128, 128, 0.05);
+  transition: all 0.3s ease;
 }
 
-.trionn-glass-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+.neu-pressed-base {
+  background: var(--primary);
+  box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+  border-radius: 1rem;
+  transition: all 0.3s ease;
 }
 
-.trionn-glass-card:hover {
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 12px 40px -10px rgba(6, 182, 212, 0.25);
+.neu-btn {
+  background: var(--primary);
+  color: var(--secondary);
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.trionn-glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.4);
-}
-
-.trionn-glow-violet {
-  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.4);
-}
-
-.trionn-glow-gold {
-  box-shadow: 0 0 25px -5px rgba(234, 179, 8, 0.4);
-}
-
-.trionn-gradient-text {
-  background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.trionn-silver-text {
-  background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.trionn-grid-bg {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-}
-
-canvas {
-  display: block;
+.neu-btn:active {
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+  color: var(--accent);
 }

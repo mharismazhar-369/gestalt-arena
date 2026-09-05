@@ -93,7 +93,7 @@ export default function ResearchPage() {
   if (loading) return <RoleRoutingLoader message="Loading Research Database..." />;
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+    <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10 space-y-12">
@@ -102,17 +102,17 @@ export default function ResearchPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="p-2.5 rounded-2xl bg-violet-500/10 border border-violet-400/30 text-violet-400 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+              <span className="p-2.5 rounded-2xl neu-pressed-base border-transparent text-[var(--accent)] shadow-inner">
                 <BookOpen size={24} />
               </span>
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-violet-400">
+                <span className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">
                   Gestalt Research Hub
                 </span>
-                <h1 className="text-3xl md:text-5xl font-black text-white">Articles & Insights</h1>
+                <h1 className="text-3xl md:text-5xl font-black text-[var(--secondary)]">Articles & Insights</h1>
               </div>
             </div>
-            <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
+            <p className="text-[var(--secondary)]/70 text-sm max-w-2xl leading-relaxed font-medium">
               Explore market research, investment thesis breakdowns, and tech reports published by verified founders and investors.
             </p>
           </div>
@@ -121,7 +121,7 @@ export default function ResearchPage() {
             <BetaBadge variant="pill" className="hidden sm:inline-flex" />
             <button
               onClick={() => setIsPublishModalOpen(true)}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 px-6 py-3 text-xs font-bold text-white shadow-xl hover:scale-105 transition"
+              className="flex items-center gap-2 px-6 py-3 text-xs neu-btn shadow-lg"
             >
               <Plus size={16} /> Publish Article
             </button>
@@ -129,15 +129,15 @@ export default function ResearchPage() {
         </div>
 
         {/* Search & Category Filter Header */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/40 p-2 rounded-3xl border border-white/5 backdrop-blur-sm">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between neu-flat-base p-2 border-transparent">
           <div className="relative w-full md:w-96">
-            <Search size={16} className="absolute left-4 top-3.5 text-slate-400" />
+            <Search size={16} className="absolute left-4 top-3.5 text-[var(--secondary)]/50" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search research papers, topics, or authors..."
-              className="w-full rounded-2xl border border-transparent bg-slate-950/80 py-3 pl-11 pr-4 text-xs text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none transition"
+              className="w-full rounded-2xl border border-transparent bg-transparent py-3 pl-11 pr-4 text-xs text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:outline-none transition font-medium"
             />
           </div>
 
@@ -146,9 +146,9 @@ export default function ResearchPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${selectedCategory === cat
-                    ? "bg-violet-500 border border-violet-400 text-white shadow-lg"
-                    : "bg-transparent text-slate-400 hover:bg-white/5 hover:text-white"
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${selectedCategory === cat
+                  ? "neu-pressed-base text-[var(--accent)] shadow-inner border-transparent"
+                  : "bg-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] border border-transparent neu-btn shadow-none"
                   }`}
               >
                 {cat}
@@ -159,19 +159,19 @@ export default function ResearchPage() {
 
         {/* Dynamic Empty State */}
         {articles.length === 0 && (
-          <div className="trionn-glass-card rounded-3xl border border-white/10 p-16 text-center flex flex-col items-center justify-center space-y-6 shadow-2xl">
-            <div className="p-6 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400">
+          <div className="neu-flat-base p-16 text-center flex flex-col items-center justify-center space-y-6">
+            <div className="p-6 rounded-full neu-pressed-base text-[var(--accent)] border-transparent shadow-inner">
               <FileText size={48} />
             </div>
             <div className="space-y-2 max-w-md">
-              <h3 className="text-2xl font-bold text-white">No Research Published Yet</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <h3 className="text-2xl font-bold text-[var(--secondary)]">No Research Published Yet</h3>
+              <p className="text-[var(--secondary)]/70 text-sm leading-relaxed font-medium">
                 The library is currently empty. Be the first to share your LinkedIn articles, industry thesis, or market analysis with the Gestalt Arena network.
               </p>
             </div>
             <button
               onClick={() => setIsPublishModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-violet-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-violet-600 hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3 text-sm neu-btn"
             >
               <Plus size={16} /> Publish First Article
             </button>
@@ -180,40 +180,40 @@ export default function ResearchPage() {
 
         {/* Featured Research Paper Banner (Only shows if articles exist and no filters are active) */}
         {articles.length > 0 && !isFiltering && (
-          <div className="trionn-glass-card rounded-3xl border border-violet-500/30 p-8 md:p-10 relative overflow-hidden shadow-2xl group transition-all hover:border-violet-400/50">
-            <div className="absolute top-0 right-0 p-8 text-violet-500/10 pointer-events-none transition-transform group-hover:scale-110 duration-700">
+          <div className="neu-flat-base p-8 md:p-10 relative overflow-hidden group transition-all">
+            <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
               <BookOpen size={240} />
             </div>
 
             <div className="relative z-10 max-w-3xl space-y-5">
               <div className="flex items-center gap-3">
-                <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-300 shadow-[0_0_10px_rgba(139,92,246,0.1)]">
+                <span className="neu-pressed-base px-3 py-1 text-xs font-bold text-[var(--accent)] shadow-inner">
                   Featured Publication
                 </span>
-                <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                <span className="text-xs text-[var(--secondary)]/60 font-medium flex items-center gap-1">
                   <Calendar size={12} /> {new Date(articles[0].created_at).toLocaleDateString()}
                 </span>
               </div>
 
-              <h2 className="text-2xl md:text-4xl font-black text-white group-hover:text-violet-300 transition cursor-pointer">
+              <h2 className="text-2xl md:text-4xl font-black text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer">
                 {articles[0].title}
               </h2>
 
-              <p className="text-slate-300 text-sm leading-relaxed line-clamp-3">
+              <p className="text-[var(--secondary)]/80 text-sm leading-relaxed line-clamp-3 font-medium">
                 {articles[0].summary}
               </p>
 
-              <div className="flex items-center justify-between border-t border-white/10 pt-5 text-xs text-slate-400 mt-4">
+              <div className="flex items-center justify-between border-t border-[var(--secondary)]/10 pt-5 text-xs text-[var(--secondary)]/60 mt-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center font-bold text-black text-[10px] uppercase">
+                  <div className="h-6 w-6 rounded-full bg-[var(--accent)] flex items-center justify-center font-bold text-[var(--primary)] text-[10px] uppercase shadow-sm">
                     {(articles[0].author?.nickname || articles[0].author?.company_name || "U").slice(0, 2)}
                   </div>
-                  <span className="font-bold text-white">{articles[0].author?.nickname || articles[0].author?.company_name || "Arena Member"}</span>
-                  <span className="text-slate-600 hidden sm:inline">•</span>
-                  <span className="hidden sm:inline capitalize">{articles[0].author?.role}</span>
+                  <span className="font-bold text-[var(--secondary)]">{articles[0].author?.nickname || articles[0].author?.company_name || "Arena Member"}</span>
+                  <span className="text-[var(--secondary)]/30 hidden sm:inline">•</span>
+                  <span className="hidden sm:inline capitalize font-medium">{articles[0].author?.role}</span>
                 </div>
 
-                <span className="flex items-center gap-1 text-violet-400 font-bold group-hover:underline cursor-pointer bg-violet-500/10 px-3 py-1.5 rounded-lg">
+                <span className="flex items-center gap-1 text-[var(--accent)] font-bold group-hover:underline cursor-pointer bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition">
                   Read Full Paper <ArrowUpRight size={14} />
                 </span>
               </div>
@@ -230,34 +230,34 @@ export default function ResearchPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -6 }}
-                className="trionn-glass-card rounded-3xl border border-white/10 p-6 flex flex-col justify-between shadow-xl space-y-5 hover:border-violet-400/40 transition bg-gradient-to-b from-white/[0.03] to-transparent"
+                className="neu-flat-base p-6 flex flex-col justify-between space-y-5 group"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="rounded-md bg-white/5 px-2.5 py-1 text-[10px] font-bold text-cyan-300 tracking-wide uppercase border border-white/5">
+                    <span className="neu-pressed-base px-2.5 py-1 text-[10px] font-bold text-[var(--accent)] tracking-wide uppercase border-transparent shadow-inner">
                       {article.category}
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500 bg-slate-900/50 px-2 py-1 rounded-md">
+                    <span className="text-[10px] font-bold text-[var(--secondary)]/60 bg-transparent border border-[var(--secondary)]/10 px-2 py-1 rounded-md">
                       {article.read_time}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white hover:text-cyan-300 transition cursor-pointer leading-snug">
+                  <h3 className="text-lg font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer leading-snug">
                     {article.title}
                   </h3>
 
-                  <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-[var(--secondary)]/70 leading-relaxed line-clamp-3 font-medium">
                     {article.summary}
                   </p>
                 </div>
 
-                <div className="border-t border-white/10 pt-4 flex items-center justify-between text-xs text-slate-400 mt-auto">
+                <div className="border-t border-[var(--secondary)]/10 pt-4 flex items-center justify-between text-xs text-[var(--secondary)]/60 mt-auto">
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-bold text-slate-200">{article.author?.nickname || article.author?.company_name || "Arena Member"}</span>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-500">{new Date(article.created_at).toLocaleDateString()}</span>
+                    <span className="font-bold text-[var(--secondary)]">{article.author?.nickname || article.author?.company_name || "Arena Member"}</span>
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--secondary)]/50 font-bold">{new Date(article.created_at).toLocaleDateString()}</span>
                   </div>
 
-                  <button className="text-cyan-400 hover:text-white transition font-bold text-xs bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 rounded-lg border border-cyan-500/20">
+                  <button className="text-[var(--accent)] font-bold text-xs bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition">
                     Read →
                   </button>
                 </div>
@@ -269,9 +269,9 @@ export default function ResearchPage() {
         {/* Filtered Empty State */}
         {filteredArticles.length === 0 && articles.length > 0 && (
           <div className="text-center py-12 space-y-3">
-            <Search size={32} className="mx-auto text-slate-600 mb-2" />
-            <h3 className="text-lg font-bold text-white">No matches found</h3>
-            <p className="text-sm text-slate-400">Try adjusting your search terms or category filters.</p>
+            <Search size={32} className="mx-auto text-[var(--secondary)]/40 mb-2" />
+            <h3 className="text-lg font-bold text-[var(--secondary)]">No matches found</h3>
+            <p className="text-sm text-[var(--secondary)]/60 font-medium">Try adjusting your search terms or category filters.</p>
           </div>
         )}
 

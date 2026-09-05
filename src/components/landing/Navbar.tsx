@@ -14,9 +14,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
   const { session, loading } = useAuth();
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => setIsMounted(true), []);
 
   const navLinks = [
     { href: "/browse/investors", label: "Investors", icon: Compass },
@@ -27,10 +25,7 @@ export default function Navbar() {
     { href: "/feed", label: "Arena Feed", icon: MessageSquare },
   ];
 
-  const userEmail = session?.user?.email;
-  const userDisplayName = userEmail ? userEmail.split("@")[0] : "My Profile";
-
-  // Intelligent routing: If logged in, clicking the logo takes you to your dashboard. If not, it goes to the marketing landing page.
+  const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
   const homeRoute = session?.user ? "/dashboard" : "/";
 
   return (
@@ -38,156 +33,68 @@ export default function Navbar() {
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6"
+      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-6"
     >
-      <div className="mx-auto mt-4 flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-slate-950/70 px-6 py-3.5 backdrop-blur-2xl shadow-2xl shadow-cyan-950/20">
+      <div className="neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
 
-        {/* Brand & Beta Badge */}
-        <div className="flex items-center gap-3">
-          <Link
-            href={homeRoute}
-            className="text-xl font-black tracking-tight text-white hover:opacity-90 transition flex items-center gap-1.5"
-          >
-            <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
-              Gestalt
-            </span>
-            <span className="text-white">ARENA</span>
+        {/* Brand */}
+        <div className="flex items-center gap-4">
+          <Link href={homeRoute} className="text-xl font-black tracking-widest text-[var(--secondary)] uppercase">
+            Gestalt<span className="text-[var(--accent)]">Arena</span>
           </Link>
-          <BetaBadge variant="pill" className="hidden sm:inline-flex" />
+          <BetaBadge variant="pill" className="hidden sm:inline-flex opacity-70" />
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden items-center gap-6 md:flex">
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-6 lg:flex">
           {navLinks.map((link) => {
             const Icon = link.icon;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-cyan-400 transition"
+                className="flex items-center gap-1.5 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-colors"
               >
-                <Icon size={15} className="text-slate-400" />
+                <Icon size={14} />
                 <span>{link.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Dynamic Action Buttons (Logged In vs Logged Out) */}
-        <div className="hidden items-center gap-3 md:flex">
+        {/* Desktop Actions */}
+        <div className="hidden items-center gap-4 md:flex">
           {isMounted && (
             !loading && session ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <NotificationDropdown />
-                <div className="h-6 w-px bg-white/10 mx-1"></div>
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition"
-                >
-                  <User size={14} className="text-cyan-400" />
+                <Link href="/dashboard" className="neu-pressed-base flex items-center gap-2 px-5 py-2 text-xs font-bold text-[var(--secondary)]">
+                  <User size={14} className="text-[var(--accent)]" />
                   <span>{userDisplayName}</span>
                 </Link>
                 <LogoutButton />
               </div>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-xs font-bold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-400 hover:text-black shadow-lg shadow-cyan-500/10"
-                >
+                <Link href="/login" className="neu-btn px-5 py-2 text-xs">
                   Login
                 </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2 text-xs font-bold text-black transition hover:scale-105 shadow-lg shadow-violet-500/20"
-                >
-                  Register
+                <Link href="/register" className="neu-pressed-base px-5 py-2 text-xs font-bold text-[var(--secondary)]">
+                  Join Platform
                 </Link>
               </>
             )
           )}
         </div>
 
-        {/* Mobile Toggle & Notifications */}
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile Toggle */}
+        <div className="flex items-center gap-3 lg:hidden">
           {isMounted && !loading && session && <NotificationDropdown />}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300 hover:text-white"
-            aria-label="Toggle Navigation Menu"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="neu-pressed-base p-2 text-[var(--secondary)] hover:text-[var(--accent)]">
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
-
-      {/* Mobile Dropdown Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-2 rounded-2xl border border-white/10 bg-slate-950/95 p-6 backdrop-blur-2xl md:hidden shadow-2xl"
-          >
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-xs font-bold text-slate-400">Navigation</span>
-                <BetaBadge variant="pill" />
-              </div>
-
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 text-base font-semibold text-slate-200 hover:text-cyan-400"
-                  >
-                    <Icon size={18} className="text-cyan-400" />
-                    <span>{link.label}</span>
-                  </Link>
-                );
-              })}
-
-              <div className="mt-2 border-t border-white/10 pt-4 flex flex-col gap-3">
-                {isMounted && (!loading && session ? (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-cyan-400/40 bg-cyan-400/10 py-2.5 text-sm font-bold text-cyan-300"
-                    >
-                      <User size={16} /> {userDisplayName}
-                    </Link>
-                    <div onClick={() => setMobileMenuOpen(false)}>
-                      <LogoutButton />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full text-center rounded-xl border border-cyan-400/40 bg-cyan-400/10 py-2.5 text-sm font-bold text-cyan-300"
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full text-center rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 py-2.5 text-sm font-bold text-black"
-                    >
-                      Register
-                    </Link>
-                  </>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.header>
   );
 }

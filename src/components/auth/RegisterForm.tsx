@@ -3,97 +3,196 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
-import { UserRole } from "@/types/user";
+import { Mail, Lock, User, Briefcase, ChevronRight, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
+
+// --- Telemetry Utility ---
+const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
+  console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
+};
 
 export default function RegisterForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("startup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  async function handleRegister(e: React.FormEvent) {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    role: "startup" // Default role
+  });
+
+  const isFilled = (field: string) => formData[field as keyof typeof formData].length > 0;
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    trackInteraction("INPUT", `register_form_${field}_changed`, { length: value.length });
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (password.length < 10) {
-      setError("Password must contain at least 10 characters.");
-      return;
-    }
-
     setLoading(true);
+    setError("");
+    trackInteraction("CLICK", "register_submit_attempt", { role: formData.role });
 
-    // Pass role and initialize empty badges via raw_user_meta_data
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
       options: {
-        data: {
-          role: role,
-          badges: [],
-          profile_completed: false
-        }
-      }
+        data: { role: formData.role },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-      return;
+    if (signUpError) {
+      setError(signUpError.message);
+      trackInteraction("CLICK", "register_submit_failed", { error: signUpError.message });
+      setLoading(false);
+    } else {
+      trackInteraction("CLICK", "register_submit_success", { role: formData.role });
+      router.push("/verify-email");
     }
-
-    router.push("/login");
-  }
+  };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl">
-      <h1 className="mb-8 text-center text-4xl font-black text-white">Create Account</h1>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+      className="w-[95vw] max-w-[550px] aspect-square bg-[#F4F7F6] rounded-full shadow-[16px_16px_32px_#d0d3d2,-16px_-16px_32px_#ffffff] relative z-10 flex flex-col items-center justify-center p-10"
+    >
+      <div className="text-center space-y-1 mb-6 mt-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.3 }}
+          className="mx-auto w-10 h-10 bg-[#F4F7F6] shadow-[4px_4px_8px_#d0d3d2,-4px_-4px_8px_#ffffff] rounded-full flex items-center justify-center mb-4"
+        >
+          <Briefcase className="text-[#81D4FA]" size={20} />
+        </motion.div>
+        <h1 className="text-2xl font-black text-[#4A148C]">Join the Arena</h1>
+        <p className="text-[#4A148C]/60 text-xs font-medium px-4">Create your account to access the ecosystem.</p>
+      </div>
 
-      <form onSubmit={handleRegister} className="space-y-6">
-        <div className="flex gap-4 mb-4">
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-[12%] bg-[#F4F7F6] shadow-[inset_4px_4px_8px_#d0d3d2,inset_-4px_-4px_8px_#ffffff] text-rose-500 px-4 py-2 rounded-full text-[10px] font-bold text-center max-w-[70%] z-20"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <form onSubmit={handleRegister} className="w-full max-w-[320px] space-y-5">
+        {/* Neumorphic Role Toggles */}
+        <div className="flex items-center justify-center gap-4 mb-2">
           <button
             type="button"
-            onClick={() => setRole("startup")}
-            className={`flex-1 p-3 rounded-xl border font-bold transition ${role === "startup" ? "bg-cyan-400 text-black border-cyan-400" : "bg-transparent text-white border-zinc-700"}`}
+            onClick={() => {
+              setFormData({ ...formData, role: "startup" });
+              trackInteraction("CLICK", "select_role_startup");
+            }}
+            className={`flex-1 py-3 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all duration-300 ${formData.role === "startup"
+                ? "bg-[#F4F7F6] shadow-[inset_4px_4px_8px_#d0d3d2,inset_-4px_-4px_8px_#ffffff] text-[#81D4FA]"
+                : "bg-[#F4F7F6] shadow-[4px_4px_8px_#d0d3d2,-4px_-4px_8px_#ffffff] text-[#4A148C]/50 hover:text-[#81D4FA]"
+              }`}
           >
-            Startup
+            <User size={14} /> Founder
           </button>
           <button
             type="button"
-            onClick={() => setRole("investor")}
-            className={`flex-1 p-3 rounded-xl border font-bold transition ${role === "investor" ? "bg-cyan-400 text-black border-cyan-400" : "bg-transparent text-white border-zinc-700"}`}
+            onClick={() => {
+              setFormData({ ...formData, role: "investor" });
+              trackInteraction("CLICK", "select_role_investor");
+            }}
+            className={`flex-1 py-3 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all duration-300 ${formData.role === "investor"
+                ? "bg-[#F4F7F6] shadow-[inset_4px_4px_8px_#d0d3d2,inset_-4px_-4px_8px_#ffffff] text-[#81D4FA]"
+                : "bg-[#F4F7F6] shadow-[4px_4px_8px_#d0d3d2,-4px_-4px_8px_#ffffff] text-[#4A148C]/50 hover:text-[#81D4FA]"
+              }`}
           >
-            Investor
+            <Briefcase size={14} /> Investor
           </button>
         </div>
 
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-white"
-        />
+        {/* Email Input */}
+        <div className="relative group">
+          <div className="relative">
+            <Mail size={16} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${isFilled("email") ? "text-[#81D4FA]" : "text-[#4A148C]/40 group-focus-within:text-[#81D4FA]"}`} />
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              className="w-full bg-[#F4F7F6] rounded-full py-3.5 pl-12 pr-12 text-sm font-medium text-[#4A148C] outline-none transition-all duration-300 shadow-[inset_5px_5px_10px_#d0d3d2,inset_-5px_-5px_10px_#ffffff] focus:shadow-[inset_2px_2px_5px_#d0d3d2,inset_-2px_-2px_5px_#ffffff]"
+              placeholder="Work Email"
+            />
+            <AnimatePresence>
+              {isFilled("email") && (
+                <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#81D4FA]">
+                  <CheckCircle2 size={16} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
-        <input
-          type="password"
-          required
-          placeholder="Minimum 10 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-white"
-        />
+        {/* Password Input */}
+        <div className="relative group">
+          <div className="relative">
+            <Lock size={16} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${isFilled("password") ? "text-[#81D4FA]" : "text-[#4A148C]/40 group-focus-within:text-[#81D4FA]"}`} />
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={6}
+              value={formData.password}
+              onChange={(e) => handleInputChange("password", e.target.value)}
+              className="w-full bg-[#F4F7F6] rounded-full py-3.5 pl-12 pr-12 text-sm font-medium text-[#4A148C] outline-none transition-all duration-300 shadow-[inset_5px_5px_10px_#d0d3d2,inset_-5px_-5px_10px_#ffffff] focus:shadow-[inset_2px_2px_5px_#d0d3d2,inset_-2px_-2px_5px_#ffffff]"
+              placeholder="Secure Password"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setShowPassword(!showPassword);
+                trackInteraction("CLICK", "toggle_password_visibility");
+              }}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-[#4A148C]/40 hover:text-[#81D4FA] transition-colors focus:outline-none"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-
-        <button type="submit" disabled={loading} className="w-full rounded-xl bg-cyan-400 p-4 font-bold text-black">
-          {loading ? "Creating..." : `Join as ${role.charAt(0).toUpperCase() + role.slice(1)}`}
-        </button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98, boxShadow: "inset 5px 5px 10px #d0d3d2, inset -5px -5px 10px #ffffff" }}
+          type="submit"
+          disabled={loading || !formData.email || !formData.password}
+          className="w-full bg-[#F4F7F6] shadow-[6px_6px_12px_#d0d3d2,-6px_-6px_12px_#ffffff] hover:shadow-[8px_8px_16px_#d0d3d2,-8px_-8px_16px_#ffffff] text-[#81D4FA] font-black py-3.5 rounded-full text-sm transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:shadow-none disabled:border disabled:border-[#d0d3d2]"
+        >
+          {loading ? <Loader2 size={18} className="animate-spin" /> : (
+            <>Create Account <ChevronRight size={18} /></>
+          )}
+        </motion.button>
       </form>
-    </div>
+
+      <div className="mt-8 text-center space-y-2">
+        <p className="text-[11px] font-medium text-[#4A148C]/70">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            onClick={() => trackInteraction("CLICK", "nav_login")}
+            className="text-[#81D4FA] font-black hover:underline"
+          >
+            Sign In
+          </Link>
+        </p>
+      </div>
+    </motion.div>
   );
 }

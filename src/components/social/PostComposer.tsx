@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useUserTier } from "@/components/context/UserTierContext";
-import { Send, AlertTriangle, ShieldCheck, Sparkles, Image, Lock } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Send, AlertTriangle, ShieldCheck, Image, Lock } from "lucide-react";
 
 interface PostComposerProps {
   onPostCreated?: (content: string) => void;
@@ -19,7 +18,6 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const isOverCharLimit = charCount > maxChars;
   const percentage = Math.min(100, (charCount / maxChars) * 100);
 
-  // SVG Circular progress radius
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -36,33 +34,30 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   };
 
   return (
-    <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-2xl relative overflow-hidden">
-      
-      {/* Top Header - Tier Status & Daily Post Count */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+    <div className="neu-flat-base p-6 relative overflow-hidden">
+
+      <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 mb-4">
         <div className="flex items-center gap-2">
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold capitalize flex items-center gap-1.5 ${capabilities.borderColor} ${capabilities.bgColor} ${capabilities.textColor}`}>
+          <span className="neu-pressed-base border-transparent shadow-inner px-3 py-1 text-[10px] font-bold capitalize flex items-center gap-1.5 text-[var(--accent)]">
             <ShieldCheck size={14} /> {capabilities.name}
           </span>
-          <span className="text-xs text-slate-400">
-            Char limit: <strong className="text-white">{maxChars} chars</strong>
+          <span className="text-xs text-[var(--secondary)]/60 font-bold">
+            Char limit: <strong className="text-[var(--secondary)]">{maxChars} chars</strong>
           </span>
         </div>
 
-        <div className="text-xs text-slate-400">
-          Daily Posts: <strong className="text-white">{postsToday} / {capabilities.maxPostsPer24h >= 9999 ? "∞" : capabilities.maxPostsPer24h}</strong>
+        <div className="text-xs text-[var(--secondary)]/60 font-bold">
+          Daily Posts: <strong className="text-[var(--secondary)]">{postsToday} / {capabilities.maxPostsPer24h >= 9999 ? "∞" : capabilities.maxPostsPer24h}</strong>
         </div>
       </div>
 
-      {/* Lockout Warning Banner if daily post cap reached */}
       {!canPostMore && (
-        <div className="mb-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex items-center gap-3 text-rose-300 text-xs font-semibold">
-          <Lock size={18} className="shrink-0 text-rose-400" />
+        <div className="mb-4 rounded-xl neu-pressed-base border-transparent shadow-inner p-4 flex items-center gap-3 text-rose-600 text-xs font-bold">
+          <Lock size={18} className="shrink-0" />
           <span>You have reached your 24-hour post limit ({capabilities.maxPostsPer24h} posts). Upgrade to a higher tier to expand daily limits.</span>
         </div>
       )}
 
-      {/* Post Text Area Form */}
       <form onSubmit={handlePost} className="space-y-4">
         <div className="relative">
           <textarea
@@ -75,32 +70,29 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
                 : "Post limit reached for current tier. Upgrade to post more."
             }
             rows={4}
-            className={`w-full rounded-2xl border bg-slate-950/70 p-4 text-sm text-white placeholder-slate-500 focus:outline-none transition backdrop-blur-xl resize-none ${
-              isOverCharLimit
-                ? "border-rose-500 focus:ring-1 focus:ring-rose-500"
-                : "border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
-            }`}
+            className={`w-full rounded-2xl border-transparent bg-transparent p-4 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/40 focus:outline-none transition resize-none neu-pressed-base shadow-inner font-medium ${isOverCharLimit
+                ? "border-rose-600 focus:ring-1 focus:ring-rose-600"
+                : "focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
+              }`}
           />
 
-          {/* Character Lockout Warning Overlay if exceeding max character limit */}
           {isOverCharLimit && (
-            <div className="mt-2 rounded-xl bg-rose-500/10 border border-rose-500/30 p-2.5 flex items-center justify-between text-xs text-rose-300">
+            <div className="mt-2 rounded-xl bg-transparent border border-rose-600/30 p-2.5 flex items-center justify-between text-xs text-rose-600 font-bold">
               <span className="flex items-center gap-1.5">
-                <AlertTriangle size={14} className="text-rose-400" />
+                <AlertTriangle size={14} />
                 Character limit exceeded by {Math.abs(charsRemaining)} characters!
               </span>
-              <span className="font-mono font-bold text-rose-400">Locked</span>
+              <span className="font-mono">Locked</span>
             </div>
           )}
         </div>
 
-        {/* Footer Actions & Dynamic Character Meter */}
         <div className="flex items-center justify-between pt-2">
-          
-          <div className="flex items-center gap-2 text-slate-500 text-xs">
+
+          <div className="flex items-center gap-2 text-[var(--secondary)]/50 text-xs font-bold">
             <button
               type="button"
-              className="p-2 rounded-xl border border-white/5 bg-white/5 hover:border-cyan-400/30 hover:text-cyan-400 transition"
+              className="p-2 bg-transparent border-transparent neu-btn shadow-none hover:text-[var(--accent)] transition rounded-lg"
               title="Attach Media Preview (UI)"
             >
               <Image size={16} />
@@ -109,67 +101,38 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            
-            {/* SVG Circular Progress Counter Ring */}
+
             <div className="flex items-center gap-2">
               <div className="relative flex items-center justify-center">
                 <svg className="h-10 w-10 transform -rotate-90">
-                  {/* Track Circle */}
+                  <circle cx="20" cy="20" r={radius} className="stroke-[var(--secondary)]/10" strokeWidth="3" fill="transparent" />
                   <circle
-                    cx="20"
-                    cy="20"
-                    r={radius}
-                    className="stroke-slate-800"
-                    strokeWidth="3"
-                    fill="transparent"
-                  />
-                  {/* Progress Circle */}
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r={radius}
-                    strokeWidth="3"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    className={`transition-all duration-300 ${
-                      isOverCharLimit
-                        ? "stroke-rose-500"
-                        : percentage > 80
-                        ? "stroke-amber-400"
-                        : "stroke-cyan-400"
-                    }`}
+                    cx="20" cy="20" r={radius} strokeWidth="3" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+                    className={`transition-all duration-300 ${isOverCharLimit ? "stroke-rose-600" : percentage > 80 ? "stroke-amber-500" : "stroke-[var(--accent)]"}`}
                     fill="transparent"
                   />
                 </svg>
-                <span className={`absolute text-[10px] font-mono font-bold ${
-                  isOverCharLimit ? "text-rose-400" : percentage > 80 ? "text-amber-400" : "text-slate-300"
-                }`}>
+                <span className={`absolute text-[10px] font-mono font-bold ${isOverCharLimit ? "text-rose-600" : percentage > 80 ? "text-amber-500" : "text-[var(--secondary)]"}`}>
                   {charsRemaining}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
+              <span className="text-[11px] text-[var(--secondary)]/50 font-mono font-bold hidden md:inline">
                 {charCount}/{maxChars}
               </span>
             </div>
 
-            {/* Submit Post Button */}
             <button
               type="submit"
               disabled={!content.trim() || isOverCharLimit || !canPostMore}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition shadow-lg ${
-                !content.trim() || isOverCharLimit || !canPostMore
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5"
-                  : "bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:scale-105 shadow-cyan-500/20"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs neu-btn ${!content.trim() || isOverCharLimit || !canPostMore
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+                }`}
             >
               <Send size={14} /> Post Feed
             </button>
-
           </div>
-
         </div>
-
       </form>
     </div>
   );

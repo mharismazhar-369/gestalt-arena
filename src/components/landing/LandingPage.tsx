@@ -9,20 +9,16 @@ import Footer from "./Footer";
 
 export default function LandingPage() {
   return (
-    <main className="relative overflow-hidden bg-[#020617]">
+    <main className="theme-investor relative overflow-hidden min-h-screen">
 
+      {/* Background Aether Engine */}
       <Universe />
 
-      <div className="absolute inset-0 bg-linear-to-b from-transparent via-[#02061730] to-[#020617]" />
-
+      {/* UI Components */}
       <Navbar />
-
       <HeroSection />
-
       <FeatureCards />
-
       <StatsSection />
-
       <Footer />
 
     </main>

@@ -16,14 +16,19 @@ export default function BrowseStartupsPage() {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("All");
   const [selectedStage, setSelectedStage] = useState<string>("All");
 
-  const industries = ["All", "SaaS", "FinTech", "HealthTech", "AI/ML", "Web3", "E-commerce", "DeepTech", "Technology"];
-  const stages = ["All", "Idea Stage", "Pre-Seed", "Seed", "Series A"];
+  const industries = [
+    "All", "SaaS", "FinTech", "HealthTech", "AI/ML", "Web3",
+    "E-commerce", "DeepTech", "Technology", "CleanTech",
+    "EdTech", "BioTech", "Logistics", "Consumer Goods"
+  ];
 
-  // Fetch live profiles instead of pitch decks
-  // Fetch live profiles and check for existing pitch decks
+  const stages = [
+    "All", "Idea Stage", "Pre-Seed", "Seed", "Series A",
+    "Series B", "Series C", "Growth/Expansion", "Pre-IPO"
+  ];
+
   useEffect(() => {
     async function fetchProfiles() {
-      // Query profiles and join both extended startup_profiles AND pitch_decks
       const { data, error } = await supabase
         .from("profiles")
         .select(`
@@ -39,13 +44,12 @@ export default function BrowseStartupsPage() {
             ? profile.startup_profiles[0]
             : profile.startup_profiles;
 
-          // Check if they have at least one active pitch deck
           const activePitchDeck = Array.isArray(profile.pitch_decks) && profile.pitch_decks.length > 0
             ? profile.pitch_decks[0].id
             : null;
 
           return {
-            id: profile.id, // Maps to the founder's user UUID for the Profile redirect
+            id: profile.id,
             name: profile.company_name || profile.nickname || "Undisclosed Startup",
             tagline: profile.services_offering ? `${profile.services_offering} Company` : "Startup Profile",
             industry: profile.industry || startupData?.industry || "Technology",
@@ -58,7 +62,7 @@ export default function BrowseStartupsPage() {
             tags: [profile.industry, startupData?.target_exit].filter(Boolean) as string[],
             verified: profile.profile_completed || false,
             tier: (profile.tier as "freemium" | "gold" | "platinum") || "freemium",
-            pitchDeckId: activePitchDeck, // Passes the ID to conditionally render the pitch button
+            pitchDeckId: activePitchDeck,
           };
         });
         setStartups(liveStartups);
@@ -68,7 +72,6 @@ export default function BrowseStartupsPage() {
     fetchProfiles();
   }, []);
 
-  // UI Filtering using dynamic state
   const filteredStartups = startups.filter((s) => {
     const matchesSearch =
       s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -89,7 +92,7 @@ export default function BrowseStartupsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+    <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10">
@@ -97,19 +100,19 @@ export default function BrowseStartupsPage() {
         {/* Header */}
         <div className="space-y-4 mb-10">
           <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-violet-500/10 border border-violet-400/30 text-violet-400">
+            <span className="p-2.5 rounded-2xl neu-pressed-base border-transparent text-[var(--accent)] shadow-inner">
               <Rocket size={24} />
             </span>
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-violet-400">
+              <span className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">
                 Public Directory
               </span>
-              <h1 className="text-3xl md:text-5xl font-black text-white">Browse Startups</h1>
+              <h1 className="text-3xl md:text-5xl font-black text-[var(--secondary)]">Browse Startups</h1>
             </div>
             <BetaBadge variant="pill" className="ml-auto hidden sm:inline-flex" />
           </div>
 
-          <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
+          <p className="text-[var(--secondary)]/70 text-sm max-w-2xl leading-relaxed font-medium">
             Window-shop high-growth startup profiles, funding asks, and valuation metrics. Connect directly with founders when you are ready to invest.
           </p>
         </div>
@@ -119,15 +122,15 @@ export default function BrowseStartupsPage() {
 
           {/* Filter Sidebar */}
           <aside className="lg:col-span-1 space-y-6">
-            <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-6">
+            <div className="neu-flat-base p-6 space-y-6">
 
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <SlidersHorizontal size={16} className="text-violet-400" /> Filter Criteria
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
+                <h3 className="font-bold text-sm text-[var(--secondary)] flex items-center gap-2">
+                  <SlidersHorizontal size={16} className="text-[var(--accent)]" /> Filter Criteria
                 </h3>
                 <button
                   onClick={resetFilters}
-                  className="text-[11px] text-slate-400 hover:text-violet-400 transition flex items-center gap-1"
+                  className="text-[11px] text-[var(--secondary)]/50 hover:text-[var(--accent)] transition flex items-center gap-1 font-bold"
                 >
                   <RefreshCw size={12} /> Reset
                 </button>
@@ -135,7 +138,7 @@ export default function BrowseStartupsPage() {
 
               {/* Industry */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">
                   Industry Sector
                 </label>
                 <div className="space-y-1.5">
@@ -144,12 +147,12 @@ export default function BrowseStartupsPage() {
                       key={ind}
                       onClick={() => setSelectedIndustry(ind)}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedIndustry === ind
-                        ? "bg-violet-500/20 border border-violet-400/50 text-violet-300"
-                        : "bg-white/5 border border-transparent text-slate-400 hover:text-white hover:bg-white/10"
+                        ? "neu-pressed-base text-[var(--accent)] shadow-inner"
+                        : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
                         }`}
                     >
                       <span>{ind}</span>
-                      {selectedIndustry === ind && <Check size={14} className="text-violet-400" />}
+                      {selectedIndustry === ind && <Check size={14} className="text-[var(--accent)]" />}
                     </button>
                   ))}
                 </div>
@@ -157,7 +160,7 @@ export default function BrowseStartupsPage() {
 
               {/* Funding Stage */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">
                   Funding Stage
                 </label>
                 <div className="space-y-1.5">
@@ -165,9 +168,9 @@ export default function BrowseStartupsPage() {
                     <button
                       key={stg}
                       onClick={() => setSelectedStage(stg)}
-                      className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium transition ${selectedStage === stg
-                        ? "bg-cyan-500/20 border border-cyan-400/50 text-cyan-300"
-                        : "bg-white/5 border border-transparent text-slate-400 hover:text-white"
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition ${selectedStage === stg
+                        ? "neu-pressed-base text-[var(--accent)] shadow-inner"
+                        : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
                         }`}
                     >
                       {stg}
@@ -184,25 +187,25 @@ export default function BrowseStartupsPage() {
 
             {/* Search Bar */}
             <div className="relative">
-              <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
+              <Search size={18} className="absolute left-4 top-3.5 text-[var(--secondary)]/50" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search startups by name, tech stack, industry, or pitch highlights..."
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/80 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400 transition backdrop-blur-xl"
+                className="w-full rounded-2xl border border-[var(--secondary)]/10 bg-[var(--primary)] py-3.5 pl-12 pr-4 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:border-[var(--accent)] focus:outline-none transition shadow-inner font-medium"
               />
             </div>
 
             {/* Results Counter */}
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span>Showing <strong>{filteredStartups.length}</strong> startup cards</span>
+            <div className="flex items-center justify-between text-xs text-[var(--secondary)]/60 font-medium px-1">
+              <span>Showing <strong className="text-[var(--secondary)]">{filteredStartups.length}</strong> startup cards</span>
               <span>Sorted by Most Recent</span>
             </div>
 
             {/* Cards Grid */}
             {loading ? (
-              <div className="trionn-glass-card rounded-3xl border border-white/10 p-12 text-center text-slate-400 text-sm">
+              <div className="neu-flat-base p-12 text-center text-[var(--secondary)]/50 text-sm font-bold">
                 Loading live startups network...
               </div>
             ) : filteredStartups.length > 0 ? (
@@ -212,11 +215,11 @@ export default function BrowseStartupsPage() {
                 ))}
               </div>
             ) : (
-              <div className="trionn-glass-card rounded-3xl border border-white/10 p-12 text-center space-y-4">
-                <p className="text-slate-400 text-sm">No startups match your current search and filter selection.</p>
+              <div className="neu-flat-base p-12 text-center space-y-4">
+                <p className="text-[var(--secondary)]/60 text-sm font-medium">No startups match your current search and filter selection.</p>
                 <button
                   onClick={resetFilters}
-                  className="rounded-xl bg-violet-400 px-5 py-2 text-xs font-bold text-black hover:bg-violet-300 transition"
+                  className="neu-btn px-5 py-2 text-xs"
                 >
                   Clear Filters
                 </button>

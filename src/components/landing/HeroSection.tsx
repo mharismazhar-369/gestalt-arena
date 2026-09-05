@@ -6,91 +6,48 @@ import { BriefcaseBusiness, Rocket } from "lucide-react";
 
 export default function HeroSection() {
   return (
-    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center pt-20">
 
-      <motion.h1
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8 }}
-        className="max-w-5xl text-6xl font-black leading-tight text-white md:text-8xl"
+        className="neu-flat-base p-12 md:p-20 max-w-5xl"
       >
-        Where
-        <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
-          {" "}Investors{" "}
-        </span>
-        Meet
-        <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-          {" "}Startups
-        </span>
-      </motion.h1>
+        <h1 className="text-5xl md:text-7xl font-black leading-tight text-[#E2F0CC]">
+          Where
+          <span className="text-[#8BC53D]"> Capital </span>
+          Meets
+          <span className="text-[#D6BD98]"> Execution</span>
+        </h1>
 
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="mt-8 max-w-3xl text-lg leading-8 text-zinc-300 md:text-xl"
-      >
-        Browse freely. Connect securely.
-        Discover startups, founders, entrepreneurs,
-        angel investors, venture capital firms,
-        seed investors and strategic partners
-        from around the world.
-      </motion.p>
+        <p className="mt-8 mx-auto max-w-2xl text-lg text-[#E2F0CC]/70 font-medium">
+          The infrastructure for private market execution. Discover strategic capital mandates and highly vetted startup pitches in one unified, transparent ledger.
+        </p>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="mt-14 flex flex-col gap-6 md:flex-row"
-      >
+        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6">
 
-        <Link
-          href="/investor"
-          className="group flex items-center gap-3 rounded-2xl border border-cyan-400 bg-cyan-400 px-10 py-5 text-lg font-bold text-black transition hover:scale-105"
-        >
-          <BriefcaseBusiness size={24} />
+          <div className="theme-investor w-full sm:w-auto">
+            <Link
+              href="/investor"
+              className="neu-investor-btn flex w-full items-center justify-center gap-3 px-10 py-5 text-lg"
+            >
+              <BriefcaseBusiness size={24} />
+              Deploy Capital
+            </Link>
+          </div>
 
-          Investor
-
-        </Link>
-
-        <Link
-          href="/startup"
-          className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-10 py-5 text-lg font-bold text-white backdrop-blur-xl transition hover:scale-105 hover:border-cyan-400"
-        >
-          <Rocket size={24} />
-
-          Startup
-
-        </Link>
-
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
-        className="mt-16 flex flex-wrap justify-center gap-5"
-      >
-
-        <div className="rounded-full border border-white/10 bg-white/5 px-6 py-3 backdrop-blur-xl">
-
-          🌍 Global
+          <div className="theme-startup w-full sm:w-auto">
+            <Link
+              href="/startup"
+              className="neu-startup-btn flex w-full items-center justify-center gap-3 px-10 py-5 text-lg"
+            >
+              <Rocket size={24} />
+              Raise Funds
+            </Link>
+          </div>
 
         </div>
-
-        <div className="rounded-full border border-white/10 bg-white/5 px-6 py-3 backdrop-blur-xl">
-
-          🔒 Secure Messaging
-
-        </div>
-
-        <div className="rounded-full border border-white/10 bg-white/5 px-6 py-3 backdrop-blur-xl">
-
-          🚀 Free Browsing
-
-        </div>
-
       </motion.div>
 
     </section>

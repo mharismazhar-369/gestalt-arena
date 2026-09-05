@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, MessageSquare, Repeat, Share2, Bookmark } from "lucide-react";
+import { Heart, ThumbsDown, MessageSquare, Repeat, Share2, Bookmark } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
+import { toggleLike, toggleDislike, toggleBookmark, createNotification } from "@/lib/api";
 import Link from "next/link";
 import CommentBox from "./CommentBox";
 
@@ -16,6 +17,7 @@ export interface Post {
   timestamp: string;
   content: string;
   likesCount: number;
+  dislikesCount: number;
   repostsCount: number;
   commentsCount: number;
   tags?: string[];
@@ -31,6 +33,10 @@ interface PostCardProps {
 export default function PostCard({ post, dbPost, currentUserId, onUpdate }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
+
+  const [disliked, setDisliked] = useState(false);
+  const [dislikesCount, setDislikesCount] = useState(post.dislikesCount);
+
   const [bookmarked, setBookmarked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -39,7 +45,12 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   useEffect(() => {
     if (dbPost && currentUserId) {
       const hasLiked = dbPost.likes?.some((like: any) => like.user_id === currentUserId);
+      const hasDisliked = dbPost.dislikes?.some((dislike: any) => dislike.user_id === currentUserId);
+      const hasBookmarked = dbPost.bookmarks?.some((bm: any) => bm.user_id === currentUserId);
+
       setLiked(!!hasLiked);
+      setDisliked(!!hasDisliked);
+      setBookmarked(!!hasBookmarked);
     }
   }, [dbPost, currentUserId]);
 
@@ -80,7 +91,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
       if (error) throw error;
 
-      // Trigger Notification to original author
+      // Trigger Notification to original author with post ID for clicking
       if (dbPost.author_id !== currentUserId) {
         await supabase.from("notifications").insert({
           user_id: dbPost.author_id,
@@ -106,23 +117,51 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (liked) {
       setLiked(false);
       setLikesCount((prev) => prev - 1);
-      await supabase.from("likes").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+      await toggleLike(dbPost.id, currentUserId, true);
     } else {
       setLiked(true);
       setLikesCount((prev) => prev + 1);
-      await supabase.from("likes").insert({ post_id: dbPost.id, user_id: currentUserId });
+      await toggleLike(dbPost.id, currentUserId, false);
+
+      // Mutually exclusive logic: remove dislike if it exists
+      if (disliked) {
+        setDisliked(false);
+        setDislikesCount((prev) => prev - 1);
+        await toggleDislike(dbPost.id, currentUserId, true);
+      }
 
       if (dbPost.author_id !== currentUserId) {
-        await supabase.from("notifications").insert({
+        await createNotification({
           user_id: dbPost.author_id,
           actor_id: currentUserId,
           type: "like",
           message: "liked your post.",
-          reference_id: dbPost.id // Fixed from post_id to reference_id
+          reference_id: dbPost.id
         });
       }
     }
+    if (onUpdate) onUpdate();
+  };
 
+  const toggleDislike = async () => {
+    if (!currentUserId || !dbPost) return;
+
+    if (disliked) {
+      setDisliked(false);
+      setDislikesCount((prev) => prev - 1);
+      await supabase.from("dislikes").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+    } else {
+      setDisliked(true);
+      setDislikesCount((prev) => prev + 1);
+      await toggleDislike(dbPost.id, currentUserId, false);
+
+      // Mutually exclusive logic: remove like if it exists
+      if (liked) {
+        setLiked(false);
+        setLikesCount((prev) => prev - 1);
+        await supabase.from("likes").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+      }
+    }
     if (onUpdate) onUpdate();
   };
 
@@ -130,75 +169,78 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (!currentUserId || !dbPost) return;
     if (bookmarked) {
       setBookmarked(false);
-      await supabase.from("bookmarks").delete().match({ post_id: dbPost.id, user_id: currentUserId });
+      await toggleBookmark(dbPost.id, currentUserId, true);
     } else {
       setBookmarked(true);
-      await supabase.from("bookmarks").insert({ post_id: dbPost.id, user_id: currentUserId });
+      await toggleBookmark(dbPost.id, currentUserId, false);
     }
-  };
-
-  const tierBadges = {
-    freemium: "text-slate-400 border-slate-500/30 bg-slate-500/10",
-    gold: "text-amber-400 border-amber-500/40 bg-amber-500/10",
-    platinum: "text-violet-400 border-violet-500/50 bg-violet-500/10",
   };
 
   return (
     <motion.article
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="trionn-glass-card rounded-3xl border border-white/10 p-6 shadow-xl space-y-4 hover:border-white/20 transition relative"
+      className="neu-flat-base p-6 space-y-4 hover:border-[var(--accent)]/30 transition relative"
     >
-      {errorMsg && <p className="text-xs font-semibold text-rose-500">{errorMsg}</p>}
-      {successMsg && <p className="text-xs font-semibold text-cyan-400">{successMsg}</p>}
+      {errorMsg && <p className="text-xs font-bold text-rose-600">{errorMsg}</p>}
+      {successMsg && <p className="text-xs font-bold text-emerald-600">{successMsg}</p>}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 font-bold text-black text-sm uppercase shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] font-black text-[var(--primary)] text-sm uppercase shadow-inner">
             {post.authorName.slice(0, 2)}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <Link href={`/profile/${dbPost?.author_id}`} className="font-bold text-sm text-white hover:underline">{post.authorName}</Link>
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${tierBadges[post.tier]}`}>
+              <Link href={`/profile/${dbPost?.author_id}`} className="font-bold text-sm text-[var(--secondary)] hover:text-[var(--accent)] transition">
+                {post.authorName}
+              </Link>
+              <span className="neu-pressed-base border-transparent shadow-inner px-2 py-0.5 text-[10px] font-bold capitalize text-[var(--accent)]">
                 {post.tier}
               </span>
             </div>
-            <p className="text-xs text-slate-400">{post.authorRole} • {post.timestamp}</p>
+            <p className="text-xs text-[var(--secondary)]/60 font-bold">{post.authorRole} • {post.timestamp}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={toggleBookmark} className={`transition ${bookmarked ? "text-cyan-400" : "text-slate-500 hover:text-cyan-400"}`} aria-label="Save">
-            <Bookmark size={16} className={bookmarked ? "fill-cyan-400" : ""} />
+          <button onClick={toggleBookmark} className={`transition bg-transparent p-2 rounded-lg ${bookmarked ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]" : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"}`} aria-label="Save">
+            <Bookmark size={14} className={bookmarked ? "fill-[var(--accent)]" : ""} />
           </button>
-          <button onClick={sharePost} className="text-slate-500 hover:text-cyan-400 transition" aria-label="Share">
-            <Share2 size={16} />
+          <button onClick={sharePost} className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition" aria-label="Share">
+            <Share2 size={14} />
           </button>
         </div>
       </div>
 
-      <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">{post.content}</p>
+      <p className="text-sm text-[var(--secondary)]/90 leading-relaxed whitespace-pre-line font-medium">{post.content}</p>
 
       {post.tags && post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {post.tags.map((tag) => (
-            <span key={tag} className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-cyan-300">
+            <span key={tag} className="neu-pressed-base border-transparent shadow-inner px-2.5 py-0.5 text-[10px] font-bold text-[var(--accent)]">
               #{tag}
             </span>
           ))}
         </div>
       )}
 
-      <div className="border-t border-white/10 pt-3 flex items-center justify-between text-xs text-slate-400">
-        <button onClick={toggleLike} className={`flex items-center gap-1.5 transition ${liked ? "text-rose-400 font-bold" : "hover:text-rose-400"}`}>
-          <Heart size={16} className={liked ? "fill-rose-400" : ""} />
+      <div className="border-t border-[var(--secondary)]/10 pt-3 flex items-center gap-6 text-xs text-[var(--secondary)]/50 font-bold">
+        <button onClick={toggleLike} className={`flex items-center gap-1.5 transition ${liked ? "text-emerald-600" : "hover:text-emerald-600"}`}>
+          <Heart size={16} className={liked ? "fill-emerald-600" : ""} />
           <span>{likesCount}</span>
         </button>
-        <button onClick={() => setShowComments(!showComments)} className={`flex items-center gap-1.5 transition ${showComments ? "text-cyan-400" : "hover:text-cyan-400"}`}>
-          <MessageSquare size={16} className={showComments ? "fill-cyan-400/20" : ""} />
+
+        <button onClick={toggleDislike} className={`flex items-center gap-1.5 transition ${disliked ? "text-rose-600" : "hover:text-rose-600"}`}>
+          <ThumbsDown size={16} className={disliked ? "fill-rose-600" : ""} />
+          <span>{dislikesCount}</span>
+        </button>
+
+        <button onClick={() => setShowComments(!showComments)} className={`flex items-center gap-1.5 transition ${showComments ? "text-[var(--accent)]" : "hover:text-[var(--accent)]"}`}>
+          <MessageSquare size={16} className={showComments ? "fill-[var(--accent)]" : ""} />
           <span>{post.commentsCount}</span>
         </button>
-        <button onClick={handleRepost} className="flex items-center gap-1.5 hover:text-violet-400 transition">
+
+        <button onClick={handleRepost} className="flex items-center gap-1.5 hover:text-[var(--accent)] transition ml-auto">
           <Repeat size={16} />
           <span>{post.repostsCount}</span>
         </button>

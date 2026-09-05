@@ -8,10 +8,10 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+import TermSheetPanel from "@/components/negotiations/TermSheetPanel";
 import {
-    Handshake, FileText, Target, DollarSign, PieChart, Activity,
-    CheckCircle2, XCircle, RefreshCw, MessageSquare, ShieldAlert,
-    ArrowLeft, Lock, Send, Loader2, Clock, AlertTriangle
+    Handshake, FileText, Target, ShieldAlert,
+    ArrowLeft, Lock, Send, Loader2, Clock, MessageSquare, UserPlus, CheckCircle2, History
 } from "lucide-react";
 
 export default function NegotiationRoomPage() {
@@ -23,22 +23,16 @@ export default function NegotiationRoomPage() {
     const [loading, setLoading] = useState(true);
     const [deal, setDeal] = useState<any>(null);
     const [isAuthorized, setIsAuthorized] = useState(false);
-    const [updating, setUpdating] = useState(false);
     const [timeLeft, setTimeLeft] = useState("");
     const [isFullyLocked, setIsFullyLocked] = useState(false);
+    const [accepting, setAccepting] = useState(false);
 
-    // Chat State
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [sendingMsg, setSendingMsg] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Live Term Sheet State
-    const [terms, setTerms] = useState({
-        valuation: 0,
-        equity: 0,
-        ticket_size: 0,
-    });
+    // Auto-scroll ref attached to the scrollable container
+    const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!dealId || !session?.user) return;
@@ -47,10 +41,12 @@ export default function NegotiationRoomPage() {
             const { data, error } = await supabase
                 .from("deal_negotiations")
                 .select(`
-          *,
-          pitch_decks (id, title, funding_goal, valuation, equity_offered),
-          investor_bid_decks (id, title, max_allocation, min_arr)
-        `)
+                    *,
+                    pitch_decks (id, title, funding_goal, valuation, equity_offered),
+                    investor_bid_decks (id, title, max_allocation, min_arr, status),
+                    startup:profiles!deal_negotiations_startup_id_fkey(company_name, nickname),
+                    investor:profiles!deal_negotiations_investor_id_fkey(company_name, nickname)
+                `)
                 .eq("id", dealId)
                 .single();
 
@@ -62,11 +58,6 @@ export default function NegotiationRoomPage() {
             if (session?.user.id === data.startup_id || session?.user.id === data.investor_id) {
                 setIsAuthorized(true);
                 setDeal(data);
-                setTerms({
-                    valuation: data.proposed_valuation || data.pitch_decks?.valuation || 0,
-                    equity: data.proposed_equity || data.pitch_decks?.equity_offered || 0,
-                    ticket_size: data.ticket_size || data.pitch_decks?.funding_goal || 0,
-                });
 
                 const { data: msgData } = await supabase
                     .from("deal_messages")
@@ -81,11 +72,9 @@ export default function NegotiationRoomPage() {
 
         fetchDealAndMessages();
 
-        const channel = supabase
-            .channel(`room_${dealId}`)
-            .on(
-                "postgres_changes",
-                { event: "INSERT", schema: "public", table: "deal_messages", filter: `deal_id=eq.${dealId}` },
+        const chatChannel = supabase
+            .channel(`chat_${dealId}`)
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "deal_messages", filter: `deal_id=eq.${dealId}` },
                 (payload) => {
                     if (payload.new.sender_id !== session?.user.id) {
                         setMessages((prev) => [...prev, payload.new]);
@@ -94,12 +83,21 @@ export default function NegotiationRoomPage() {
             )
             .subscribe();
 
+        const dealChannel = supabase
+            .channel(`deal_${dealId}`)
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "deal_negotiations", filter: `id=eq.${dealId}` },
+                (payload) => {
+                    setDeal((prev: any) => ({ ...prev, ...payload.new }));
+                }
+            )
+            .subscribe();
+
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(chatChannel);
+            supabase.removeChannel(dealChannel);
         };
     }, [dealId, session]);
 
-    // 24-Hour Countdown Timer Logic
     useEffect(() => {
         if (deal?.status === "Pending Finalization" && deal?.accepted_at) {
             const interval = setInterval(() => {
@@ -112,6 +110,10 @@ export default function NegotiationRoomPage() {
                     setTimeLeft("00:00:00");
                     setIsFullyLocked(true);
                     clearInterval(interval);
+                    // Automatically lock the deal permanently when 24h expire
+                    supabase.rpc('lock_permanent_deal', { p_deal_id: dealId, p_funds_transferred: false }).then(() => {
+                        setDeal((prev: any) => ({ ...prev, status: 'Accepted' }));
+                    });
                 } else {
                     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
@@ -123,60 +125,115 @@ export default function NegotiationRoomPage() {
         }
     }, [deal]);
 
+    // Handle smooth auto-scroll to bottom of chat
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
     }, [messages]);
 
-    const handleUpdateDeal = async (newStatus: string, isCounterOffer = false) => {
-        setUpdating(true);
-        const payload: any = { status: newStatus };
-
-        if (isCounterOffer) {
-            payload.proposed_valuation = terms.valuation;
-            payload.proposed_equity = terms.equity;
-            payload.ticket_size = terms.ticket_size;
-            payload.status = "Negotiating";
-        }
-
-        const { error } = await supabase.from("deal_negotiations").update(payload).eq("id", dealId);
-
+    const handleAcceptConnection = async () => {
+        setAccepting(true);
+        // Only update the deal status to Negotiating. The backend RLS protects the assets.
+        const { error } = await supabase.from("deal_negotiations").update({ status: "Negotiating" }).eq("id", dealId);
         if (!error) {
-            setDeal({ ...deal, ...payload });
-            const systemMessage = isCounterOffer
-                ? `has submitted a counter-offer for review.`
-                : `has updated the deal status to: ${newStatus}.`;
-
             await supabase.from("deal_messages").insert({
                 deal_id: dealId,
                 sender_id: session?.user.id,
-                content: `*System:* ${systemMessage}`
+                content: `*System:* has accepted the connection. The negotiation room is now fully open.`
             });
+            setDeal({ ...deal, status: "Negotiating" });
         }
-        setUpdating(false);
+        setAccepting(false);
     };
 
-    const handleAcceptDeal = async () => {
-        setUpdating(true);
-        const now = new Date().toISOString();
-        const payload = { status: "Pending Finalization", accepted_at: now };
-
-        const { error } = await supabase.from("deal_negotiations").update(payload).eq("id", dealId);
+    // New handler to confirm funds transfer and permanently lock the deal
+    const handleConfirmFunds = async (proof: { bank: string, mode: string, reference: string }) => {
+        const { error } = await supabase.rpc('lock_permanent_deal', {
+            p_deal_id: dealId,
+            p_funds_transferred: true,
+            p_bank_name: proof.bank,
+            p_transfer_mode: proof.mode,
+            p_transfer_ref: proof.reference
+        });
 
         if (!error) {
-            setDeal({ ...deal, ...payload });
+            await supabase.from("deal_messages").insert({
+                deal_id: dealId, sender_id: session?.user.id,
+                content: `*System:* The investor submitted proof of transfer (${proof.mode} via ${proof.bank}). The deal is now permanently locked and recorded in the ledger.`
+            });
+            setDeal({ ...deal, status: 'Accepted', funds_transferred: true });
+            setIsFullyLocked(true);
+        } else {
+            alert(`Error locking deal: ${error.message}`);
+        }
+    };
 
-            // Auto-close public mandate
-            if (deal.bid_deck_id) {
-                await supabase.from("investor_bid_decks").update({ status: "Closed" }).eq("id", deal.bid_deck_id);
+    const handleUpdateDealStatus = async (newStatus: string, isCounterOffer: boolean, newTerms?: any) => {
+
+        // --- ATOMIC BACKEND TRANSACTION (START GRACE PERIOD) ---
+        if (newStatus === "Pending Finalization" && newTerms) {
+            const { data, error } = await supabase.rpc('finalize_deal', {
+                p_deal_id: dealId,
+                p_ticket: newTerms.ticket_size,
+                p_val: newTerms.valuation,
+                p_eq: newTerms.equity,
+                p_terms: newTerms.additional_terms || ""
+            });
+
+            if (error) {
+                alert(`Failed to finalize deal: ${error.message}`);
+                return;
             }
 
             await supabase.from("deal_messages").insert({
                 deal_id: dealId,
                 sender_id: session?.user.id,
-                content: `*System:* has formally accepted the terms. The 24-hour grace period has begun.`
+                content: `*System:* locked the terms and initiated the 24-hour grace period. Transaction Hash: ${data.transaction_hash}`
             });
+
+            // Re-fetch the deal to get the new hash and ledger data
+            const { data: updatedDeal } = await supabase.from("deal_negotiations").select("*").eq("id", dealId).single();
+            if (updatedDeal) setDeal(updatedDeal);
+            return;
         }
-        setUpdating(false);
+
+        // --- STANDARD COUNTER OFFERS & CANCELLATIONS ---
+        const payload: any = { status: newStatus };
+
+        if (isCounterOffer && newTerms) {
+            payload.proposed_valuation = newTerms.valuation;
+            payload.proposed_equity = newTerms.equity;
+            payload.ticket_size = newTerms.ticket_size;
+            payload.additional_terms = newTerms.additional_terms;
+
+            const currentHistory = deal.offer_history || [];
+            const newOfferLog = {
+                valuation: newTerms.valuation,
+                equity: newTerms.equity,
+                ticket_size: newTerms.ticket_size,
+                additional_terms: newTerms.additional_terms,
+                sender_id: session?.user.id,
+                created_at: new Date().toISOString()
+            };
+            payload.offer_history = [...currentHistory, newOfferLog];
+        }
+
+        if (newStatus === "Cancelled" || newStatus === "Rejected") {
+            if (deal.bid_deck_id && deal.investor_bid_decks?.status !== "Private") {
+                await supabase.from("investor_bid_decks").update({ status: "active" }).eq("id", deal.bid_deck_id);
+            }
+            if (deal.pitch_deck_id) {
+                await supabase.from("pitch_decks").update({ status: "active" }).eq("id", deal.pitch_deck_id);
+            }
+        }
+
+        const { error } = await supabase.from("deal_negotiations").update(payload).eq("id", dealId);
+        if (!error) {
+            const systemMessage = isCounterOffer ? `has submitted a counter-offer for review.` : `has updated the deal status to: ${newStatus}.`;
+            await supabase.from("deal_messages").insert({ deal_id: dealId, sender_id: session?.user.id, content: `*System:* ${systemMessage}` });
+            setDeal({ ...deal, ...payload });
+        }
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -187,23 +244,21 @@ export default function NegotiationRoomPage() {
         const msgText = newMessage.trim();
         setNewMessage("");
 
-        const tempMsg = {
-            id: "temp-" + Date.now(),
-            sender_id: session.user.id,
-            content: msgText,
-            created_at: new Date().toISOString()
-        };
+        const tempId = "temp-" + Date.now();
+        const tempMsg = { id: tempId, sender_id: session.user.id, content: msgText, created_at: new Date().toISOString() };
         setMessages((prev) => [...prev, tempMsg]);
 
-        const { error } = await supabase.from("deal_messages").insert({
-            deal_id: dealId,
-            sender_id: session.user.id,
-            content: msgText,
-        });
+        const { data, error } = await supabase.from("deal_messages").insert({
+            deal_id: dealId, sender_id: session.user.id, content: msgText,
+        }).select().single();
 
         if (error) {
-            setMessages((prev) => prev.filter(m => m.id !== tempMsg.id));
+            console.error("Chat Insert Error:", error);
+            alert(`Message failed to send: ${error.message}`);
+            setMessages((prev) => prev.filter(m => m.id !== tempId));
             setNewMessage(msgText);
+        } else if (data) {
+            setMessages((prev) => prev.map(m => m.id === tempId ? data : m));
         }
         setSendingMsg(false);
     };
@@ -212,14 +267,14 @@ export default function NegotiationRoomPage() {
 
     if (!isAuthorized || !deal) {
         return (
-            <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg">
+            <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
                 <Navbar />
                 <main className="flex-grow flex items-center justify-center">
-                    <div className="text-center space-y-4 max-w-md p-8 trionn-glass-card rounded-3xl border border-rose-500/30">
-                        <ShieldAlert size={48} className="mx-auto text-rose-500 mb-4" />
-                        <h1 className="text-2xl font-bold text-white">Access Denied</h1>
-                        <p className="text-slate-400 text-sm">You do not have authorization to view this private deal thread, or the deal does not exist.</p>
-                        <Link href="/dashboard" className="mt-4 inline-block px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold transition">Return to Dashboard</Link>
+                    <div className="text-center space-y-4 max-w-md p-10 neu-flat-base rounded-3xl">
+                        <ShieldAlert size={48} className="mx-auto text-rose-600 mb-4" />
+                        <h1 className="text-2xl font-bold text-[var(--secondary)]">Access Denied</h1>
+                        <p className="text-[var(--secondary)]/70 text-sm font-medium">You do not have authorization to view this private deal thread.</p>
+                        <Link href="/dashboard" className="mt-4 neu-btn px-6 py-3 text-xs inline-block">Return to Dashboard</Link>
                     </div>
                 </main>
                 <Footer />
@@ -228,246 +283,181 @@ export default function NegotiationRoomPage() {
     }
 
     const isFounder = session?.user.id === deal.startup_id;
-    const termsLocked = deal.status === "Pending Finalization" || deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
-    const chatLocked = deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
+    const startupName = deal.startup?.company_name || deal.startup?.nickname || "Startup Partner";
+    const investorName = deal.investor?.company_name || deal.investor?.nickname || "Investor Partner";
+    const otherPartyName = isFounder ? investorName : startupName;
+
+    const isTargetedCounter = deal.investor_bid_decks?.status === "Private";
+    const needsMyApproval = deal.status === "Pending" && (isTargetedCounter ? isFounder : !isFounder);
+    const isWaitingOnOther = deal.status === "Pending" && (isTargetedCounter ? !isFounder : isFounder);
+    const connectionLocked = deal.status === "Pending";
+
+    const chatLocked = deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked || connectionLocked;
+
+    const offerHistory = deal.offer_history || [];
 
     return (
-        <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+        <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
             <Navbar />
 
-            <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10 space-y-8">
+            <main className="pt-32 pb-24 px-6 mx-auto max-w-[1400px] w-full relative z-10 space-y-8">
 
-                {/* Navigation & Status Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <Link href="/dashboard" className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition mb-4">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[var(--secondary)]/10">
+                    <div className="space-y-2">
+                        <Link href={isFounder ? "/startup/dashboard" : "/investor/dashboard"} className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/60 hover:text-[var(--accent)] transition mb-4">
                             <ArrowLeft size={14} /> Back to Dashboard
                         </Link>
-                        <h1 className="text-3xl font-black text-white flex items-center gap-3">
-                            <Handshake className={isFounder ? "text-violet-400" : "text-cyan-400"} size={32} />
-                            Private Deal Room
+                        <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)] flex items-center gap-4">
+                            <Handshake className={isFounder ? "text-violet-600" : "text-[var(--accent)]"} size={32} />
+                            Deal with <span className="text-[var(--accent)]">{otherPartyName}</span>
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1">End-to-end encrypted negotiation thread.</p>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2">
-                        <div className="flex items-center gap-3 bg-black/40 border border-white/10 px-5 py-3 rounded-2xl">
-                            <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Status:</span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${deal.status === 'Accepted' || isFullyLocked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                    deal.status === 'Pending Finalization' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                                        deal.status === 'Rejected' || deal.status === 'Cancelled' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                }`}>
+                    <div className="flex flex-col items-end gap-3 shrink-0">
+                        <div className="flex items-center gap-3 neu-pressed-base border-transparent shadow-inner px-5 py-3 rounded-2xl">
+                            <span className="text-xs font-bold uppercase text-[var(--secondary)]/60 tracking-wider">Status:</span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 
+                                ${isFullyLocked || deal.status === 'Accepted' ? 'text-emerald-600 bg-emerald-600/10' :
+                                    deal.status === 'Pending Finalization' ? 'text-amber-600 bg-amber-600/10' :
+                                        deal.status === 'Rejected' || deal.status === 'Cancelled' ? 'text-rose-600 bg-rose-600/10' :
+                                            'text-blue-600 bg-blue-600/10'}`}>
                                 {isFullyLocked ? "Finalized" : deal.status}
                             </span>
                         </div>
-                        {deal.status === "Pending Finalization" && !isFullyLocked && (
-                            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
-                                <Clock size={14} className="animate-pulse" /> Grace Period: {timeLeft}
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-8">
+                {connectionLocked && (
+                    <div className="neu-flat-base rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 border-2 border-blue-600/30 bg-blue-600/5">
+                        <UserPlus size={48} className="text-blue-600 mb-2" />
+                        <h2 className="text-xl font-bold text-[var(--secondary)]">Connection Pending</h2>
 
-                    {/* LEFT COLUMN: The Live Term Sheet */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className={`trionn-glass-card rounded-3xl border ${isFounder ? 'border-violet-500/30' : 'border-cyan-500/30'} p-6 shadow-xl relative overflow-hidden`}>
-                            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                    <FileText size={18} className={isFounder ? "text-violet-400" : "text-cyan-400"} /> Live Term Sheet
-                                </h2>
-                                {termsLocked ? <Lock size={14} className="text-rose-400" /> : <RefreshCw size={14} className="text-emerald-400" />}
-                            </div>
+                        {needsMyApproval ? (
+                            <>
+                                <p className="text-sm font-medium text-[var(--secondary)]/70 max-w-lg">
+                                    {otherPartyName} wants to enter negotiations. Accepting will unlock the deal board and chat room.
+                                </p>
+                                <button onClick={handleAcceptConnection} disabled={accepting} className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition shadow-lg mt-4 disabled:opacity-50">
+                                    {accepting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                    {accepting ? "Connecting..." : "Accept Connection & Open Deal Room"}
+                                </button>
+                            </>
+                        ) : (
+                            <p className="text-sm font-medium text-[var(--secondary)]/70 max-w-lg">
+                                Waiting for {otherPartyName} to accept the connection.
+                            </p>
+                        )}
+                    </div>
+                )}
 
-                            <div className="space-y-5">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                        <DollarSign size={12} /> Investment Amount
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={terms.ticket_size}
-                                        onChange={(e) => setTerms({ ...terms, ticket_size: Number(e.target.value) })}
-                                        disabled={termsLocked}
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                        <Activity size={12} /> Pre-Money Valuation
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={terms.valuation}
-                                        onChange={(e) => setTerms({ ...terms, valuation: Number(e.target.value) })}
-                                        disabled={termsLocked}
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                        <PieChart size={12} /> Equity Stake (%)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={terms.equity}
-                                        onChange={(e) => setTerms({ ...terms, equity: Number(e.target.value) })}
-                                        disabled={termsLocked}
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-lg font-mono font-bold text-white focus:border-emerald-400 focus:outline-none transition disabled:opacity-50"
-                                    />
-                                </div>
-                            </div>
+                <div className={`grid lg:grid-cols-3 gap-8 items-start transition-opacity duration-500 ${connectionLocked ? 'opacity-40 pointer-events-none grayscale-[0.5]' : 'opacity-100'}`}>
 
-                            {/* Action Buttons: Negotiating Phase */}
-                            {!termsLocked && (
-                                <div className="mt-8 space-y-3 pt-6 border-t border-white/10">
-                                    <button
-                                        onClick={() => handleUpdateDeal("Negotiating", true)}
-                                        disabled={updating}
-                                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 px-4 py-3 text-xs font-bold text-white transition disabled:opacity-50"
-                                    >
-                                        <RefreshCw size={14} className={updating ? "animate-spin" : ""} /> Submit Counter Offer
-                                    </button>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button
-                                            onClick={() => handleUpdateDeal("Rejected")}
-                                            disabled={updating}
-                                            className="flex items-center justify-center gap-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-400 transition"
-                                        >
-                                            <XCircle size={14} /> Reject
-                                        </button>
-                                        <button
-                                            onClick={handleAcceptDeal}
-                                            disabled={updating}
-                                            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 hover:scale-105 px-4 py-3 text-xs font-bold text-black transition shadow-lg shadow-emerald-500/20"
-                                        >
-                                            <CheckCircle2 size={14} /> Accept Terms
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                    {/* COL 1: Live Term Sheet */}
+                    <div className="lg:col-span-1 h-full min-h-[600px]">
+                        <TermSheetPanel
+                            deal={deal}
+                            dealId={dealId}
+                            userId={session?.user?.id}
+                            timeLeft={timeLeft}
+                            isFullyLocked={isFullyLocked}
+                            onUpdateStatus={handleUpdateDealStatus}
+                            onConfirmFunds={handleConfirmFunds}
+                        />
+                    </div>
 
-                            {/* Action Buttons: Pending Finalization (Grace Period) */}
-                            {deal.status === "Pending Finalization" && !isFullyLocked && (
-                                <div className="mt-8 space-y-4 pt-6 border-t border-amber-500/30">
-                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-2">
-                                        <h4 className="text-xs font-bold text-amber-400 flex items-center gap-1.5"><AlertTriangle size={14} /> Grace Period Active</h4>
-                                        <p className="text-[10px] text-amber-200/70">Terms are locked. You have {timeLeft} remaining to cancel the deal before it becomes permanently binding.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => handleUpdateDeal("Cancelled")}
-                                        disabled={updating}
-                                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 px-4 py-3 text-xs font-bold text-white transition shadow-lg shadow-rose-500/20"
-                                    >
-                                        <XCircle size={14} /> Cancel Deal
-                                    </button>
+                    {/* COL 2: Counter Offer Deal Board */}
+                    <div className="lg:col-span-1 h-[600px] flex flex-col neu-flat-base rounded-3xl p-8 overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 mb-6 shrink-0">
+                            <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
+                                <History size={18} className="text-amber-500" /> Counter Offer Board
+                            </h2>
+                        </div>
+
+                        <div className="flex-grow overflow-y-auto custom-scrollbar space-y-4 pr-2">
+                            {offerHistory.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-[var(--secondary)]/40 space-y-3 font-medium text-center">
+                                    <History size={32} />
+                                    <p className="text-sm">No counter offers made yet.<br />The history will appear here.</p>
                                 </div>
+                            ) : (
+                                offerHistory.slice().reverse().map((offer: any, idx: number) => {
+                                    const isMyOffer = offer.sender_id === session?.user.id;
+                                    return (
+                                        <div key={idx} className={`p-4 rounded-2xl shadow-inner text-sm ${isMyOffer ? 'neu-pressed-base border-blue-600/30' : 'neu-pressed-base border-transparent'}`}>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className={`text-[10px] font-bold uppercase ${isMyOffer ? 'text-blue-500' : 'text-[var(--accent)]'}`}>
+                                                    {isMyOffer ? 'You Offered' : `${otherPartyName} Offered`}
+                                                </span>
+                                                <span className="text-[9px] text-[var(--secondary)]/50 font-bold">{new Date(offer.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                                                <div>
+                                                    <span className="text-[10px] text-[var(--secondary)]/50 block">Amount</span>
+                                                    <span className="font-mono font-bold">${Number(offer.ticket_size).toLocaleString()}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] text-[var(--secondary)]/50 block">Equity</span>
+                                                    <span className="font-mono font-bold">{offer.equity}%</span>
+                                                </div>
+                                            </div>
+                                            {offer.additional_terms && (
+                                                <div className="pt-2 border-t border-[var(--secondary)]/10">
+                                                    <span className="text-[10px] text-[var(--secondary)]/50 block mb-1">Notes</span>
+                                                    <p className="text-xs font-medium text-[var(--secondary)]/80 italic">"{offer.additional_terms}"</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })
                             )}
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: Context & Chat */}
-                    <div className="lg:col-span-2 flex flex-col space-y-6">
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                    <Target size={12} className="text-cyan-400" /> Investor Mandate
-                                </span>
-                                {deal.investor_bid_decks ? (
-                                    <>
-                                        <h3 className="font-bold text-white line-clamp-1">{deal.investor_bid_decks.title}</h3>
-                                        <Link href={`/bids/${deal.bid_deck_id}`} target="_blank" className="text-xs text-cyan-400 hover:underline block pt-1">View Original Mandate →</Link>
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-slate-400 italic">Direct Pitch (No Public Mandate)</p>
-                                )}
+                    {/* COL 3: Context Links & Chat */}
+                    <div className="lg:col-span-1 flex flex-col space-y-6 h-[600px]">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="neu-pressed-base border-transparent shadow-inner rounded-2xl p-4 space-y-1 relative">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--secondary)]/60 flex items-center gap-1.5"><Target size={10} className="text-[var(--accent)]" /> Mandate</span>
+                                <h3 className="text-xs font-bold text-[var(--secondary)] line-clamp-1">{deal.investor_bid_decks?.title || "Direct Pitch"}</h3>
                             </div>
-                            <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                    <FileText size={12} className="text-violet-400" /> Startup Pitch
-                                </span>
-                                {deal.pitch_decks ? (
-                                    <>
-                                        <h3 className="font-bold text-white line-clamp-1">{deal.pitch_decks.title}</h3>
-                                        <Link href={`/startup/${deal.pitch_deck_id}/pitch`} target="_blank" className="text-xs text-violet-400 hover:underline block pt-1">View Original Pitch Deck →</Link>
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-slate-400 italic">Pitch Deck Removed</p>
-                                )}
+                            <div className="neu-pressed-base border-transparent shadow-inner rounded-2xl p-4 space-y-1 relative">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--secondary)]/60 flex items-center gap-1.5"><FileText size={10} className="text-violet-600" /> Pitch Deck</span>
+                                <h3 className="text-xs font-bold text-[var(--secondary)] line-clamp-1">{deal.pitch_decks?.title || "Removed"}</h3>
                             </div>
                         </div>
 
-                        {/* LIVE DISCUSSION MODULE */}
-                        <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 flex-grow flex flex-col shadow-xl min-h-[500px]">
-                            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
-                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                    <MessageSquare size={18} className="text-blue-400" /> Secure Discussion
+                        <div className="neu-flat-base rounded-3xl p-6 flex-grow flex flex-col overflow-hidden relative">
+                            <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-3 mb-4 shrink-0">
+                                <h2 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2">
+                                    <MessageSquare size={16} className="text-blue-600" /> Chat
                                 </h2>
-                                {chatLocked && <Lock size={14} className="text-rose-400" />}
                             </div>
 
-                            <div className="flex-grow bg-black/40 rounded-2xl border border-white/5 p-4 flex flex-col space-y-4 overflow-y-auto mb-4">
-                                <div className="flex justify-center mb-4">
-                                    <span className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Lock size={12} /> Deal Room Initiated • {new Date(deal.created_at).toLocaleDateString()}
-                                    </span>
-                                </div>
-
-                                {messages.length === 0 ? (
-                                    <div className="flex-grow flex flex-col items-center justify-center text-slate-500 space-y-2 opacity-50">
-                                        <MessageSquare size={24} />
-                                        <p className="text-sm">No messages yet. Discuss the terms here.</p>
-                                    </div>
-                                ) : (
-                                    messages.map((msg) => {
-                                        const isSystem = msg.content.startsWith("*System:*");
-                                        const isMe = msg.sender_id === session?.user.id;
-
-                                        if (isSystem) {
-                                            return (
-                                                <div key={msg.id} className="flex justify-center py-2">
-                                                    <span className="text-xs italic text-slate-500 bg-white/[0.02] px-4 py-1 rounded-full border border-white/5 text-center max-w-sm">
-                                                        {msg.content.replace("*System:*", "")}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }
-
+                            <div ref={chatContainerRef} className="flex-grow bg-transparent border-transparent neu-pressed-base shadow-inner rounded-2xl p-4 flex flex-col space-y-4 overflow-y-auto mb-4 custom-scrollbar h-full">
+                                {messages.map((msg) => {
+                                    const isSystem = msg.content.startsWith("*System:*");
+                                    const isMe = msg.sender_id === session?.user.id;
+                                    if (isSystem) {
                                         return (
-                                            <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`max-w-[75%] md:max-w-[60%] rounded-2xl px-5 py-3 text-sm shadow-md ${isMe
-                                                        ? 'bg-blue-600/90 text-white rounded-br-sm'
-                                                        : 'bg-white/10 text-slate-200 border border-white/5 rounded-bl-sm'
-                                                    }`}>
-                                                    {msg.content}
-                                                    <div className={`text-[9px] mt-1 text-right ${isMe ? 'text-blue-200/70' : 'text-slate-500'}`}>
-                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
+                                            <div key={msg.id} className="flex justify-center">
+                                                <span className="text-[10px] italic font-medium text-[var(--secondary)]/60 bg-[var(--primary)] px-3 py-1 rounded-full text-center max-w-[90%]">{msg.content.replace("*System:*", "")}</span>
                                             </div>
                                         );
-                                    })
-                                )}
-                                <div ref={messagesEndRef} />
+                                    }
+                                    return (
+                                        <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-xs shadow-md font-medium ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'neu-flat-base text-[var(--secondary)] rounded-bl-sm'}`}>
+                                                {msg.content}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            <form onSubmit={handleSendMessage} className="relative flex items-center">
-                                <input
-                                    type="text"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    disabled={chatLocked}
-                                    placeholder={chatLocked ? "Deal finalized. Chat is locked." : "Type a message..."}
-                                    className="w-full bg-slate-900/80 border border-white/10 focus:border-blue-500/50 rounded-2xl py-3.5 pl-5 pr-14 text-sm text-white placeholder-slate-500 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!newMessage.trim() || sendingMsg || chatLocked}
-                                    className="absolute right-2 p-2 bg-blue-500 hover:bg-blue-400 text-black rounded-xl transition disabled:opacity-50 disabled:bg-white/10 disabled:text-slate-500"
-                                >
-                                    {sendingMsg ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            <form onSubmit={handleSendMessage} className="relative flex items-center shrink-0 mt-4">
+                                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} disabled={chatLocked} placeholder="Type a message..." className="w-full bg-transparent border-transparent neu-pressed-base shadow-inner focus:ring-1 focus:ring-blue-500 rounded-xl py-3 pl-4 pr-12 text-xs font-medium text-[var(--secondary)] placeholder-[var(--secondary)]/40 outline-none transition disabled:opacity-50" />
+                                <button type="submit" disabled={!newMessage.trim() || sendingMsg || chatLocked} className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition disabled:opacity-50">
+                                    {sendingMsg ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                                 </button>
                             </form>
                         </div>

@@ -17,7 +17,11 @@ export default function BrowseInvestorsPage() {
   const [selectedStage, setSelectedStage] = useState<string>("All");
   const [selectedRange, setSelectedRange] = useState<string>("All");
 
-  const investmentTypes = ["All", "Angel", "Seed", "VC", "Private Equity", "Debt", "Revenue Share"];
+  const investmentTypes = [
+    "All", "Angel", "Pre-Seed", "Seed", "Venture Capital",
+    "Corporate VC", "Private Equity", "Family Office",
+    "Syndicate", "Debt", "Revenue Share", "Grant/Non-Dilutive"
+  ];
   const stages = ["All", "Pre-Seed", "Seed", "Series A", "Series B+"];
   const ranges = ["All", "< $25k", "$25k - $100k", "$100k - $500k", "$500k+"];
 
@@ -73,48 +77,55 @@ export default function BrowseInvestorsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
+    <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10">
         <div className="space-y-4 mb-10">
           <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-400">
+            <span className="p-2.5 rounded-2xl neu-pressed-base border-transparent text-[var(--accent)] shadow-inner">
               <Compass size={24} />
             </span>
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-cyan-400">
+              <span className="text-xs font-bold uppercase tracking-widest text-[var(--accent)]">
                 Public Directory
               </span>
-              <h1 className="text-3xl md:text-5xl font-black text-white">Browse Investors</h1>
+              <h1 className="text-3xl md:text-5xl font-black text-[var(--secondary)]">Browse Investors</h1>
             </div>
             <BetaBadge variant="pill" className="ml-auto hidden sm:inline-flex" />
           </div>
-          <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
+          <p className="text-[var(--secondary)]/70 text-sm max-w-2xl leading-relaxed font-medium">
             Discover verified angel investors, venture capital funds, and strategic capital allocators.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
           <aside className="lg:col-span-1 space-y-6">
-            <div className="trionn-glass-card rounded-3xl border border-white/10 p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <SlidersHorizontal size={16} className="text-cyan-400" /> Filter Criteria
+            <div className="neu-flat-base p-6 space-y-6">
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
+                <h3 className="font-bold text-sm text-[var(--secondary)] flex items-center gap-2">
+                  <SlidersHorizontal size={16} className="text-[var(--accent)]" /> Filter Criteria
                 </h3>
-                <button onClick={resetFilters} className="text-[11px] text-slate-400 hover:text-cyan-400 transition flex items-center gap-1">
+                <button onClick={resetFilters} className="text-[11px] text-[var(--secondary)]/50 hover:text-[var(--accent)] transition flex items-center gap-1 font-bold">
                   <RefreshCw size={12} /> Reset
                 </button>
               </div>
 
               {/* Sidebar Filters */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Investment Type</label>
+                <label className="text-xs font-bold text-[var(--secondary)]/70 uppercase tracking-wider block">Investment Type</label>
                 <div className="space-y-1.5">
                   {investmentTypes.map((type) => (
-                    <button key={type} onClick={() => setSelectedType(type)} className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedType === type ? "bg-cyan-500/20 border border-cyan-400/50 text-cyan-300" : "bg-white/5 border border-transparent text-slate-400 hover:text-white hover:bg-white/10"}`}>
+                    <button
+                      key={type}
+                      onClick={() => setSelectedType(type)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-between ${selectedType === type
+                          ? "neu-pressed-base text-[var(--accent)] shadow-inner"
+                          : "bg-transparent border border-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] neu-btn shadow-none"
+                        }`}
+                    >
                       <span>{type}</span>
-                      {selectedType === type && <Check size={14} className="text-cyan-400" />}
+                      {selectedType === type && <Check size={14} className="text-[var(--accent)]" />}
                     </button>
                   ))}
                 </div>
@@ -124,16 +135,22 @@ export default function BrowseInvestorsPage() {
 
           <div className="lg:col-span-3 space-y-6">
             <div className="relative">
-              <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search investors..." className="w-full rounded-2xl border border-white/10 bg-slate-950/80 py-3.5 pl-12 pr-4 text-sm text-white focus:border-cyan-400 focus:outline-none transition backdrop-blur-xl" />
+              <Search size={18} className="absolute left-4 top-3.5 text-[var(--secondary)]/50" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search investors..."
+                className="w-full rounded-2xl border border-[var(--secondary)]/10 bg-[var(--primary)] py-3.5 pl-12 pr-4 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:border-[var(--accent)] focus:outline-none transition shadow-inner font-medium"
+              />
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span>Showing <strong>{filteredInvestors.length}</strong> investor profiles</span>
+            <div className="flex items-center justify-between text-xs text-[var(--secondary)]/60 font-medium px-1">
+              <span>Showing <strong className="text-[var(--secondary)]">{filteredInvestors.length}</strong> investor profiles</span>
             </div>
 
             {loading ? (
-              <div className="trionn-glass-card rounded-3xl border border-white/10 p-12 text-center text-slate-400 text-sm">
+              <div className="neu-flat-base p-12 text-center text-[var(--secondary)]/50 text-sm font-bold">
                 Loading live investor network...
               </div>
             ) : filteredInvestors.length > 0 ? (
@@ -143,9 +160,9 @@ export default function BrowseInvestorsPage() {
                 ))}
               </div>
             ) : (
-              <div className="trionn-glass-card rounded-3xl border border-white/10 p-12 text-center space-y-4">
-                <p className="text-slate-400 text-sm">No investors match your criteria.</p>
-                <button onClick={resetFilters} className="rounded-xl bg-cyan-400 px-5 py-2 text-xs font-bold text-black hover:bg-cyan-300 transition">Clear Filters</button>
+              <div className="neu-flat-base p-12 text-center space-y-4">
+                <p className="text-[var(--secondary)]/60 text-sm font-medium">No investors match your criteria.</p>
+                <button onClick={resetFilters} className="neu-btn px-5 py-2 text-xs">Clear Filters</button>
               </div>
             )}
           </div>

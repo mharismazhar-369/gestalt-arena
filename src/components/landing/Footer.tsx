@@ -9,7 +9,7 @@ export default function Footer() {
     <footer className="relative z-10 border-t border-white/10 bg-slate-950/80 backdrop-blur-2xl">
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-10 md:grid-cols-4">
-          
+
           {/* Brand Info & Beta Badge */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -20,7 +20,7 @@ export default function Footer() {
             </Link>
 
             <p className="text-xs text-slate-400 leading-relaxed">
-              The premier TRIONN-styled window-shopping matchmaking marketplace connecting strategic investors, founders, and groundbreaking startups globally.
+              The premier window-shopping matchmaking marketplace connecting strategic investors, founders, and groundbreaking startups globally.
             </p>
 
             <div className="pt-1">

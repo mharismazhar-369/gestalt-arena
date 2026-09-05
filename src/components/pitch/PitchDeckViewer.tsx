@@ -1,166 +1,202 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
-import { Building, PieChart, FileText, CheckCircle2, TrendingUp, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import {
+    Target, Wallet, TrendingUp, Users, Activity, Calendar,
+    Lightbulb, CheckCircle2, Globe, Briefcase, Eye, Star, Presentation
+} from "lucide-react";
+import EmbeddedInvestorActions from "./EmbeddedInvestorActions";
 
 export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const { data: opp, error } = await supabase
+    // 1. Fetch Pitch Deck & Founder Profile
+    const { data: pitchDeck, error } = await supabase
         .from("pitch_decks")
-        .select(`
-      *,
-      profiles:user_id (company_name, city, country)
-    `)
+        .select(`*, profiles:user_id (company_name, nickname)`)
         .eq("id", pitchId)
         .single();
 
-    if (error || !opp) {
+    if (error || !pitchDeck) {
         return (
-            <div className="trionn-glass-card rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center text-rose-400 text-sm font-bold">
-                Fundraising data could not be retrieved.
+            <div className="neu-pressed-base border-transparent shadow-inner p-6 text-center text-rose-600 text-sm font-bold">
+                Pitch deck data could not be retrieved.
             </div>
         );
     }
 
-    const profile = Array.isArray(opp.profiles) ? opp.profiles[0] : opp.profiles;
-    const companyName = profile?.company_name || opp.company_name || "Undisclosed Startup";
-    const location = profile?.city ? `${profile.city}, ${profile.country || ""}` : "Global Network";
+    const isOwner = user?.id === pitchDeck.user_id;
 
-    const amountRaised = opp.amount_raised || 0;
-    const fundingGoal = opp.funding_goal || 1;
-    const progressPercentage = Math.min(Math.round((amountRaised / fundingGoal) * 100), 100);
+    // 2. Track View (If current user is an investor viewing a startup's deck)
+    if (user && !isOwner) {
+        await supabase.from("pitch_deck_views").insert({
+            pitch_deck_id: pitchId,
+            viewer_id: user.id
+        });
+    }
+
+    // 3. Aggregate Actual Views & Ratings from DB
+    const { count: viewCount } = await supabase
+        .from("pitch_deck_views")
+        .select("*", { count: "exact", head: true })
+        .eq("pitch_deck_id", pitchId);
+
+    const { data: ratingsData } = await supabase
+        .from("pitch_deck_ratings")
+        .select("score")
+        .eq("pitch_deck_id", pitchId);
+
+    let avgRating = 0;
+    if (ratingsData && ratingsData.length > 0) {
+        const sum = ratingsData.reduce((acc, curr) => acc + curr.score, 0);
+        avgRating = Number((sum / ratingsData.length).toFixed(1));
+    }
+
+    // 4. Formatting Helpers
+    const fundingGoal = pitchDeck.funding_goal ? `$${Number(pitchDeck.funding_goal).toLocaleString()}` : "TBD";
+    const minTicket = pitchDeck.min_ticket ? `$${Number(pitchDeck.min_ticket).toLocaleString()}` : "Flexible";
+    const valuation = pitchDeck.valuation ? `$${Number(pitchDeck.valuation).toLocaleString()}` : "TBD";
+    const revenue = pitchDeck.revenue ? `$${Number(pitchDeck.revenue).toLocaleString()}` : "$0";
 
     return (
-        <div className="space-y-6 w-full text-white">
-            {/* Main Header Card */}
-            <div className="trionn-glass-card rounded-3xl border border-white/10 overflow-hidden shadow-xl">
-                <div className="p-8 border-b border-white/10 bg-white/5">
-                    <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-                        <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                                    {opp.stage || "Seed"}
-                                </span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" /> Active Raise
-                                </span>
-                            </div>
-                            <h2 className="text-3xl font-black tracking-tight mb-3 text-white">{opp.title || companyName}</h2>
-                            <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                                {opp.elevator_pitch || opp.description || "No description provided."}
-                            </p>
+        <div className="space-y-6 w-full text-[var(--secondary)]">
+
+            {/* Master Header Card */}
+            <div className="neu-flat-base p-8 relative overflow-hidden group">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                    <div className="space-y-4 max-w-2xl">
+                        <div className="flex items-center gap-3">
+                            <span className="neu-pressed-base border-transparent shadow-inner px-3 py-1 rounded-full text-[10px] font-bold uppercase text-[var(--accent)]">
+                                {pitchDeck.stage || "Pre-Seed"} Round
+                            </span>
                         </div>
 
-                        {opp.deck_url && (
-                            <a
-                                href={opp.deck_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full md:w-auto shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-cyan-500/10 border border-cyan-400/40 text-cyan-300 font-bold rounded-xl hover:bg-cyan-400 hover:text-black transition-all shadow-lg shadow-cyan-500/10"
-                            >
-                                <FileText className="w-4 h-4" /> View Pitch Deck
-                            </a>
-                        )}
+                        <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)] leading-tight">
+                            {pitchDeck.title || "Untitled Pitch"}
+                        </h1>
+                        <p className="text-sm text-[var(--secondary)]/80 font-medium italic border-l-4 border-[var(--accent)] pl-4 py-1">
+                            {pitchDeck.elevator_pitch || "No elevator pitch provided."}
+                        </p>
                     </div>
-                </div>
 
-                {/* Financials Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 bg-black/40">
-                    <div className="p-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Raise</p>
-                        <p className="text-xl font-black text-white">${(opp.funding_goal || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="p-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pre-Money Valuation</p>
-                        <p className="text-xl font-black text-white">${(opp.valuation || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="p-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Min. Ticket Size</p>
-                        <p className="text-xl font-black text-white">${(opp.min_ticket || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="p-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Equity Offered</p>
-                        <p className="text-xl font-black text-white">{opp.equity_offered || "TBD"}%</p>
-                    </div>
-                </div>
-
-                {/* Funding Progress Bar */}
-                <div className="p-8 bg-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Funding Progress</h3>
-                    <div className="mb-2 flex justify-between text-xs font-bold">
-                        <span className="text-cyan-400">${amountRaised.toLocaleString()} committed</span>
-                        <span className="text-slate-500">{progressPercentage}% of ${(opp.funding_goal || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-1000 ease-in-out"
-                            style={{ width: `${progressPercentage}%` }}
-                        />
+                    <div className="flex gap-6 neu-pressed-base border-transparent shadow-inner p-4 rounded-2xl shrink-0">
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                            <div className="flex items-center gap-1.5 text-[var(--accent)]">
+                                <Eye size={18} />
+                                <span className="text-lg font-bold">{viewCount || 0}</span>
+                            </div>
+                            <span className="text-[10px] text-[var(--secondary)]/50 uppercase tracking-wider font-bold">Total Views</span>
+                        </div>
+                        <div className="w-px bg-[var(--secondary)]/10" />
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                            <div className="flex items-center gap-1.5 text-amber-500">
+                                <Star size={18} fill="currentColor" />
+                                <span className="text-lg font-bold">{avgRating}</span>
+                            </div>
+                            <span className="text-[10px] text-[var(--secondary)]/50 uppercase tracking-wider font-bold">Ratings</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <section className="trionn-glass-card border border-white/10 rounded-3xl p-8 shadow-sm">
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-6 text-white border-b border-white/10 pb-4">
-                            <TrendingUp className="w-5 h-5 text-cyan-400" /> Traction & Metrics
-                        </h3>
-                        <p className="text-sm leading-relaxed text-slate-300">
-                            {opp.traction || "Early stage development. No specific traction metrics disclosed yet."}
-                        </p>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
-                            <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Current MRR</p>
-                                <p className="text-lg font-black text-white">${(opp.revenue || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Monthly Burn</p>
-                                <p className="text-lg font-black text-white">${(opp.burn_rate || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Runway</p>
-                                <p className="text-lg font-black text-white">{opp.runway_months || 0} months</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="trionn-glass-card border border-white/10 rounded-3xl p-8 shadow-sm">
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-4 text-white border-b border-white/10 pb-4">
-                            <PieChart className="w-5 h-5 text-violet-400" /> Use of Funds
-                        </h3>
-                        <p className="text-sm leading-relaxed text-slate-300">
-                            {opp.use_of_funds || "Fund allocation details pending founder update."}
-                        </p>
-                    </section>
+            {/* Financials & Metrics Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <Target className="text-emerald-600 mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Raise Target</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{fundingGoal}</p>
                 </div>
-
-                <div className="space-y-6">
-                    <section className="trionn-glass-card border border-white/10 rounded-3xl p-6 shadow-sm">
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-6 text-white border-b border-white/10 pb-4">
-                            <Building className="w-5 h-5 text-amber-400" /> Company Profile
-                        </h3>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Company Name</p>
-                                <p className="font-bold text-sm text-white">{companyName}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Headquarters</p>
-                                <p className="font-bold text-sm text-white">{location}</p>
-                            </div>
-                            <div className="pt-4 mt-4 border-t border-white/10">
-                                <Link href={`/startup/${opp.user_id}`} className="text-cyan-400 font-bold hover:text-cyan-300 transition flex items-center gap-1 text-xs">
-                                    View full startup profile <ArrowRight size={12} />
-                                </Link>
-                            </div>
-                        </div>
-                    </section>
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <Wallet className="text-[var(--accent)] mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Min Ticket</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{minTicket}</p>
+                </div>
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <TrendingUp className="text-[var(--accent)] mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Valuation Cap</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{valuation}</p>
+                </div>
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <Users className="text-[var(--accent)] mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Equity Offered</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{pitchDeck.equity_offered ? `${pitchDeck.equity_offered}%` : "TBD"}</p>
+                </div>
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <Activity className="text-emerald-600 mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Current ARR</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{revenue}</p>
+                </div>
+                <div className="neu-pressed-base border-transparent shadow-inner p-5 flex flex-col gap-1 rounded-2xl items-center text-center">
+                    <Calendar className="text-[var(--accent)] mb-1" size={16} />
+                    <p className="text-[10px] text-[var(--secondary)]/60 uppercase font-bold tracking-wider">Runway</p>
+                    <p className="text-base font-bold text-[var(--secondary)]">{pitchDeck.runway_months ? `${pitchDeck.runway_months} Mo` : "N/A"}</p>
                 </div>
             </div>
+
+            {/* The Business Case */}
+            <div className="grid md:grid-cols-2 gap-6">
+                <div className="neu-flat-base p-6 space-y-4">
+                    <h2 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Lightbulb size={16} className="text-[var(--accent)]" /> Problem Statement
+                    </h2>
+                    <p className="text-sm text-[var(--secondary)]/80 leading-relaxed font-medium whitespace-pre-line">
+                        {pitchDeck.problem_statement || "Not detailed."}
+                    </p>
+                </div>
+
+                <div className="neu-flat-base p-6 space-y-4">
+                    <h2 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <CheckCircle2 size={16} className="text-emerald-600" /> The Solution
+                    </h2>
+                    <p className="text-sm text-[var(--secondary)]/80 leading-relaxed font-medium whitespace-pre-line">
+                        {pitchDeck.solution || "Not detailed."}
+                    </p>
+                </div>
+
+                <div className="neu-flat-base p-6 space-y-4">
+                    <h2 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Globe size={16} className="text-[var(--accent)]" /> Market Size
+                    </h2>
+                    <p className="text-sm text-[var(--secondary)]/80 leading-relaxed font-medium whitespace-pre-line">
+                        {pitchDeck.market_size || "Not detailed."}
+                    </p>
+                </div>
+
+                <div className="neu-flat-base p-6 space-y-4">
+                    <h2 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Briefcase size={16} className="text-[var(--accent)]" /> Business Model
+                    </h2>
+                    <p className="text-sm text-[var(--secondary)]/80 leading-relaxed font-medium whitespace-pre-line">
+                        {pitchDeck.business_model || "Not detailed."}
+                    </p>
+                </div>
+            </div>
+
+            {/* External Document Attachment */}
+            {pitchDeck.deck_url && (
+                <div className="neu-flat-base p-6 relative flex flex-col items-center justify-center space-y-4">
+                    <div className="p-3 rounded-full neu-pressed-base border-transparent shadow-inner text-[var(--accent)]">
+                        <Presentation size={24} />
+                    </div>
+                    <a
+                        href={pitchDeck.deck_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-8 py-3 neu-btn text-xs font-bold"
+                    >
+                        View External Deck Document
+                    </a>
+                </div>
+            )}
+
+            {/* Embedded Action System (Only shows if viewer is an Investor) */}
+            {user && !isOwner && (
+                <EmbeddedInvestorActions
+                    pitchId={pitchDeck.id}
+                    startupId={pitchDeck.user_id}
+                    currentUserId={user.id}
+                />
+            )}
         </div>
     );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat } from "lucide-react";
+import Link from "next/link";
+import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat, Handshake } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -25,10 +26,8 @@ export default function NotificationDropdown() {
     const fetchNotifications = async () => {
       const { data } = await supabase
         .from("notifications")
-        .select(`
-          id, type, is_read, message, created_at,
-          actor:profiles!actor_id(nickname, company_name)
-        `)
+        // FIX: Added reference_id to the query
+        .select(`id, type, is_read, message, created_at, reference_id, actor:profiles!actor_id(nickname, company_name)`)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(20);
@@ -44,28 +43,16 @@ export default function NotificationDropdown() {
       .channel(uniqueChannelName)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${session.user.id}`,
-        },
-        () => {
-          fetchNotifications();
-        }
-      )
-      .subscribe();
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` },
+        () => fetchNotifications()
+      ).subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [session]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -73,27 +60,43 @@ export default function NotificationDropdown() {
 
   const markAllAsRead = async () => {
     if (!session?.user || unreadCount === 0) return;
-
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", session.user.id)
-      .eq("is_read", false);
-
+    await supabase.from("notifications").update({ is_read: true }).eq("user_id", session.user.id).eq("is_read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  };
+
+  const markSingleAsRead = async (id: string) => {
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+  };
+
+  // Helper function to resolve the correct URL route
+  const getNotificationLink = (type: string, refId: string) => {
+    if (!refId) return "#";
+    switch (type) {
+      case "negotiate":
+      case "deal_initiated": return `/negotiations/${refId}`;
+      case "rating":
+      case "interested": return `/startup/${refId}/pitch`;
+      case "bid": return `/bids/${refId}`;
+      case "like":
+      case "comment":
+      case "reshare": return `/feed`;
+      default: return "#";
+    }
   };
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "like": return <Heart size={16} className="text-pink-400" />;
-      case "reshare": return <Repeat size={16} className="text-emerald-400" />;
-      case "comment":
-      case "negotiate": return <MessageCircle size={16} className="text-cyan-400" />;
-      case "bid": return <Gavel size={16} className="text-amber-400" />;
-      case "rating": return <Star size={16} className="text-amber-400 fill-amber-400" />;
-      case "follow": return <UserPlus size={16} className="text-violet-400" />;
-      case "interested": return <Bookmark size={16} className="text-cyan-400 fill-cyan-400/20" />;
-      default: return <Bell size={16} className="text-slate-400" />;
+      case "like": return <Heart size={16} className="text-rose-600" />;
+      case "reshare": return <Repeat size={16} className="text-emerald-600" />;
+      case "comment": return <MessageCircle size={16} className="text-blue-600" />;
+      case "negotiate":
+      case "deal_initiated": return <Handshake size={16} className="text-[var(--accent)]" />;
+      case "bid": return <Gavel size={16} className="text-amber-600" />;
+      case "rating": return <Star size={16} className="text-amber-500 fill-amber-500" />;
+      case "follow": return <UserPlus size={16} className="text-violet-600" />;
+      case "interested": return <Bookmark size={16} className="text-[var(--accent)] fill-[var(--accent)]/20" />;
+      default: return <Bell size={16} className="text-[var(--secondary)]/60" />;
     }
   };
 
@@ -103,16 +106,16 @@ export default function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full transition-all duration-300 border ${isOpen
-            ? "bg-white/10 border-white/20 text-white"
-            : unreadCount > 0
-              ? "bg-cyan-500/10 border-cyan-400/50 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.4)] animate-pulse"
-              : "bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10"
+        className={`relative p-2 rounded-full transition-all duration-300 ${isOpen
+          ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
+          : unreadCount > 0
+            ? "neu-flat-base text-[var(--accent)] shadow-[0_0_15px_var(--accent)] animate-pulse"
+            : "bg-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)]"
           }`}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[10px] font-black text-black border-2 border-[#02040a]">
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-black text-black border-2 border-[var(--primary)]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -125,19 +128,19 @@ export default function NotificationDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-3 w-80 md:w-96 rounded-2xl border border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl shadow-2xl overflow-hidden z-50"
+            className="absolute right-0 mt-4 w-80 md:w-96 rounded-2xl neu-flat-base overflow-hidden z-50 border border-[var(--secondary)]/10"
           >
-            <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-              <h4 className="font-bold text-white flex items-center gap-2">
+            <div className="p-4 border-b border-[var(--secondary)]/10 flex justify-between items-center">
+              <h4 className="font-bold text-[var(--secondary)] flex items-center gap-2 text-sm">
                 Notifications
                 {unreadCount > 0 && (
-                  <span className="bg-cyan-500/20 text-cyan-400 py-0.5 px-2 rounded-full text-[10px]">
+                  <span className="neu-pressed-base border-transparent shadow-inner text-[var(--accent)] py-0.5 px-2 rounded-full text-[10px]">
                     {unreadCount} New
                   </span>
                 )}
               </h4>
               {unreadCount > 0 && (
-                <button onClick={markAllAsRead} className="text-[10px] text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                <button onClick={markAllAsRead} className="text-[10px] text-[var(--secondary)]/60 hover:text-[var(--accent)] font-bold transition flex items-center gap-1">
                   <Check size={12} /> Mark read
                 </button>
               )}
@@ -145,31 +148,34 @@ export default function NotificationDropdown() {
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 text-sm">
+                <div className="p-8 text-center text-[var(--secondary)]/50 font-medium text-sm">
                   You're all caught up.
                 </div>
               ) : (
                 notifications.map((notif) => {
                   const actorName = notif.actor?.nickname || notif.actor?.company_name || "A user";
+                  const routeUrl = getNotificationLink(notif.type, notif.reference_id);
 
                   return (
-                    <div
+                    <Link
+                      href={routeUrl}
                       key={notif.id}
-                      className={`p-4 border-b border-white/5 text-sm transition hover:bg-white/5 flex gap-3 ${!notif.is_read ? "bg-cyan-500/5" : "opacity-70"
+                      onClick={() => !notif.is_read && markSingleAsRead(notif.id)}
+                      className={`p-4 border-b border-[var(--secondary)]/5 text-sm transition flex gap-3 hover:bg-[var(--secondary)]/5 ${!notif.is_read ? "bg-[var(--secondary)]/[0.03]" : "opacity-70"
                         }`}
                     >
-                      <div className="mt-0.5">
+                      <div className="mt-0.5 shrink-0">
                         {getIcon(notif.type)}
                       </div>
                       <div className="flex-1">
-                        <p className="text-slate-300 text-xs leading-relaxed">
-                          <span className="font-bold text-white">{actorName}</span> {notif.message}
+                        <p className="text-[var(--secondary)]/80 text-xs leading-relaxed font-medium">
+                          <span className="font-bold text-[var(--secondary)]">{actorName}</span> {notif.message}
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-1 font-medium tracking-wide">
+                        <p className="text-[10px] text-[var(--secondary)]/50 mt-1 font-bold tracking-wide">
                           {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })
               )}

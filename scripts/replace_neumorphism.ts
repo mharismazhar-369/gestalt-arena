@@ -51,8 +51,8 @@ files.forEach(file => {
     [/text-cyan-500\b/g, `text-[${themeAccent}]`],
     [/text-violet-500\b/g, `text-[${themeAccent}]`],
     [/text-emerald-500\b/g, `text-[${themeAccent}]`],
-    [/text-([\w-]+)\/70/g, () => `text-[${themeMain}]/70`],
-    [/text-([\w-]+)\/80/g, () => `text-[${themeMain}]/80`]
+    [/text-([\w-]+)\/70/g, `text-[${themeMain}]/70`],
+    [/text-([\w-]+)\/80/g, `text-[${themeMain}]/80`]
   ];
   replacements.forEach(([regex, repl]) => {
     content = content.replace(regex, repl);

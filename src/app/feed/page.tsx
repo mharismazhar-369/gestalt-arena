@@ -14,6 +14,10 @@ import {
   ArrowRight, ShieldCheck, DollarSign
 } from "lucide-react";
 
+const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
+  console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
+};
+
 export default function FeedPage() {
   const { session } = useAuth();
 
@@ -94,7 +98,7 @@ export default function FeedPage() {
         const tags: Record<string, number> = {};
         recentPosts.forEach(post => {
           const matches = post.content?.match(/#\w+/g) || [];
-          matches.forEach(tag => tags[tag] = (tags[tag] || 0) + 1);
+          matches.forEach((tag: string) => tags[tag] = (tags[tag] || 0) + 1);
         });
         const sortedTags = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 6).map(e => e[0]);
         setTrendingTags(sortedTags);
@@ -139,19 +143,22 @@ export default function FeedPage() {
 
                     <div className="absolute -bottom-1 -right-1 z-20">
                       <button
-                        onClick={() => setShowStatusMenu(!showStatusMenu)}
+                        onClick={() => {
+                          trackInteraction("CLICK", "toggle_status_menu", { current_state: showStatusMenu });
+                          setShowStatusMenu(!showStatusMenu);
+                        }}
                         className={`h-4 w-4 rounded-full border-2 border-[var(--primary)] flex items-center justify-center transition-all ${statusColors[status]}`}
                       />
 
                       {showStatusMenu && (
                         <div className="absolute top-5 left-0 neu-flat-base p-2 rounded-xl flex flex-col gap-1 w-24 shadow-lg">
-                          <button onClick={() => { setStatus('online'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_online"); setStatus('online'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Online
                           </button>
-                          <button onClick={() => { setStatus('busy'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_busy"); setStatus('busy'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-rose-500"></span> Busy
                           </button>
-                          <button onClick={() => { setStatus('away'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_away"); setStatus('away'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-amber-400"></span> Away
                           </button>
                         </div>
@@ -177,13 +184,13 @@ export default function FeedPage() {
                     <span className="text-[var(--secondary)]">{metrics.views}</span>
                   </div>
 
-                  <Link href={`/profile/${session?.user?.id}`} className="flex items-center justify-between text-[10px] font-bold group cursor-pointer">
+                  <Link href={`/profile/${session?.user?.id}`} onClick={() => trackInteraction("CLICK", "nav_profile_posts")} className="flex items-center justify-between text-[10px] font-bold group cursor-pointer">
                     <span className="flex items-center gap-1.5 text-[var(--secondary)]/70 group-hover:text-[var(--accent)] transition">
                       <MessageSquare size={12} className="text-[var(--accent)]" /> Published Posts
                     </span>
                     <span className="text-[var(--secondary)] group-hover:text-[var(--accent)] transition">{metrics.posts}</span>
                   </Link>
-                  <Link href="/research" className="flex items-center justify-between text-[10px] font-bold group cursor-pointer">
+                  <Link href="/research" onClick={() => trackInteraction("CLICK", "nav_research_articles")} className="flex items-center justify-between text-[10px] font-bold group cursor-pointer">
                     <span className="flex items-center gap-1.5 text-[var(--secondary)]/70 group-hover:text-[var(--accent)] transition">
                       <FileText size={12} className="text-[var(--accent)]" /> Research Articles
                     </span>
@@ -219,7 +226,7 @@ export default function FeedPage() {
                       {deckData.elevator_pitch || deckData.thesis}
                     </p>
 
-                    <Link href={isStartup ? `/startup/${deckData.id}/pitch` : `/bids/${deckData.id}`} className="mt-2 flex items-center justify-between w-full p-2 bg-transparent hover:bg-[var(--secondary)]/5 text-[10px] font-bold text-[var(--secondary)] rounded-lg transition border border-[var(--secondary)]/10">
+                    <Link href={isStartup ? `/startup/${deckData.id}/pitch` : `/bids/${deckData.id}`} onClick={() => trackInteraction("CLICK", "nav_deck_details", { type: isStartup ? "pitch" : "mandate", id: deckData.id })} className="mt-2 flex items-center justify-between w-full p-2 bg-transparent hover:bg-[var(--secondary)]/5 text-[10px] font-bold text-[var(--secondary)] rounded-lg transition border border-[var(--secondary)]/10">
                       View Details <ArrowRight size={12} />
                     </Link>
                   </div>
@@ -229,7 +236,7 @@ export default function FeedPage() {
                     <p className="text-[10px] text-[var(--secondary)]/60 font-medium px-2">
                       No active {isStartup ? "pitch deck" : "mandate"} found.
                     </p>
-                    <Link href={isStartup ? "/startup/pitch/build" : "/investor/bids/create"} className="text-[10px] font-bold text-[var(--accent)] hover:underline inline-block mt-1">
+                    <Link href={isStartup ? "/startup/pitch/build" : "/investor/bids/create"} onClick={() => trackInteraction("CLICK", "nav_create_deck", { type: isStartup ? "pitch" : "mandate" })} className="text-[10px] font-bold text-[var(--accent)] hover:underline inline-block mt-1">
                       Create one now
                     </Link>
                   </div>
@@ -275,7 +282,7 @@ export default function FeedPage() {
                 </h3>
                 <div className="space-y-3">
                   {trendingArticles.length > 0 ? trendingArticles.map((item) => (
-                    <Link href={`/research/${item.id}`} key={item.id} className="group cursor-pointer block">
+                    <Link href={`/research/${item.id}`} key={item.id} onClick={() => trackInteraction("CLICK", "nav_trending_research", { article_id: item.id })} className="group cursor-pointer block">
                       <h4 className="text-xs font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition line-clamp-2 leading-tight">
                         {item.title}
                       </h4>
@@ -296,7 +303,7 @@ export default function FeedPage() {
                 </h3>
                 <div className="space-y-3">
                   {trendingInvestors.length > 0 ? trendingInvestors.map((inv) => (
-                    <Link href={`/profile/${inv.id}`} key={inv.id} className="flex items-center gap-3 cursor-pointer group">
+                    <Link href={`/profile/${inv.id}`} key={inv.id} onClick={() => trackInteraction("CLICK", "nav_trending_investor", { investor_id: inv.id })} className="flex items-center gap-3 cursor-pointer group">
                       <div className="h-8 w-8 shrink-0 rounded-full bg-[var(--secondary)]/5 flex items-center justify-center font-bold text-[10px] text-[var(--secondary)] group-hover:bg-[var(--accent)] group-hover:text-[var(--primary)] transition">
                         {(inv.nickname || inv.company_name || "U").slice(0, 2).toUpperCase()}
                       </div>
@@ -321,7 +328,7 @@ export default function FeedPage() {
                   <Hash size={14} className="text-[var(--accent)]" /> Trending Topics
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {trendingTags.length > 0 ? trendingTags.map((tag) => (
+                  {trendingTags.length > 0 ? trendingTags.map((tag: string) => (
                     <span key={tag} className="px-2 py-1 rounded-md text-[10px] font-bold text-[var(--secondary)]/70 neu-pressed-base border-transparent shadow-inner cursor-pointer hover:text-[var(--accent)] transition">
                       {tag}
                     </span>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Star, MessageCircle, Gavel, Bookmark, Loader2 } from "lucide-react";
+import { Star, MessageCircle, Gavel, Bookmark, Loader2, ShieldAlert } from "lucide-react";
 
 interface EmbeddedInvestorActionsProps {
     pitchId: string;
@@ -18,13 +18,18 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const isAuthor = currentUserId === startupId;
+
     useEffect(() => {
+        if (isAuthor) return;
+
         const fetchUserData = async () => {
+            // Using the new strict deck_ratings table
             const { data: ratingData } = await supabase
-                .from("pitch_deck_ratings")
+                .from("deck_ratings")
                 .select("score")
-                .eq("pitch_deck_id", pitchId)
-                .eq("investor_id", currentUserId)
+                .eq("deck_id", pitchId)
+                .eq("user_id", currentUserId)
                 .single();
 
             if (ratingData) setRating(ratingData.score);
@@ -39,22 +44,24 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
             if (interestData) setIsBookmarked(true);
         };
         fetchUserData();
-    }, [pitchId, currentUserId]);
+    }, [pitchId, currentUserId, isAuthor]);
 
     const handleRate = async (score: number) => {
+        if (isAuthor) return;
         setRating(score);
 
+        // Uses the newly created schema with unique constraints
         const { data: existing } = await supabase
-            .from("pitch_deck_ratings")
+            .from("deck_ratings")
             .select("id")
-            .eq("pitch_deck_id", pitchId)
-            .eq("investor_id", currentUserId)
+            .eq("deck_id", pitchId)
+            .eq("user_id", currentUserId)
             .single();
 
         if (existing) {
-            await supabase.from("pitch_deck_ratings").update({ score }).eq("id", existing.id);
+            await supabase.from("deck_ratings").update({ score }).eq("id", existing.id);
         } else {
-            await supabase.from("pitch_deck_ratings").insert({ pitch_deck_id: pitchId, investor_id: currentUserId, score });
+            await supabase.from("deck_ratings").insert({ deck_id: pitchId, user_id: currentUserId, score });
             await supabase.from("notifications").insert({
                 user_id: startupId,
                 actor_id: currentUserId,
@@ -66,6 +73,7 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
     };
 
     const handleInterested = async () => {
+        if (isAuthor) return;
         const newStatus = !isBookmarked;
         setIsBookmarked(newStatus);
 
@@ -84,6 +92,7 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
     };
 
     const handleNegotiate = async () => {
+        if (isAuthor) return;
         setLoading(true);
 
         const { data: existingDeal } = await supabase
@@ -98,7 +107,6 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
             return;
         }
 
-        // Create the Deal Room
         const { data: newDeal, error } = await supabase
             .from("deal_negotiations")
             .insert({
@@ -111,7 +119,6 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
             .single();
 
         if (!error && newDeal) {
-            // FIX: Trigger the notification passing the newDeal.id as the reference_id
             await supabase.from("notifications").insert({
                 user_id: startupId,
                 actor_id: currentUserId,
@@ -126,6 +133,7 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
     };
 
     const handleBid = () => {
+        if (isAuthor) return;
         router.push(`/investor/bids/create?target_pitch=${pitchId}`);
     };
 
@@ -135,34 +143,46 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
                 <span className="text-xs font-bold text-[var(--secondary)]/60 uppercase tracking-wider">
                     Rate Idea
                 </span>
-                <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            onClick={() => handleRate(star)}
-                            className="transition-transform hover:scale-110 p-1 focus:outline-none"
-                        >
-                            <Star
-                                size={26}
-                                className={`transition-all duration-300 ${(hoverRating || rating) >= star
-                                    ? "fill-[var(--accent)] text-[var(--accent)] drop-shadow-[0_0_8px_var(--accent)]"
-                                    : "text-[var(--secondary)]/20"
-                                    }`}
-                            />
-                        </button>
-                    ))}
-                </div>
+                {isAuthor ? (
+                    <div className="flex items-center gap-2 px-4 py-2 neu-pressed-base border-transparent shadow-inner rounded-xl">
+                        <ShieldAlert size={14} className="text-amber-500" />
+                        <span className="text-xs font-bold text-[var(--secondary)]/50 italic">
+                            Read Only: Author
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                                key={star}
+                                type="button"
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => handleRate(star)}
+                                className="transition-transform hover:scale-110 p-1 focus:outline-none"
+                            >
+                                <Star
+                                    size={26}
+                                    className={`transition-all duration-300 ${(hoverRating || rating) >= star
+                                        ? "fill-[var(--accent)] text-[var(--accent)] drop-shadow-[0_0_8px_var(--accent)]"
+                                        : "text-[var(--secondary)]/20"
+                                        }`}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-col sm:flex-row w-full xl:w-auto gap-4">
                 <button
                     onClick={handleInterested}
-                    className={`flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-sm transition-all duration-300 ${isBookmarked
-                        ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
-                        : "bg-transparent text-[var(--secondary)] hover:text-[var(--accent)] shadow-[4px_4px_10px_rgba(0,0,0,0.3),-4px_-4px_10px_rgba(255,255,255,0.03)]"
+                    disabled={isAuthor}
+                    className={`flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-sm transition-all duration-300 ${isAuthor
+                            ? "opacity-50 cursor-not-allowed neu-pressed-base border-transparent shadow-inner text-[var(--secondary)]/40"
+                            : isBookmarked
+                                ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
+                                : "bg-transparent text-[var(--secondary)] hover:text-[var(--accent)] shadow-[4px_4px_10px_rgba(0,0,0,0.3),-4px_-4px_10px_rgba(255,255,255,0.03)]"
                         }`}
                 >
                     <Bookmark size={18} className={isBookmarked ? "fill-[var(--accent)]" : ""} />
@@ -171,8 +191,8 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
 
                 <button
                     onClick={handleNegotiate}
-                    disabled={loading}
-                    className="flex items-center justify-center gap-2 px-8 py-4 text-sm neu-btn disabled:opacity-50"
+                    disabled={loading || isAuthor}
+                    className={`flex items-center justify-center gap-2 px-8 py-4 text-sm neu-btn ${isAuthor ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                     {loading ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={18} />}
                     {loading ? "Opening Room..." : "Negotiate"}
@@ -180,7 +200,8 @@ export default function EmbeddedInvestorActions({ pitchId, startupId, currentUse
 
                 <button
                     onClick={handleBid}
-                    className="flex items-center justify-center gap-2 px-8 py-4 text-sm neu-btn"
+                    disabled={isAuthor}
+                    className={`flex items-center justify-center gap-2 px-8 py-4 text-sm neu-btn ${isAuthor ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                     <Gavel size={18} />
                     Bid

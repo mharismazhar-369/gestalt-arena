@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Target, ArrowLeft, FileText, PlusCircle, CheckCircle2 } from "lucide-react";
+import { Target, ArrowLeft, FileText, PlusCircle, CheckCircle2, Lock } from "lucide-react";
 import MandateApplicationForm from "@/components/bids/MandateApplicationForm";
 
 export default async function ApplyToMandatePage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,16 +26,39 @@ export default async function ApplyToMandatePage({ params }: { params: Promise<{
         redirect("/browse/bids");
     }
 
+    const profile = Array.isArray(bid.profiles) ? bid.profiles[0] : bid.profiles;
+    const investorName = profile?.company_name || profile?.nickname || "Undisclosed Investor";
+
+    // --- NEW: Route Protection for Closed Deals ---
+    if (bid.status === "Accepted") {
+        return (
+            <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
+                <Navbar />
+                <main className="flex-grow flex items-center justify-center p-6 relative z-10">
+                    <div className="neu-flat-base p-10 max-w-lg w-full text-center space-y-6">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-600 mb-4">
+                            <Lock size={32} />
+                        </div>
+                        <h1 className="text-2xl font-black text-[var(--secondary)]">Mandate Closed</h1>
+                        <p className="text-sm font-medium text-[var(--secondary)]/70">
+                            The mandate <strong>"{bid.title}"</strong> by <strong>{investorName}</strong> has been successfully allocated and is no longer accepting new applications.
+                        </p>
+                        <Link href="/browse/bids" className="neu-btn px-8 py-3 inline-block mt-4 text-sm">
+                            Browse Active Mandates
+                        </Link>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
     // 2. Fetch the Founder's Existing Pitch Decks
-    // Added target_bid_id to support the locking logic in MandateApplicationForm
     const { data: existingPitches } = await supabase
         .from("pitch_decks")
         .select("id, title, stage, funding_goal, target_bid_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-
-    const profile = Array.isArray(bid.profiles) ? bid.profiles[0] : bid.profiles;
-    const investorName = profile?.company_name || profile?.nickname || "Undisclosed Investor";
 
     return (
         <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
@@ -121,8 +144,6 @@ export default async function ApplyToMandatePage({ params }: { params: Promise<{
                                     <CheckCircle2 size={14} className="text-emerald-600" /> Auto-locks to this mandate
                                 </li>
                             </ul>
-
-                            {/* Note: target_bid param passes context to your pitch builder */}
                             <Link
                                 href={`/startup/pitch/build?target_bid=${bid.id}`}
                                 className="w-full text-center px-6 py-4 neu-btn text-sm inline-block"

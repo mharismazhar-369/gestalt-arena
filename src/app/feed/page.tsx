@@ -19,7 +19,8 @@ const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadat
 };
 
 export default function FeedPage() {
-  const { session } = useAuth();
+  // Extract the newly added global status and update function
+  const { session, status, updateStatus } = useAuth();
 
   // Real Data States
   const [profile, setProfile] = useState<any>(null);
@@ -28,8 +29,7 @@ export default function FeedPage() {
   const [trendingInvestors, setTrendingInvestors] = useState<any[]>([]);
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
 
-  // Real-time Status State
-  const [status, setStatus] = useState<'online' | 'busy' | 'away'>('online');
+  // Local state for just toggling the menu visibility
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   // Activity Metrics
@@ -64,7 +64,6 @@ export default function FeedPage() {
       setMetrics({
         posts: postCount || 0,
         articles: articleCount || 0,
-        // Checks for 'profile_views' or 'views' column. Defaults to 0 if null.
         views: profileData?.profile_views || profileData?.views || 0
       });
 
@@ -79,7 +78,7 @@ export default function FeedPage() {
         setDeckData(bid || null);
       }
 
-      // 4. Fetch Trending Aggregations (Right Column)
+      // 4. Fetch Trending Aggregations
       const [
         { data: trendArticles },
         { data: trendInvestors },
@@ -87,13 +86,13 @@ export default function FeedPage() {
       ] = await Promise.all([
         supabase.from("articles").select("id, title, read_time").order("created_at", { ascending: false }).limit(3),
         supabase.from("profiles").select("id, nickname, company_name, ownership_type, role").eq("role", "investor").limit(3),
-        supabase.from("posts").select("content").order("created_at", { ascending: false }).limit(100) // For hashtag parsing
+        supabase.from("posts").select("content").order("created_at", { ascending: false }).limit(100)
       ]);
 
       if (trendArticles) setTrendingArticles(trendArticles);
       if (trendInvestors) setTrendingInvestors(trendInvestors);
 
-      // Parse Hashtags from recent posts
+      // Parse Hashtags
       if (recentPosts) {
         const tags: Record<string, number> = {};
         recentPosts.forEach(post => {
@@ -124,12 +123,9 @@ export default function FeedPage() {
 
       <main className="pt-32 pb-24 px-4 md:px-6 mx-auto max-w-[1400px] w-full relative z-10">
 
-        {/* 3-Column Layout on Large Screens */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* ======================= */}
-          {/* LEFT SIDEBAR (Profile + Deck) */}
-          {/* ======================= */}
+          {/* LEFT SIDEBAR */}
           <aside className="hidden lg:block lg:col-span-3 space-y-6">
             <div className="sticky top-32 space-y-6">
 
@@ -141,24 +137,25 @@ export default function FeedPage() {
                       {displayName.slice(0, 2)}
                     </div>
 
+                    {/* Global Status Integration */}
                     <div className="absolute -bottom-1 -right-1 z-20">
                       <button
                         onClick={() => {
                           trackInteraction("CLICK", "toggle_status_menu", { current_state: showStatusMenu });
                           setShowStatusMenu(!showStatusMenu);
                         }}
-                        className={`h-4 w-4 rounded-full border-2 border-[var(--primary)] flex items-center justify-center transition-all ${statusColors[status]}`}
+                        className={`h-4 w-4 rounded-full border-2 border-[var(--primary)] flex items-center justify-center transition-all ${statusColors[status || 'online']}`}
                       />
 
                       {showStatusMenu && (
                         <div className="absolute top-5 left-0 neu-flat-base p-2 rounded-xl flex flex-col gap-1 w-24 shadow-lg">
-                          <button onClick={() => { trackInteraction("CLICK", "set_status_online"); setStatus('online'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_online"); updateStatus('online'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Online
                           </button>
-                          <button onClick={() => { trackInteraction("CLICK", "set_status_busy"); setStatus('busy'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_busy"); updateStatus('busy'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-rose-500"></span> Busy
                           </button>
-                          <button onClick={() => { trackInteraction("CLICK", "set_status_away"); setStatus('away'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
+                          <button onClick={() => { trackInteraction("CLICK", "set_status_away"); updateStatus('away'); setShowStatusMenu(false); }} className="text-[10px] font-bold text-left px-2 py-1.5 hover:bg-[var(--secondary)]/5 rounded-md flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-amber-400"></span> Away
                           </button>
                         </div>
@@ -176,7 +173,6 @@ export default function FeedPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Changed to a standard div to display exact db value without acting as a link */}
                   <div className="flex items-center justify-between text-[10px] font-bold group">
                     <span className="flex items-center gap-1.5 text-[var(--secondary)]/70">
                       <Eye size={12} className="text-[var(--accent)]" /> Profile Views
@@ -245,11 +241,8 @@ export default function FeedPage() {
             </div>
           </aside>
 
-          {/* ======================= */}
-          {/* CENTER CONTENT (Feed)   */}
-          {/* ======================= */}
+          {/* CENTER CONTENT */}
           <section className="lg:col-span-9 xl:col-span-6 space-y-6">
-
             <div className="neu-flat-base p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="p-2 rounded-xl neu-pressed-base border-transparent text-[var(--accent)] shadow-inner">
@@ -269,9 +262,7 @@ export default function FeedPage() {
 
           </section>
 
-          {/* ======================= */}
-          {/* RIGHT SIDEBAR (Trends)  */}
-          {/* ======================= */}
+          {/* RIGHT SIDEBAR */}
           <aside className="hidden xl:block xl:col-span-3 space-y-6">
             <div className="sticky top-32 space-y-6">
 

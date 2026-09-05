@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutButton from "@/components/auth/LogoutButton";
@@ -13,12 +13,13 @@ import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare } from "lu
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { session, loading } = useAuth();
+
+  // Hooking into the new global status
+  const { session, loading, status } = useAuth();
   const pathname = usePathname();
 
   useEffect(() => setIsMounted(true), []);
 
-  // Determine if we should render the Landing Page Glass theme or the App Neumorphic theme
   const isGlassTheme = pathname === "/" || pathname === "/about" || pathname === "/pricing";
 
   const navLinks = [
@@ -33,6 +34,12 @@ export default function Navbar() {
   const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
   const homeRoute = session?.user ? "/dashboard" : "/";
 
+  const statusColors = {
+    online: "bg-emerald-500",
+    busy: "bg-rose-500",
+    away: "bg-amber-400"
+  };
+
   return (
     <motion.header
       initial={{ y: -60, opacity: 0 }}
@@ -43,14 +50,15 @@ export default function Navbar() {
       <div
         className={
           isGlassTheme
-            ? "mx-auto flex max-w-7xl items-center justify-between px-6 py-4 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)]"
-            : "neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4"
+            ? "mx-auto flex max-w-7xl items-center justify-between px-6 py-4 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] relative z-20"
+            : "neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4 relative z-20"
         }
       >
         {/* Brand */}
         <div className="flex items-center gap-4">
           <Link
             href={homeRoute}
+            onClick={() => setMobileMenuOpen(false)}
             className={`text-xl font-black tracking-widest uppercase ${isGlassTheme ? "text-slate-900" : "text-[var(--secondary)]"}`}
           >
             Gestalt<span className={isGlassTheme ? "text-emerald-500" : "text-[var(--accent)]"}>Arena</span>
@@ -67,8 +75,8 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${isGlassTheme
-                    ? "text-slate-600 hover:text-indigo-600"
-                    : "text-[var(--secondary)] hover:text-[var(--accent)]"
+                  ? "text-slate-600 hover:text-indigo-600"
+                  : "text-[var(--secondary)] hover:text-[var(--accent)]"
                   }`}
               >
                 <Icon size={14} />
@@ -92,7 +100,10 @@ export default function Navbar() {
                       : "neu-pressed-base flex items-center gap-2 px-5 py-2 text-xs font-bold text-[var(--secondary)]"
                   }
                 >
-                  <User size={14} className={isGlassTheme ? "text-indigo-600" : "text-[var(--accent)]"} />
+                  <div className="relative flex items-center justify-center">
+                    <User size={14} className={isGlassTheme ? "text-indigo-600" : "text-[var(--accent)]"} />
+                    <span className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white ${statusColors[status || "online"]}`} />
+                  </div>
                   <span>{userDisplayName}</span>
                 </Link>
                 <LogoutButton />
@@ -131,14 +142,101 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className={
               isGlassTheme
-                ? "p-2 text-slate-600 hover:text-indigo-600"
-                : "neu-pressed-base p-2 text-[var(--secondary)] hover:text-[var(--accent)]"
+                ? "p-2 text-slate-600 hover:text-indigo-600 focus:outline-none"
+                : "neu-pressed-base p-2 text-[var(--secondary)] hover:text-[var(--accent)] focus:outline-none"
             }
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 ${isGlassTheme
+                ? "bg-white/95 backdrop-blur-xl border border-white/80"
+                : "neu-flat-base border-t border-[var(--secondary)]/10"
+              }`}
+          >
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors border-b last:border-0 ${isGlassTheme
+                      ? "text-slate-700 border-slate-100 hover:text-indigo-600"
+                      : "text-[var(--secondary)] border-[var(--secondary)]/5 hover:text-[var(--accent)]"
+                    }`}
+                >
+                  <Icon size={16} />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+
+            {/* Mobile Auth Actions */}
+            <div className="pt-4 flex flex-col gap-3">
+              {isMounted && (
+                !loading && session ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={
+                        isGlassTheme
+                          ? "flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700"
+                          : "neu-btn flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold"
+                      }
+                    >
+                      <div className="relative">
+                        <User size={16} className={isGlassTheme ? "text-indigo-600" : "text-[var(--accent)]"} />
+                        <span className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white ${statusColors[status || "online"]}`} />
+                      </div>
+                      <span>Dashboard ({userDisplayName})</span>
+                    </Link>
+                    <div className="flex justify-center" onClick={() => setMobileMenuOpen(false)}>
+                      <LogoutButton />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={
+                        isGlassTheme
+                          ? "px-5 py-3 text-sm font-bold text-center text-slate-700 border border-slate-200 rounded-xl"
+                          : "neu-pressed-base px-5 py-3 text-sm text-center font-bold"
+                      }
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={
+                        isGlassTheme
+                          ? "px-5 py-3 text-sm font-bold text-center text-white bg-slate-900 rounded-xl"
+                          : "neu-btn px-5 py-3 text-sm text-center font-bold"
+                      }
+                    >
+                      Join Platform
+                    </Link>
+                  </>
+                )
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }

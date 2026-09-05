@@ -2,7 +2,7 @@ import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
     Target, Wallet, TrendingUp, Users, Activity, Calendar,
-    Lightbulb, CheckCircle2, Globe, Briefcase, Eye, Star, Presentation
+    Lightbulb, CheckCircle2, Globe, Briefcase, Eye, Star, Presentation, Lock
 } from "lucide-react";
 import EmbeddedInvestorActions from "./EmbeddedInvestorActions";
 
@@ -26,6 +26,7 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
     }
 
     const isOwner = user?.id === pitchDeck.user_id;
+    const isDealClosed = pitchDeck.status === "Accepted";
 
     // 2. Track View (If current user is an investor viewing a startup's deck)
     if (user && !isOwner) {
@@ -35,16 +36,16 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
         });
     }
 
-    // 3. Aggregate Actual Views & Ratings from DB
+    // 3. Aggregate Actual Views & Ratings from DB (using new deck_ratings table)
     const { count: viewCount } = await supabase
         .from("pitch_deck_views")
         .select("*", { count: "exact", head: true })
         .eq("pitch_deck_id", pitchId);
 
     const { data: ratingsData } = await supabase
-        .from("pitch_deck_ratings")
+        .from("deck_ratings")
         .select("score")
-        .eq("pitch_deck_id", pitchId);
+        .eq("deck_id", pitchId);
 
     let avgRating = 0;
     if (ratingsData && ratingsData.length > 0) {
@@ -69,6 +70,11 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
                             <span className="neu-pressed-base border-transparent shadow-inner px-3 py-1 rounded-full text-[10px] font-bold uppercase text-[var(--accent)]">
                                 {pitchDeck.stage || "Pre-Seed"} Round
                             </span>
+                            {isDealClosed && (
+                                <span className="flex items-center gap-1 bg-rose-500/10 text-rose-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                    <Lock size={12} /> Deal Closed
+                                </span>
+                            )}
                         </div>
 
                         <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)] leading-tight">
@@ -189,13 +195,23 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
                 </div>
             )}
 
-            {/* Embedded Action System (Only shows if viewer is an Investor) */}
+            {/* Embedded Action System (Locked if Deal Closed) */}
             {user && !isOwner && (
-                <EmbeddedInvestorActions
-                    pitchId={pitchDeck.id}
-                    startupId={pitchDeck.user_id}
-                    currentUserId={user.id}
-                />
+                isDealClosed ? (
+                    <div className="neu-flat-base p-8 text-center space-y-3 bg-rose-500/5 mt-8 border border-rose-500/20">
+                        <Lock size={32} className="mx-auto text-rose-600" />
+                        <h3 className="text-lg font-black text-rose-600">Deal Closed</h3>
+                        <p className="text-sm font-medium text-[var(--secondary)]/70 max-w-md mx-auto">
+                            This pitch deck has successfully closed its funding round and is no longer accepting new bids, negotiations, or ratings.
+                        </p>
+                    </div>
+                ) : (
+                    <EmbeddedInvestorActions
+                        pitchId={pitchDeck.id}
+                        startupId={pitchDeck.user_id}
+                        currentUserId={user.id}
+                    />
+                )
             )}
         </div>
     );

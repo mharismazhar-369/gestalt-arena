@@ -13,8 +13,8 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import {
   UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2,
   Users, MessageSquare, Edit3, Globe, Link as LinkIcon,
-  Briefcase, TrendingUp, FileText, Plane, Lock, Activity, Target,
-  User, CheckCircle2, EyeOff, Presentation, Eye
+  Briefcase, Activity, Target, User, CheckCircle2, EyeOff,
+  Presentation, Eye, Zap, Lock, FileText
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -32,7 +32,6 @@ export default function PublicProfilePage() {
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
-  // New states for Deal Flow
   const [pitchDecks, setPitchDecks] = useState<any[]>([]);
   const [bidDecks, setBidDecks] = useState<any[]>([]);
 
@@ -56,7 +55,7 @@ export default function PublicProfilePage() {
       }
       setProfile(coreData);
 
-      // 2. Fetch Role-Specific Preferences & Deal Flow Records
+      // 2. Fetch Role-Specific Preferences
       if (coreData.role === "startup") {
         const { data: startupRes } = await supabase.from("startup_profiles").select("*").eq("profile_id", profileId).single();
         if (startupRes) setStartupData(startupRes);
@@ -72,7 +71,7 @@ export default function PublicProfilePage() {
         if (bids) setBidDecks(bids);
       }
 
-      // 3. Fetch Recent Feed Activity
+      // 3. Fetch Recent Activity
       const { data: postsData } = await supabase
         .from("posts")
         .select("id, content, created_at")
@@ -135,7 +134,7 @@ export default function PublicProfilePage() {
         {/* HEADER BANNER */}
         <div className="neu-flat-base p-8 md:p-10 relative overflow-hidden space-y-6 group">
           <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
-            {isStartup ? <Plane size={240} /> : <Building2 size={240} />}
+            {isStartup ? <Building2 size={240} /> : <Briefcase size={240} />}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
@@ -197,13 +196,26 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          <div className="border-t border-[var(--secondary)]/10 pt-6 space-y-3 relative z-10">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]/70">
-              {isStartup ? "Elevator Pitch & Overview" : "Investment Mandate & Thesis"}
-            </h3>
-            <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-4xl whitespace-pre-line font-medium">
-              {profile.bio || profile.elevator_pitch || "No overview provided yet."}
-            </p>
+          <div className="border-t border-[var(--secondary)]/10 pt-6 space-y-6 relative z-10">
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]/70">
+                {isStartup ? "Elevator Pitch & Overview" : "Investment Mandate & Thesis"}
+              </h3>
+              <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-4xl whitespace-pre-line font-medium">
+                {profile.bio || profile.elevator_pitch || "No overview provided yet."}
+              </p>
+            </div>
+
+            {isStartup && startupData?.technical_moat && (
+              <div className="space-y-3 pt-4 border-t border-[var(--secondary)]/5">
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[var(--secondary)]/70">
+                  <Zap size={14} className="text-[var(--accent)]" /> Technical Moat & Strategy
+                </h3>
+                <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-4xl whitespace-pre-line font-medium">
+                  {startupData.technical_moat}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -224,7 +236,7 @@ export default function PublicProfilePage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Role Type</span>
-                  <span className="text-xs font-bold text-[var(--secondary)] capitalize">{profile.ownership_type || profile.role}</span>
+                  <span className="text-xs font-bold text-[var(--secondary)] capitalize">{profile.ownership_type?.replace("-", " ") || profile.role}</span>
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Gender</span>
@@ -306,7 +318,7 @@ export default function PublicProfilePage() {
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Target Geographies</span>
-                    <span className="text-sm font-bold text-[var(--secondary)]">{investorData?.geographies?.join(", ") || "Global"}</span>
+                    <span className="text-sm font-bold text-[var(--secondary)]">{investorData?.target_operational_locations || "Global"}</span>
                   </div>
                 </>
               )}
@@ -331,41 +343,57 @@ export default function PublicProfilePage() {
             </div>
 
             {isConnected ? (
-              <div className="grid grid-cols-3 gap-4">
-                {isStartup ? (
-                  <>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Current ARR</span>
-                      <span className="text-lg font-mono font-bold text-emerald-600">${startupData?.current_arr?.toLocaleString() || 0}</span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  {isStartup ? (
+                    <>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Current ARR</span>
+                        <span className="text-lg font-mono font-bold text-emerald-600">${startupData?.current_arr?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Monthly Burn</span>
+                        <span className="text-lg font-mono font-bold text-rose-600">${startupData?.monthly_burn?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Operational Costs</span>
+                        <span className="text-lg font-mono font-bold text-amber-600">${startupData?.operational_costs?.toLocaleString() || 0}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Min Ticket</span>
+                        <span className="text-lg font-mono font-bold text-emerald-600">${investorData?.min_ticket?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Max Ticket</span>
+                        <span className="text-lg font-mono font-bold text-emerald-600">${investorData?.max_ticket?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="neu-pressed-base p-4 shadow-inner border-transparent">
+                        <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Deal Velocity / Yr</span>
+                        <span className="text-lg font-mono font-bold text-[var(--accent)]">{investorData?.deal_velocity || "3-5"}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {!isStartup && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="neu-pressed-base p-4 shadow-inner border-transparent flex flex-col justify-center">
+                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Willing to Lead Rounds</span>
+                      <span className="text-sm font-bold text-[var(--secondary)]">{investorData?.lead_investment ? "Yes - Can price rounds" : "No - Follow-on only"}</span>
                     </div>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Monthly Burn</span>
-                      <span className="text-lg font-mono font-bold text-rose-600">${startupData?.monthly_burn?.toLocaleString() || 0}</span>
+                    <div className="neu-pressed-base p-4 shadow-inner border-transparent flex flex-col justify-center">
+                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Preferred Stages</span>
+                      <span className="text-sm font-bold text-[var(--secondary)]">
+                        {investorData?.preferred_stages?.length > 0 ? investorData.preferred_stages.join(", ") : "Agnostic"}
+                      </span>
                     </div>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Operational Costs</span>
-                      <span className="text-lg font-mono font-bold text-amber-600">${startupData?.operational_costs?.toLocaleString() || 0}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Min Ticket</span>
-                      <span className="text-lg font-mono font-bold text-emerald-600">${investorData?.min_ticket?.toLocaleString() || 0}</span>
-                    </div>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Max Ticket</span>
-                      <span className="text-lg font-mono font-bold text-emerald-600">${investorData?.max_ticket?.toLocaleString() || 0}</span>
-                    </div>
-                    <div className="neu-pressed-base p-4 shadow-inner border-transparent">
-                      <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Willing to Lead</span>
-                      <span className="text-lg font-mono font-bold text-[var(--accent)]">{investorData?.lead_investment ? "Yes" : "No"}</span>
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center space-y-2 neu-pressed-base border-transparent shadow-inner">
+              <div className="flex flex-col items-center justify-center py-6 text-center space-y-2 neu-pressed-base border-transparent shadow-inner h-full">
                 <EyeOff size={32} className="text-[var(--secondary)]/40 mb-2" />
                 <p className="text-sm font-bold text-[var(--secondary)]">Internal Financials Masked</p>
                 <p className="text-xs text-[var(--secondary)]/60 max-w-sm font-medium">Connect with this user to view their restricted operational costs, burn rates, and exact capital requirements.</p>
@@ -463,7 +491,7 @@ export default function PublicProfilePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-2">
             <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
-              <FileText size={18} className="text-[var(--accent)]" /> Recent Arena Activity
+              <Activity size={18} className="text-[var(--accent)]" /> Recent Arena Activity
             </h3>
           </div>
 

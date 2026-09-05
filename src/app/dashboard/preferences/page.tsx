@@ -146,36 +146,49 @@ export default function GlobalPreferencesPage() {
 
     try {
       const { role, ...profileUpdates } = profile;
+
+      // 1. Update Core Profile
       const { error: profileError } = await supabase
         .from("profiles")
-        .update(profileUpdates)
+        .update({
+          role: role,
+          ...profileUpdates,
+          updated_at: new Date().toISOString()
+        })
         .eq("id", session.user.id);
 
       if (profileError) throw profileError;
 
-      if (profile.role === "investor") {
+      // 2. Safely Upsert Child Tables (DB Trigger now guarantees no FK crashes)
+      if (role === "investor") {
+        const { id, investor_id, ...cleanInvestorPrefs } = investorPrefs as any;
         const { error: prefError } = await supabase
           .from("investor_preferences")
-          .upsert({
-            investor_id: session.user.id,
-            ...investorPrefs,
+          .update({
+            ...cleanInvestorPrefs,
             updated_at: new Date().toISOString(),
-          });
+          })
+          .eq("investor_id", session.user.id);
+
         if (prefError) throw prefError;
       } else {
+        const { id, profile_id, ...cleanStartupPrefs } = startupPrefs as any;
         const { error: startupError } = await supabase
           .from("startup_profiles")
-          .upsert({
-            profile_id: session.user.id,
-            ...startupPrefs,
+          .update({
+            ...cleanStartupPrefs,
             updated_at: new Date().toISOString(),
-          });
+          })
+          .eq("profile_id", session.user.id);
+
         if (startupError) throw startupError;
       }
 
       setMessage({ type: "success", text: "Settings synchronized with AI routing engine." });
     } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Failed to save preferences." });
+      const errorMsg = err?.message || err?.details || JSON.stringify(err);
+      console.error("Database Save Error:", errorMsg, err);
+      setMessage({ type: "error", text: errorMsg });
     } finally {
       setSaving(false);
       setTimeout(() => setMessage(null), 4000);

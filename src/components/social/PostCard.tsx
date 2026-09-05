@@ -8,6 +8,10 @@ import { toggleLike, toggleDislike, toggleBookmark, createNotification } from "@
 import Link from "next/link";
 import CommentBox from "./CommentBox";
 
+const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
+  console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
+};
+
 export interface Post {
   id: string;
   authorName: string;

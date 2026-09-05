@@ -95,7 +95,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
       if (error) throw error;
 
-      // Trigger Notification to original author with post ID for clicking
       if (dbPost.author_id !== currentUserId) {
         await supabase.from("notifications").insert({
           user_id: dbPost.author_id,
@@ -115,7 +114,8 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     }
   };
 
-  const toggleLike = async () => {
+  // RENAMED to avoid clashing with imported toggleLike
+  const handleToggleLike = async () => {
     if (!currentUserId || !dbPost) return;
 
     if (liked) {
@@ -127,7 +127,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       setLikesCount((prev) => prev + 1);
       await toggleLike(dbPost.id, currentUserId, false);
 
-      // Mutually exclusive logic: remove dislike if it exists
       if (disliked) {
         setDisliked(false);
         setDislikesCount((prev) => prev - 1);
@@ -147,7 +146,8 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (onUpdate) onUpdate();
   };
 
-  const toggleDislike = async () => {
+  // RENAMED to avoid clashing with imported toggleDislike
+  const handleToggleDislike = async () => {
     if (!currentUserId || !dbPost) return;
 
     if (disliked) {
@@ -159,7 +159,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       setDislikesCount((prev) => prev + 1);
       await toggleDislike(dbPost.id, currentUserId, false);
 
-      // Mutually exclusive logic: remove like if it exists
       if (liked) {
         setLiked(false);
         setLikesCount((prev) => prev - 1);
@@ -169,7 +168,8 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (onUpdate) onUpdate();
   };
 
-  const toggleBookmark = async () => {
+  // RENAMED to avoid clashing with imported toggleBookmark
+  const handleToggleBookmark = async () => {
     if (!currentUserId || !dbPost) return;
     if (bookmarked) {
       setBookmarked(false);
@@ -207,7 +207,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={toggleBookmark} className={`transition bg-transparent p-2 rounded-lg ${bookmarked ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]" : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"}`} aria-label="Save">
+          <button onClick={handleToggleBookmark} className={`transition bg-transparent p-2 rounded-lg ${bookmarked ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]" : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"}`} aria-label="Save">
             <Bookmark size={14} className={bookmarked ? "fill-[var(--accent)]" : ""} />
           </button>
           <button onClick={sharePost} className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition" aria-label="Share">
@@ -229,12 +229,12 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       )}
 
       <div className="border-t border-[var(--secondary)]/10 pt-3 flex items-center gap-6 text-xs text-[var(--secondary)]/50 font-bold">
-        <button onClick={toggleLike} className={`flex items-center gap-1.5 transition ${liked ? "text-emerald-600" : "hover:text-emerald-600"}`}>
+        <button onClick={handleToggleLike} className={`flex items-center gap-1.5 transition ${liked ? "text-emerald-600" : "hover:text-emerald-600"}`}>
           <Heart size={16} className={liked ? "fill-emerald-600" : ""} />
           <span>{likesCount}</span>
         </button>
 
-        <button onClick={toggleDislike} className={`flex items-center gap-1.5 transition ${disliked ? "text-rose-600" : "hover:text-rose-600"}`}>
+        <button onClick={handleToggleDislike} className={`flex items-center gap-1.5 transition ${disliked ? "text-rose-600" : "hover:text-rose-600"}`}>
           <ThumbsDown size={16} className={disliked ? "fill-rose-600" : ""} />
           <span>{dislikesCount}</span>
         </button>

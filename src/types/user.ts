@@ -16,6 +16,8 @@ export interface UserProfile {
   // Shared new fields
   profile_completed?: boolean;
   bio?: string;
+  username?: string;
+  industry?: string;
 
   // Startup fields
   company_name?: string;

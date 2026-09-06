@@ -9,7 +9,7 @@ import { useTheme } from "@/components/context/ThemeProvider";
 import {
   Save, AlertCircle, User, Globe, Target, DollarSign,
   Briefcase, Activity, MapPin, Link as LinkIcon, Loader2, Rocket,
-  Building, Hash
+  Building, Hash, CheckCircle, XCircle
 } from "lucide-react";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 
@@ -24,6 +24,7 @@ export default function GlobalPreferencesPage() {
   const [profile, setProfile] = useState({
     role: "investor",
     nickname: "",
+    username: "",
     bio: "",
     gender: "",
     dob: "",
@@ -41,6 +42,9 @@ export default function GlobalPreferencesPage() {
     linkedin_url: "",
     website_url: "",
   });
+
+  const [initialUsername, setInitialUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
   // Expanded Investor Preferences
   const [investorPrefs, setInvestorPrefs] = useState({
@@ -85,6 +89,7 @@ export default function GlobalPreferencesPage() {
         setProfile({
           role: profileData.role || "investor",
           nickname: profileData.nickname || "",
+          username: profileData.username || "",
           bio: profileData.bio || "",
           gender: profileData.gender || "",
           dob: profileData.dob || "",
@@ -102,6 +107,7 @@ export default function GlobalPreferencesPage() {
           linkedin_url: profileData.linkedin_url || "",
           website_url: profileData.website_url || "",
         });
+        setInitialUsername(profileData.username || "");
 
         if (profileData.role === "investor") {
           const { data: prefData } = await supabase
@@ -111,9 +117,20 @@ export default function GlobalPreferencesPage() {
             .single();
 
           if (prefData) {
+            // FIX: Explicitly handle nulls from the database
             setInvestorPrefs({
-              ...investorPrefs,
-              ...prefData,
+              min_ticket: prefData.min_ticket || 50000,
+              max_ticket: prefData.max_ticket || 500000,
+              preferred_stages: prefData.preferred_stages || [],
+              industries: prefData.industries || [],
+              geographies: prefData.geographies || [],
+              lead_investment: prefData.lead_investment || false,
+              follow_on: prefData.follow_on || false,
+              risk_tolerance: prefData.risk_tolerance || "balanced",
+              board_involvement: prefData.board_involvement || "observer",
+              deal_velocity: prefData.deal_velocity || "3-5",
+              target_company_size: prefData.target_company_size || "1-10",
+              target_operational_locations: prefData.target_operational_locations || "",
             });
           }
         } else {
@@ -124,9 +141,17 @@ export default function GlobalPreferencesPage() {
             .single();
 
           if (startupData) {
+            // FIX: Explicitly handle nulls from the database
             setStartupPrefs({
-              ...startupPrefs,
-              ...startupData,
+              current_arr: startupData.current_arr || 0,
+              monthly_burn: startupData.monthly_burn || 0,
+              operational_costs: startupData.operational_costs || 0,
+              runway_months: startupData.runway_months || 12,
+              technical_moat: startupData.technical_moat || "",
+              target_exit: startupData.target_exit || "acquisition",
+              industry: startupData.industry || "",
+              company_size: startupData.company_size || "1-10",
+              operational_locations: startupData.operational_locations || "",
             });
           }
         }
@@ -137,9 +162,40 @@ export default function GlobalPreferencesPage() {
     fetchSettings();
   }, [session]);
 
+  // Real-Time Username Checker
+  useEffect(() => {
+    if (!profile.username || profile.username.length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (profile.username === initialUsername) {
+      setUsernameStatus('available');
+      return;
+    }
+
+    const checkAvailability = async () => {
+      setUsernameStatus('checking');
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", profile.username)
+        .maybeSingle();
+
+      if (data && data.id !== session?.user?.id) {
+        setUsernameStatus('taken');
+      } else {
+        setUsernameStatus('available');
+      }
+    };
+
+    const timeoutId = setTimeout(checkAvailability, 500);
+    return () => clearTimeout(timeoutId);
+  }, [profile.username, initialUsername, session?.user?.id]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || usernameStatus === 'taken') return;
 
     setSaving(true);
     setMessage(null);
@@ -159,7 +215,10 @@ export default function GlobalPreferencesPage() {
 
       if (profileError) throw profileError;
 
-      // 2. Safely Upsert Child Tables (DB Trigger now guarantees no FK crashes)
+      // Update the initial state reference upon successful save
+      setInitialUsername(profile.username);
+
+      // 2. Safely Upsert Child Tables
       if (role === "investor") {
         const { id, investor_id, ...cleanInvestorPrefs } = investorPrefs as any;
         const { error: prefError } = await supabase
@@ -286,6 +345,28 @@ export default function GlobalPreferencesPage() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-[var(--secondary)]/70 tracking-wider block">@ Username (Handle)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--secondary)]/50 font-mono">@</span>
+                  <input
+                    type="text"
+                    value={profile.username}
+                    onChange={e => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                    className={`w-full pl-8 pr-10 py-3 rounded-xl border bg-[var(--primary)] text-sm text-[var(--secondary)] focus:outline-none transition shadow-inner ${usernameStatus === 'taken' ? 'border-rose-500 focus:border-rose-500' : 'border-[var(--secondary)]/10 focus:border-[var(--accent)]'}`}
+                    placeholder="unique_handle"
+                    minLength={3}
+                    maxLength={20}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {usernameStatus === 'checking' && <Loader2 size={16} className="animate-spin text-[var(--accent)]" />}
+                    {usernameStatus === 'available' && <CheckCircle size={16} className="text-emerald-500" />}
+                    {usernameStatus === 'taken' && <XCircle size={16} className="text-rose-500" />}
+                  </div>
+                </div>
+                {usernameStatus === 'taken' && <p className="text-[10px] text-rose-500 font-bold mt-1">This handle is already taken.</p>}
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-[10px] uppercase font-bold text-[var(--secondary)]/70 tracking-wider block">Gender</label>
                 <select
                   value={profile.gender}
@@ -297,16 +378,6 @@ export default function GlobalPreferencesPage() {
                   <option value="F">Female</option>
                   <option value="O">Prefer not to say</option>
                 </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-[var(--secondary)]/70 tracking-wider block">Date of Birth (Age Verification)</label>
-                <input
-                  type="date"
-                  value={profile.dob}
-                  onChange={e => setProfile({ ...profile, dob: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-[var(--secondary)]/10 bg-[var(--primary)] text-sm text-[var(--secondary)] focus:border-[var(--accent)] focus:outline-none transition shadow-inner"
-                />
               </div>
 
               {/* Company & Services */}
@@ -750,7 +821,7 @@ export default function GlobalPreferencesPage() {
           <div className="flex justify-end pt-4 pb-10">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || usernameStatus === 'checking' || usernameStatus === 'taken'}
               className="neu-btn px-8 py-4 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}

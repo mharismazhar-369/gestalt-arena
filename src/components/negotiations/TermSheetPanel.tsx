@@ -45,11 +45,11 @@ export default function TermSheetPanel({
     deal, offers, dealId, userId, timeLeft, isFullyLocked,
     onCreateOffer, onAcceptOffer, onConfirmFunds, onAppeal
 }: TermSheetPanelProps) {
-    const isFounder = userId === deal.startup_id;
-    const dealClosed = !!deal.deal_maker_offer_id || ["Accepted", "Rejected", "Cancelled"].includes(deal.status) || isFullyLocked;
+    const isFounder = userId === deal?.startup_id;
+    const dealClosed = !!deal?.deal_maker_offer_id || ["Accepted", "Rejected", "Cancelled"].includes(deal?.status) || isFullyLocked;
     const activeOffer = offers.length ? offers[offers.length - 1] : null;
 
-    const [structure, setStructure] = useState(deal.deal_structure || activeOffer?.deal_structure || "Equity");
+    const [structure, setStructure] = useState(deal?.deal_structure || activeOffer?.deal_structure || "Equity");
     const [expanded, setExpanded] = useState<string[]>(["headline", "structure"]);
     const [updating, setUpdating] = useState(false);
     const [showProofForm, setShowProofForm] = useState(false);
@@ -58,12 +58,12 @@ export default function TermSheetPanel({
 
     const [terms, setTerms] = useState<any>({
         currency: "USD",
-        ticket_size: deal.proposed_valuation ? deal.ticket_size || 0 : 0,
-        valuation: deal.proposed_valuation || 0,
-        equity: deal.proposed_equity || 0,
-        funding_goal: deal.pitch_decks?.funding_goal || 0,
-        minimum_investment: deal.investor_bid_decks?.min_arr || 0,
-        maximum_investment: deal.investor_bid_decks?.max_allocation || 0,
+        ticket_size: deal?.proposed_valuation ? deal.ticket_size || 0 : 0,
+        valuation: deal?.proposed_valuation || 0,
+        equity: deal?.proposed_equity || 0,
+        funding_goal: deal?.pitch_decks?.funding_goal || 0,
+        minimum_investment: deal?.investor_bid_decks?.min_arr || 0,
+        maximum_investment: deal?.investor_bid_decks?.max_allocation || 0,
         round: "",
         share_class: "Preferred",
         price_per_share: 0,
@@ -105,17 +105,20 @@ export default function TermSheetPanel({
 
     useEffect(() => {
         const source = activeOffer?.terms || {};
-        setStructure(deal.deal_structure || activeOffer?.deal_structure || source.deal_structure || "Equity");
+        setStructure(deal?.deal_structure || activeOffer?.deal_structure || source.deal_structure || "Equity");
         setTerms((prev: any) => ({ ...prev, ...source }));
-    }, [deal.deal_structure, activeOffer?.id]);
+    }, [deal?.deal_structure, activeOffer?.id]);
 
     const set = (key: string, value: any) => setTerms((prev: any) => ({ ...prev, [key]: value }));
 
     const toggleSection = (key: string) =>
         setExpanded((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
 
+    // FIX: Correctly assess if the form is dirty, explicitly allowing the very first offer to pass
     const latestTerms = activeOffer?.terms || {};
-    const isDirty = JSON.stringify(terms) !== JSON.stringify({ ...terms, ...latestTerms });
+    const isDirty = offers.length === 0 ||
+        structure !== activeOffer?.deal_structure ||
+        JSON.stringify(terms) !== JSON.stringify({ ...terms, ...latestTerms });
 
     const platformFee = Number(terms.ticket_size || terms.transaction_value || 0) * 0.02;
 

@@ -406,6 +406,15 @@ export default function NegotiationRoomPage() {
     const connectionLocked = deal?.status === "Pending";
     const chatLocked = connectionLocked;
     const dealMakerOffer = offers.find((o) => o.id === deal?.deal_maker_offer_id || o.status === "deal_maker");
+    const handleCancelDeal = async () => {
+        if (!confirm("Are you sure you want to withdraw from this deal? This action cannot be undone.")) return;
+        const { error } = await supabase.rpc("cancel_deal", { p_deal_id: dealId });
+        if (!error) {
+            setDeal((prev: any) => ({ ...prev, status: "Cancelled" }));
+        } else {
+            alert(`Failed to cancel deal: ${error.message}`);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
@@ -506,6 +515,7 @@ export default function NegotiationRoomPage() {
                             onAcceptOffer={handleAcceptOffer}
                             onConfirmFunds={handleConfirmFunds}
                             onAppeal={handleAppealDeal}
+                            onCancelDeal={handleCancelDeal} // <-- ADD THIS LINE
                         />
                     </div>
 

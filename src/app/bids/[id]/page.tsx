@@ -6,7 +6,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Target, DollarSign, Activity, FileText, Eye, Building, Rocket, CheckCircle2, XCircle, MessageSquare, Globe, Briefcase, Clock, Percent, Link as LinkIcon } from "lucide-react";
+import {
+    Target, DollarSign, Activity, FileText, Eye, Building,
+    Rocket, CheckCircle2, XCircle, MessageSquare, Globe,
+    Briefcase, Clock, Percent, Link as LinkIcon, Trophy, Users
+} from "lucide-react";
 import PitchDeckViewer from "@/components/pitch/PitchDeckViewer";
 import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
 import { Suspense } from "react";
@@ -20,7 +24,7 @@ export default async function BidDetailsPage({
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Fetch strictly the targeted Mandate
+    // 1. Fetch strictly the targeted Mandate
     const { data: bid } = await supabase
         .from("investor_bid_decks")
         .select("*")
@@ -29,7 +33,14 @@ export default async function BidDetailsPage({
 
     if (!bid) redirect("/browse/bids");
 
+    // 2. Count Total Pitches Submitted to this Mandate
+    const { count: applicationCount } = await supabase
+        .from("deal_negotiations")
+        .select("*", { count: 'exact', head: true })
+        .eq("bid_deck_id", bidId);
+
     const isOwner = user?.id === bid.investor_id;
+    const isClosed = bid.status === "Accepted" || bid.status === "Closed";
 
     let isFounder = false;
     if (user && !isOwner) {
@@ -71,6 +82,24 @@ export default async function BidDetailsPage({
 
             <main className="pt-32 pb-24 px-6 mx-auto max-w-6xl w-full relative z-10 space-y-8">
 
+                {/* Platform Success Celebration (Visible when deal is Closed) */}
+                {isClosed && (
+                    <div className="neu-flat-base border-emerald-500/30 bg-emerald-500/5 p-6 md:p-8 relative overflow-hidden flex items-center gap-6">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                            <Trophy size={150} />
+                        </div>
+                        <div className="shrink-0 w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600">
+                            <Trophy size={32} />
+                        </div>
+                        <div className="relative z-10">
+                            <h2 className="text-xl md:text-2xl font-black text-emerald-600 mb-1">Deal Successfully Closed</h2>
+                            <p className="text-sm font-medium text-[var(--secondary)]/80">
+                                This mandate has been fulfilled and matched on the platform! It serves as a public record of successful capital allocation.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Mandate Master Card */}
                 <div className="neu-flat-base p-8 md:p-12 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
@@ -78,25 +107,30 @@ export default async function BidDetailsPage({
                     </div>
 
                     <div className="relative z-10 space-y-4">
-                        <span className="neu-pressed-base border-transparent shadow-inner px-3 py-1 rounded-full text-[10px] font-bold uppercase text-[var(--accent)] inline-block mb-2">
+                        <span className={`neu-pressed-base border-transparent shadow-inner px-3 py-1 rounded-full text-[10px] font-bold uppercase inline-block mb-2 ${isClosed ? 'text-emerald-600' : 'text-[var(--accent)]'}`}>
                             {bid.status || "Active Mandate"}
                         </span>
                         <h1 className="text-3xl md:text-5xl font-black text-[var(--secondary)] leading-tight">{bid.title}</h1>
                         <p className="text-[var(--secondary)]/80 text-sm leading-relaxed max-w-4xl font-medium">{bid.thesis}</p>
                     </div>
 
-                    {/* New: Advanced Mandate Parameters Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-10 relative z-10">
+                    {/* Advanced Mandate Parameters Grid WITH OFFER COUNT */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-10 relative z-10">
+                        {/* New Offer Counter */}
+                        <div className="neu-pressed-base border-transparent shadow-inner p-4 flex flex-col gap-1 bg-[var(--accent)]/5">
+                            <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><Users size={12} className="text-[var(--accent)]" /> Total Offers</span>
+                            <span className="text-lg font-black text-[var(--secondary)]">{applicationCount || 0}</span>
+                        </div>
                         <div className="neu-pressed-base border-transparent shadow-inner p-4 flex flex-col gap-1">
                             <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><DollarSign size={12} className="text-[var(--accent)]" /> Max Allocation</span>
                             <span className="text-lg font-black text-emerald-600">${bid.max_allocation?.toLocaleString() || "Flexible"}</span>
                         </div>
                         <div className="neu-pressed-base border-transparent shadow-inner p-4 flex flex-col gap-1">
-                            <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><Activity size={12} className="text-[var(--accent)]" /> Min ARR Target</span>
+                            <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><Activity size={12} className="text-[var(--accent)]" /> Min ARR</span>
                             <span className="text-lg font-black text-[var(--secondary)]">${bid.min_arr?.toLocaleString() || 0}</span>
                         </div>
                         <div className="neu-pressed-base border-transparent shadow-inner p-4 flex flex-col gap-1">
-                            <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><Percent size={12} className="text-[var(--accent)]" /> Min ROI Rate</span>
+                            <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1.5"><Percent size={12} className="text-[var(--accent)]" /> Min ROI</span>
                             <span className="text-lg font-black text-[var(--secondary)]">{bid.min_roi ? `${bid.min_roi}%` : "TBD"}</span>
                         </div>
                         <div className="neu-pressed-base border-transparent shadow-inner p-4 flex flex-col gap-1">
@@ -109,7 +143,7 @@ export default async function BidDetailsPage({
                         </div>
                     </div>
 
-                    {/* New: Lists Section (Sectors, Countries, Portfolios) */}
+                    {/* Lists Section (Sectors, Countries, Portfolios) */}
                     <div className="grid md:grid-cols-3 gap-6 mt-6 relative z-10">
                         <div className="space-y-3">
                             <h4 className="text-xs font-bold text-[var(--secondary)]/70 flex items-center gap-2"><Target size={14} className="text-[var(--accent)]" /> Target Sectors</h4>
@@ -142,8 +176,8 @@ export default async function BidDetailsPage({
                     </div>
                 </div>
 
-                {/* Founder Specific Action */}
-                {isFounder && !hasApplied && (
+                {/* Founder Specific Action (Only if Mandate is NOT Closed) */}
+                {isFounder && !hasApplied && !isClosed && (
                     <div className="neu-flat-base p-10 text-center space-y-4">
                         <h3 className="text-xl font-bold text-[var(--secondary)]">Apply for this Mandate</h3>
                         <p className="text-xs text-[var(--secondary)]/70 max-w-lg mx-auto font-medium">Submit your pitch deck directly to this investor's pipeline to open a private deal negotiation thread.</p>
@@ -160,7 +194,7 @@ export default async function BidDetailsPage({
                 {isFounder && hasApplied && (
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-2">
-                            <Rocket size={20} className="text-[var(--accent)]" /> Your Active Application
+                            <Rocket size={20} className="text-[var(--accent)]" /> Your Application Thread
                         </h2>
                         <div className="space-y-4">
                             {deals.map((deal) => (
@@ -168,7 +202,7 @@ export default async function BidDetailsPage({
                                     <summary className="flex items-center justify-between p-6 cursor-pointer list-none hover:bg-[var(--secondary)]/5 transition-colors [&::-webkit-details-marker]:hidden">
                                         <div>
                                             <div className="flex items-center gap-3 mb-1">
-                                                <span className="text-[10px] font-bold text-[var(--accent)] neu-pressed-base border-transparent shadow-inner px-2 py-0.5 rounded">Status: {deal.status}</span>
+                                                <span className={`text-[10px] font-bold neu-pressed-base border-transparent shadow-inner px-2 py-0.5 rounded ${isClosed && deal.status === "Accepted" ? "text-emerald-600" : "text-[var(--accent)]"}`}>Status: {deal.status}</span>
                                                 <span className="text-[10px] text-[var(--secondary)]/50 font-bold">Submitted: {new Date(deal.created_at).toLocaleDateString()}</span>
                                             </div>
                                             <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
@@ -191,7 +225,7 @@ export default async function BidDetailsPage({
                                         <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[var(--secondary)]/10 pt-6">
                                             <span className="text-xs text-[var(--secondary)]/60 font-bold">Application Status: <strong className="text-[var(--secondary)]">{deal.status}</strong></span>
                                             <div className="flex flex-wrap items-center gap-3">
-                                                <DeleteResourceButton table="deal_negotiations" recordId={deal.id} itemName="Application" />
+                                                {!isClosed && <DeleteResourceButton table="deal_negotiations" recordId={deal.id} itemName="Application" />}
                                                 <Link
                                                     href={`/negotiations/${deal.id}`}
                                                     className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs neu-btn"
@@ -216,16 +250,20 @@ export default async function BidDetailsPage({
                         {deals.length === 0 ? (
                             <div className="p-10 border border-dashed border-[var(--secondary)]/20 bg-transparent rounded-3xl text-center space-y-2">
                                 <p className="text-sm font-bold text-[var(--secondary)]/70">No pitches received yet.</p>
-                                <p className="text-xs text-[var(--secondary)]/50 font-medium">Founders applying to this mandate will appear here.</p>
+                                <p className="text-xs text-[var(--secondary)]/50 font-medium">
+                                    {isClosed ? "This mandate was closed externally." : "Founders applying to this mandate will appear here."}
+                                </p>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 {deals.map((deal) => (
-                                    <details key={deal.id} className="group neu-flat-base overflow-hidden transition-all duration-300">
+                                    <details key={deal.id} className={`group neu-flat-base overflow-hidden transition-all duration-300 ${deal.status === 'Accepted' ? 'border border-emerald-500/30 bg-emerald-500/5' : ''}`}>
                                         <summary className="flex items-center justify-between p-6 cursor-pointer list-none hover:bg-[var(--secondary)]/5 transition-colors [&::-webkit-details-marker]:hidden">
                                             <div>
                                                 <div className="flex items-center gap-3 mb-1">
-                                                    <span className="text-[10px] font-bold text-amber-600 neu-pressed-base border-transparent shadow-inner px-2 py-0.5 rounded">{deal.status}</span>
+                                                    <span className={`text-[10px] font-bold neu-pressed-base border-transparent shadow-inner px-2 py-0.5 rounded ${deal.status === 'Accepted' ? 'text-emerald-600 bg-emerald-500/10' : 'text-amber-600'}`}>
+                                                        {deal.status === 'Accepted' ? 'Winning Deal' : deal.status}
+                                                    </span>
                                                     <span className="text-[10px] text-[var(--secondary)]/50 font-bold">{new Date(deal.created_at).toLocaleDateString()}</span>
                                                 </div>
                                                 <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
@@ -247,13 +285,15 @@ export default async function BidDetailsPage({
                                                 <PitchDeckViewer pitchId={deal.pitch_deck_id} />
                                             </Suspense>
                                             <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[var(--secondary)]/10 pt-6">
-                                                <span className="text-xs text-[var(--secondary)]/60 font-bold">Current Status: <strong className="text-[var(--secondary)]">{deal.status}</strong></span>
+                                                <span className="text-xs text-[var(--secondary)]/60 font-bold">Current Status: <strong className={`text-[var(--secondary)] ${deal.status === 'Accepted' ? 'text-emerald-600' : ''}`}>{deal.status}</strong></span>
                                                 <div className="flex gap-3">
-                                                    <button className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-rose-600 bg-transparent hover:bg-rose-600/10 border border-rose-600/30 rounded-xl transition">
-                                                        <XCircle size={14} /> Reject
-                                                    </button>
+                                                    {!isClosed && (
+                                                        <button className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold text-rose-600 bg-transparent hover:bg-rose-600/10 border border-rose-600/30 rounded-xl transition">
+                                                            <XCircle size={14} /> Reject
+                                                        </button>
+                                                    )}
                                                     <Link href={`/negotiations/${deal.id}`} className="flex items-center justify-center gap-2 px-6 py-2.5 text-xs neu-btn">
-                                                        <CheckCircle2 size={14} /> Accept & Negotiate
+                                                        <CheckCircle2 size={14} /> {isClosed ? 'View Completed Negotiation' : 'Accept & Negotiate'}
                                                     </Link>
                                                 </div>
                                             </div>

@@ -18,6 +18,7 @@ interface TermSheetPanelProps {
     onAcceptOffer: (offerId: string) => Promise<void>;
     onConfirmFunds: (action: "submit_proof" | "confirm_receipt", proof?: { bank: string, mode: string, reference: string }) => void;
     onAppeal: () => void;
+    onCancelDeal: () => Promise<void>;
 }
 
 const DEAL_TYPES = [
@@ -43,11 +44,20 @@ const labelClass = "text-[9px] font-bold text-[var(--secondary)]/60 uppercase tr
 
 export default function TermSheetPanel({
     deal, offers, dealId, userId, timeLeft, isFullyLocked,
-    onCreateOffer, onAcceptOffer, onConfirmFunds, onAppeal
+    onCreateOffer, onAcceptOffer, onConfirmFunds, onAppeal, onCancelDeal
 }: TermSheetPanelProps) {
     const isFounder = userId === deal?.startup_id;
     const dealClosed = !!deal?.deal_maker_offer_id || ["Accepted", "Rejected", "Cancelled"].includes(deal?.status) || isFullyLocked;
-    const activeOffer = offers.length ? offers[offers.length - 1] : null;
+
+    const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+
+    useEffect(() => {
+        if (offers.length > 0 && !selectedOfferId) {
+            setSelectedOfferId(offers[offers.length - 1].id);
+        }
+    }, [offers, selectedOfferId]);
+
+    const activeOffer = offers.find(o => o.id === selectedOfferId) || (offers.length ? offers[offers.length - 1] : null);
 
     const [structure, setStructure] = useState(deal?.deal_structure || activeOffer?.deal_structure || "Equity");
     const [expanded, setExpanded] = useState<string[]>(["headline", "structure"]);
@@ -114,7 +124,6 @@ export default function TermSheetPanel({
     const toggleSection = (key: string) =>
         setExpanded((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
 
-    // FIX: Correctly assess if the form is dirty, explicitly allowing the very first offer to pass
     const latestTerms = activeOffer?.terms || {};
     const isDirty = offers.length === 0 ||
         structure !== activeOffer?.deal_structure ||
@@ -154,22 +163,21 @@ export default function TermSheetPanel({
             name: file.name,
             type: file.type,
             size: file.size,
-            note: "Attachment selected locally. Upload storage integration should use the approved deal-offer bucket."
+            note: "Attachment selected locally."
         }));
 
         const success = await onCreateOffer({ ...terms, deal_structure: structure }, structure, metadata);
         if (success) {
             setAttachments([]);
+            if (offers.length > 0) {
+                setSelectedOfferId("");
+            }
         }
         setUpdating(false);
     };
 
-    const handleAcceptLatest = async () => {
+    const handleAcceptSelected = async () => {
         if (!activeOffer || dealClosed || updating) return;
-        if (activeOffer.sender_id === userId) {
-            alert("You cannot accept your own counter offer.");
-            return;
-        }
 
         const confirmed = confirm(
             `Accept Counter Offer #${activeOffer.offer_number}?\n\n` +
@@ -180,6 +188,13 @@ export default function TermSheetPanel({
 
         setUpdating(true);
         await onAcceptOffer(activeOffer.id);
+        setUpdating(false);
+    };
+
+    const handleCancel = async () => {
+        if (updating) return;
+        setUpdating(true);
+        await onCancelDeal();
         setUpdating(false);
     };
 
@@ -226,9 +241,23 @@ export default function TermSheetPanel({
 
             <div className="space-y-4 flex-grow overflow-y-auto custom-scrollbar pr-1">
                 <div className="neu-pressed-base rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3 border-b border-[var(--secondary)]/10 pb-3">
                         <span className="text-[9px] font-black uppercase tracking-wider text-[var(--secondary)]/50">Negotiation Snapshot</span>
-                        <span className="text-[9px] font-black text-blue-600 uppercase">{isFounder ? "Founder / Startup" : "Investor"}</span>
+                        {offers.length > 0 ? (
+                            <select
+                                value={selectedOfferId}
+                                onChange={(e) => setSelectedOfferId(e.target.value)}
+                                className="bg-[var(--primary)] border border-[var(--secondary)]/10 rounded-lg p-1.5 text-xs font-bold text-blue-600 focus:outline-none cursor-pointer"
+                            >
+                                {offers.map(offer => (
+                                    <option key={offer.id} value={offer.id}>
+                                        View Offer #{offer.offer_number} {offer.status === 'deal_maker' ? '(Deal Maker)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <span className="text-[9px] font-black text-blue-600 uppercase">New Offer Draft</span>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -611,14 +640,43 @@ export default function TermSheetPanel({
 
             {!dealClosed && deal.status !== "Pending Finalization" && (
                 <div className="mt-6 space-y-3 pt-5 border-t border-[var(--secondary)]/10 shrink-0">
-                    {activeOffer && activeOffer.sender_id !== userId && (
+
+                    {/* Explicit Target Offer Selector */}
+                    {offers.length > 0 && (
+                        <div className="bg-blue-600/5 border border-blue-600/15 p-4 rounded-xl space-y-2 mb-4">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-blue-600 flex items-center gap-1.5">
+                                <FileText size={12} /> Target Historical Offer
+                            </label>
+                            <select
+                                value={selectedOfferId}
+                                onChange={(e) => setSelectedOfferId(e.target.value)}
+                                className="w-full bg-[var(--primary)] border border-[var(--secondary)]/10 rounded-lg p-2.5 text-xs font-bold text-[var(--secondary)] focus:outline-none focus:border-blue-500 cursor-pointer"
+                            >
+                                {offers.map(offer => {
+                                    const myAcceptance = offer.deal_offer_acceptances?.some((a: any) => a.user_id === userId);
+                                    return (
+                                        <option key={offer.id} value={offer.id}>
+                                            Counter Offer #{offer.offer_number} {myAcceptance ? '(Accepted by You)' : (offer.sender_id === userId ? '(Your Offer - Ready to Confirm)' : '(Partner Offer - Ready to Accept)')}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <p className="text-[9px] text-[var(--secondary)]/60 font-medium">
+                                Select an offer above to load its terms into the panel or explicitly accept it.
+                            </p>
+                        </div>
+                    )}
+
+                    {activeOffer && (
                         <button
-                            onClick={handleAcceptLatest}
-                            disabled={updating}
+                            onClick={handleAcceptSelected}
+                            disabled={updating || activeOffer.deal_offer_acceptances?.some((a: any) => a.user_id === userId)}
                             className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 text-xs font-bold disabled:opacity-50"
                         >
                             {updating ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            Accept Counter Offer #{activeOffer.offer_number}
+                            {activeOffer.deal_offer_acceptances?.some((a: any) => a.user_id === userId)
+                                ? `You Accepted Target Offer #${activeOffer.offer_number}`
+                                : `Accept Target Offer #${activeOffer.offer_number}`}
                         </button>
                     )}
 
@@ -630,8 +688,16 @@ export default function TermSheetPanel({
                         <RefreshCw size={14} className={updating ? "animate-spin" : ""} /> Submit New Counter Offer
                     </button>
 
-                    {isDirty && (
-                        <p className="text-[9px] text-amber-600 font-bold text-center">
+                    <button
+                        onClick={handleCancel}
+                        disabled={updating}
+                        className="w-full flex items-center justify-center gap-2 bg-transparent text-rose-600 border border-rose-600/20 hover:bg-rose-600/10 rounded-xl px-4 py-3 text-xs font-bold disabled:opacity-50 transition"
+                    >
+                        <XCircle size={14} /> Withdraw & Cancel Deal
+                    </button>
+
+                    {isDirty && offers.length > 0 && (
+                        <p className="text-[9px] text-amber-600 font-bold text-center pt-2">
                             You are editing a new immutable offer snapshot. Nothing changes until you submit it.
                         </p>
                     )}

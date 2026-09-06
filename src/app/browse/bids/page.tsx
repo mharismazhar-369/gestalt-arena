@@ -5,30 +5,32 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { Target, FileText, DollarSign, Activity, CheckCircle, SlidersHorizontal } from "lucide-react";
+import { Target, FileText, DollarSign, Activity, CheckCircle, SlidersHorizontal, Trophy } from "lucide-react";
 
 export default async function UnifiedBoardPage({
     searchParams
 }: {
-    searchParams?: { filter?: string }
+    searchParams: Promise<{ filter?: string }>
 }) {
+    const resolvedParams = await searchParams;
+    const filter = resolvedParams?.filter || 'all';
+
     const supabase = await createClient();
 
-    // 1. Fetch ONLY Public, Active Investor Mandates (Filters out Private counter-offers)
+    // Fetch Public Mandates (Active AND Successfully Closed/Accepted)
     const { data: mandates } = await supabase
         .from("investor_bid_decks")
         .select("*, profiles!investor_bid_decks_investor_id_fkey(company_name, nickname)")
-        .eq("status", "active") // CRITICAL FIX: Hides Private bids
+        .in("status", ["active", "Closed", "Accepted"])
         .order("created_at", { ascending: false });
 
-    // 2. Fetch ONLY Public Startup Pitches (Filters out pitches tailored to specific mandates)
+    // Fetch Public Startup Pitches
     const { data: pitches } = await supabase
         .from("pitch_decks")
         .select("*, profiles!pitch_decks_user_id_fkey(company_name, nickname)")
-        .is("target_bid_id", null) // CRITICAL FIX: Hides locked/tailored pitches
+        .is("target_bid_id", null)
         .order("created_at", { ascending: false });
 
-    // 3. Format & Merge into a single feed
     const formattedMandates = (mandates || []).map(m => ({ ...m, feed_type: 'mandate' }));
     const formattedPitches = (pitches || []).map(p => ({ ...p, feed_type: 'pitch' }));
 
@@ -36,8 +38,6 @@ export default async function UnifiedBoardPage({
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    // 4. Server-Side Filtering based on URL Query Params
-    const filter = searchParams?.filter || 'all';
     const filteredFeed = unifiedFeed.filter(item => {
         if (filter === 'investors') return item.feed_type === 'mandate';
         if (filter === 'startups') return item.feed_type === 'pitch';
@@ -93,16 +93,19 @@ export default async function UnifiedBoardPage({
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredFeed.map((item) => (
-                        item.feed_type === 'mandate' ? (
+                    {filteredFeed.map((item) => {
+                        const isMandate = item.feed_type === 'mandate';
+                        const isClosed = isMandate && (item.status === 'Closed' || item.status === 'Accepted');
+
+                        return isMandate ? (
                             // INVESTOR MANDATE CARD
-                            <div key={`m-${item.id}`} className="neu-flat-base p-6 space-y-4 flex flex-col relative overflow-hidden">
-                                {item.status === 'Closed' && (
-                                    <div className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider text-[var(--secondary)] bg-[var(--primary)] border border-[var(--secondary)]/10 px-2 py-1 rounded shadow-inner">
-                                        Deal Closed
+                            <div key={`m-${item.id}`} className={`neu-flat-base p-6 space-y-4 flex flex-col relative overflow-hidden transition-all ${isClosed ? 'border border-emerald-500/40 bg-emerald-500/5' : ''}`}>
+                                {isClosed && (
+                                    <div className="absolute top-4 right-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md shadow-inner z-10">
+                                        <Trophy size={12} /> Deal Closed
                                     </div>
                                 )}
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)] flex items-center gap-1">
+                                <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${isClosed ? 'text-emerald-600' : 'text-[var(--accent)]'}`}>
                                     <Target size={12} /> Capital Mandate
                                 </span>
                                 <h3 className="text-xl font-bold text-[var(--secondary)] line-clamp-1">{item.title}</h3>
@@ -118,8 +121,8 @@ export default async function UnifiedBoardPage({
                                         <span className="text-sm font-black text-[var(--secondary)]">${item.min_arr?.toLocaleString()}</span>
                                     </div>
                                 </div>
-                                <Link href={`/bids/${item.id}`} className="w-full text-center py-3 neu-btn text-xs">
-                                    View Mandate Details
+                                <Link href={`/bids/${item.id}`} className={`w-full text-center py-3 text-xs ${isClosed ? 'neu-pressed-base text-emerald-600 font-bold' : 'neu-btn'}`}>
+                                    {isClosed ? 'View Platform Success' : 'View Mandate Details'}
                                 </Link>
                             </div>
                         ) : (
@@ -145,10 +148,9 @@ export default async function UnifiedBoardPage({
                                     View Pitch Deck
                                 </Link>
                             </div>
-                        )
-                    ))}
+                        );
+                    })}
 
-                    {/* Empty State / No Results */}
                     {filteredFeed.length === 0 && (
                         <div className="col-span-full neu-flat-base p-12 text-center space-y-4">
                             <p className="text-[var(--secondary)]/60 text-sm font-medium">No deals match this filter setting right now.</p>

@@ -365,6 +365,9 @@ export type Database = {
           bid_deck_id: string | null
           board_seats: number | null
           created_at: string | null
+          deal_locked_at: string | null
+          deal_maker_offer_id: string | null
+          deal_structure: string | null
           funds_transferred: boolean | null
           id: string
           investor_id: string
@@ -391,6 +394,9 @@ export type Database = {
           bid_deck_id?: string | null
           board_seats?: number | null
           created_at?: string | null
+          deal_locked_at?: string | null
+          deal_maker_offer_id?: string | null
+          deal_structure?: string | null
           funds_transferred?: boolean | null
           id?: string
           investor_id: string
@@ -417,6 +423,9 @@ export type Database = {
           bid_deck_id?: string | null
           board_seats?: number | null
           created_at?: string | null
+          deal_locked_at?: string | null
+          deal_maker_offer_id?: string | null
+          deal_structure?: string | null
           funds_transferred?: boolean | null
           id?: string
           investor_id?: string
@@ -463,6 +472,124 @@ export type Database = {
             columns: ["startup_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_offer_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          offer_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          offer_id: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          offer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_offer_acceptances_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "deal_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_offer_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          deal_id: string
+          event_data: Json
+          event_type: string
+          id: string
+          offer_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          deal_id: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          offer_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          deal_id?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          offer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_offer_events_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_offer_events_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "deal_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_offers: {
+        Row: {
+          created_at: string
+          deal_id: string
+          deal_structure: string
+          id: string
+          offer_number: number
+          sender_id: string
+          status: string
+          terms: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          deal_structure?: string
+          id?: string
+          offer_number: number
+          sender_id: string
+          status?: string
+          terms?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          deal_structure?: string
+          id?: string
+          offer_number?: number
+          sender_id?: string
+          status?: string
+          terms?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_offers_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_negotiations"
             referencedColumns: ["id"]
           },
         ]
@@ -1905,6 +2032,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_deal_offer: { Args: { p_offer_id: string }; Returns: Json }
+      create_deal_offer: {
+        Args: { p_deal_id: string; p_deal_structure: string; p_terms: Json }
+        Returns: {
+          created_at: string
+          deal_id: string
+          deal_structure: string
+          id: string
+          offer_number: number
+          sender_id: string
+          status: string
+          terms: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deal_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       finalize_deal: {
         Args: {
           p_deal_id: string

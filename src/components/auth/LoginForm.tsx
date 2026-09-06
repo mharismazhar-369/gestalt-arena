@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { Mail, Lock, LogIn, Loader2, Eye, EyeOff, Sparkles, Check } from "lucide-react";
 
-// --- Telemetry Utility ---
 const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
   console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
 };
@@ -19,13 +18,11 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-
   const [formData, setFormData] = useState({ email: "", password: "" });
 
   useEffect(() => {
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
       if (session) {
         trackInteraction("CLICK", "auto_login_bypass_success");
         router.push("/dashboard");
@@ -38,7 +35,6 @@ export default function LoginForm() {
         setSessionChecking(false);
       }
     };
-
     initializeAuth();
   }, [router]);
 
@@ -53,11 +49,8 @@ export default function LoginForm() {
     trackInteraction("CLICK", "google_login_attempt");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
+      options: { redirectTo: `${window.location.origin}/auth/callback` }
     });
-
     if (error) {
       trackInteraction("CLICK", "google_login_failed", { error: error.message });
       setError(error.message);
@@ -81,13 +74,11 @@ export default function LoginForm() {
       setLoading(false);
     } else {
       trackInteraction("CLICK", "login_submit_success");
-
       if (rememberMe) {
         localStorage.setItem("gestalt_saved_email", formData.email);
       } else {
         localStorage.removeItem("gestalt_saved_email");
       }
-
       router.push("/dashboard");
     }
   };
@@ -134,8 +125,6 @@ export default function LoginForm() {
       </AnimatePresence>
 
       <form onSubmit={handleLogin} className="w-full max-w-[320px] space-y-4">
-
-        {/* Google OAuth Button */}
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -202,8 +191,8 @@ export default function LoginForm() {
                 trackInteraction("CLICK", "toggle_remember_me", { state: !rememberMe });
               }}
               className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${rememberMe
-                  ? "bg-[#FFF9F0] shadow-[inset_2px_2px_5px_#dfd9d2,inset_-2px_-2px_5px_#ffffff]"
-                  : "bg-[#FFF9F0] shadow-[3px_3px_6px_#dfd9d2,-3px_-3px_6px_#ffffff]"
+                ? "bg-[#FFF9F0] shadow-[inset_2px_2px_5px_#dfd9d2,inset_-2px_-2px_5px_#ffffff]"
+                : "bg-[#FFF9F0] shadow-[3px_3px_6px_#dfd9d2,-3px_-3px_6px_#ffffff]"
                 }`}
             >
               <Check size={12} className={`transition-opacity ${rememberMe ? "opacity-100 text-[#FF7E67]" : "opacity-0"}`} />
@@ -226,22 +215,11 @@ export default function LoginForm() {
       </form>
 
       <div className="mt-6 text-center space-y-2">
-        <Link
-          href="/forgot-password"
-          onClick={() => trackInteraction("CLICK", "nav_forgot_password")}
-          className="block text-[11px] font-bold text-[#2D3748]/50 hover:text-[#FF7E67] transition-colors"
-        >
+        <Link href="/forgot-password" onClick={() => trackInteraction("CLICK", "nav_forgot_password")} className="block text-[11px] font-bold text-[#2D3748]/50 hover:text-[#FF7E67] transition-colors">
           Forgot your password?
         </Link>
         <p className="text-[11px] font-medium text-[#2D3748]/70">
-          New here?{" "}
-          <Link
-            href="/register"
-            onClick={() => trackInteraction("CLICK", "nav_register")}
-            className="text-[#FF7E67] font-black hover:underline"
-          >
-            Create an account
-          </Link>
+          New here? <Link href="/register" onClick={() => trackInteraction("CLICK", "nav_register")} className="text-[#FF7E67] font-black hover:underline">Create an account</Link>
         </p>
       </div>
     </motion.div>

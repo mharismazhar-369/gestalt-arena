@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DollarSign, Activity, PieChart, RefreshCw, XCircle, CheckCircle2, Lock, Landmark, FileText, Building, Hash, CreditCard } from "lucide-react";
+import { DollarSign, Activity, PieChart, RefreshCw, XCircle, CheckCircle2, Lock, Landmark, FileText, Building, Hash, CreditCard, ShieldAlert } from "lucide-react";
 
 interface TermSheetPanelProps {
     deal: any;
@@ -10,14 +10,15 @@ interface TermSheetPanelProps {
     timeLeft: string;
     isFullyLocked: boolean;
     onUpdateStatus: (status: string, isCounter: boolean, newTerms?: any) => void;
-    onConfirmFunds: (proof: { bank: string, mode: string, reference: string }) => void;
+    onConfirmFunds: (action: 'submit_proof' | 'confirm_receipt', proof?: { bank: string, mode: string, reference: string }) => void;
+    onAppeal: () => void;
 }
 
 export default function TermSheetPanel({
-    deal, dealId, userId, timeLeft, isFullyLocked, onUpdateStatus, onConfirmFunds
+    deal, dealId, userId, timeLeft, isFullyLocked, onUpdateStatus, onConfirmFunds, onAppeal
 }: TermSheetPanelProps) {
     const isFounder = userId === deal.startup_id;
-    const termsLocked = deal.status === "Pending Finalization" || deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
+    const termsLocked = deal.status === "Pending Finalization" || deal.status === "Awaiting Receipt Confirmation" || deal.status === "Disputed" || deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked;
 
     const [terms, setTerms] = useState({
         valuation: deal.proposed_valuation || 0,
@@ -62,7 +63,7 @@ export default function TermSheetPanel({
     const submitProof = () => {
         if (!transferProof.bank || !transferProof.reference) return;
         setUpdating(true);
-        onConfirmFunds(transferProof);
+        onConfirmFunds('submit_proof', transferProof);
     };
 
     const platformFee = terms.ticket_size * 0.01;
@@ -77,7 +78,6 @@ export default function TermSheetPanel({
             </div>
 
             <div className="space-y-6 flex-grow">
-                {/* Inputs ... */}
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider flex items-center gap-1.5"><DollarSign size={12} className="text-emerald-600" /> Investment Amount</label>
                     <input type="number" value={terms.ticket_size} onChange={(e) => setTerms({ ...terms, ticket_size: Number(e.target.value) })} disabled={termsLocked} className="w-full bg-transparent border-transparent neu-pressed-base shadow-inner rounded-xl p-4 text-lg font-mono font-bold text-[var(--secondary)] focus:ring-1 focus:ring-emerald-500 focus:outline-none transition disabled:opacity-50" />
@@ -134,7 +134,6 @@ export default function TermSheetPanel({
                         </button>
                     )}
 
-                    {/* NEW: Evidence Form */}
                     {!isFounder && showProofForm && (
                         <div className="bg-[var(--primary)] p-4 rounded-xl border border-blue-600/30 space-y-4">
                             <h5 className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Proof of Transfer Required</h5>
@@ -167,6 +166,28 @@ export default function TermSheetPanel({
                         <button onClick={() => onUpdateStatus("Cancelled", false)} disabled={updating} className="w-full flex items-center justify-center gap-2 bg-transparent text-rose-600 border border-rose-600/30 hover:bg-rose-600/10 rounded-xl px-4 py-3 text-xs font-bold transition disabled:opacity-50">
                             <XCircle size={14} /> Cancel Deal
                         </button>
+                    )}
+                </div>
+            )}
+
+            {deal.status === "Awaiting Receipt Confirmation" && (
+                <div className="mt-8 space-y-4 pt-6 border-t border-blue-600/20 bg-blue-600/5 p-5 rounded-xl">
+                    <div className="text-center space-y-1 mb-4">
+                        <h4 className="text-sm font-bold text-blue-600 flex items-center justify-center gap-2">Investor Issued Funds</h4>
+                        <p className="text-[10px] text-[var(--secondary)]/70 font-medium">
+                            {isFounder ? "Please verify the funds have arrived in your account." : "Waiting for the founder to confirm receipt of funds."}
+                        </p>
+                    </div>
+
+                    {isFounder && (
+                        <div className="space-y-3">
+                            <button onClick={() => onConfirmFunds('confirm_receipt')} disabled={updating} className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 text-xs font-bold transition shadow-lg disabled:opacity-50">
+                                <CheckCircle2 size={14} /> Confirm Receipt of Funds
+                            </button>
+                            <button onClick={onAppeal} disabled={updating} className="w-full flex items-center justify-center gap-2 bg-transparent text-rose-600 border border-rose-600/30 hover:bg-rose-600/10 rounded-xl px-4 py-3 text-xs font-bold transition disabled:opacity-50">
+                                <ShieldAlert size={14} /> Did Not Receive / Appeal
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

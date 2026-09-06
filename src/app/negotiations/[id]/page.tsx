@@ -31,7 +31,6 @@ export default function NegotiationRoomPage() {
     const [newMessage, setNewMessage] = useState("");
     const [sendingMsg, setSendingMsg] = useState(false);
 
-    // Auto-scroll ref attached to the scrollable container
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -99,33 +98,40 @@ export default function NegotiationRoomPage() {
     }, [dealId, session]);
 
     useEffect(() => {
-        if (deal?.status === "Pending Finalization" && deal?.accepted_at) {
-            const interval = setInterval(() => {
-                const acceptedTime = new Date(deal.accepted_at).getTime();
-                const targetTime = acceptedTime + 24 * 60 * 60 * 1000;
-                const now = new Date().getTime();
-                const difference = targetTime - now;
-
-                if (difference <= 0) {
-                    setTimeLeft("00:00:00");
-                    setIsFullyLocked(true);
-                    clearInterval(interval);
-                    // Automatically lock the deal permanently when 24h expire
-                    supabase.rpc('lock_permanent_deal', { p_deal_id: dealId, p_funds_transferred: false }).then(() => {
-                        setDeal((prev: any) => ({ ...prev, status: 'Accepted' }));
-                    });
-                } else {
-                    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-                    setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-                }
-            }, 1000);
-            return () => clearInterval(interval);
+        // 1. Strict defensive check: Ensure deal exists AND has an accepted_at date 
+        // before we ever attempt to start the countdown interval.
+        if (!deal || deal.status !== "Pending Finalization" || !deal.accepted_at) {
+            return;
         }
-    }, [deal]);
 
-    // Handle smooth auto-scroll to bottom of chat
+        // 2. Lock in the string value so the interval doesn't rely on the dynamic 'deal' object
+        const acceptedTimestamp = deal.accepted_at;
+
+        const interval = setInterval(() => {
+            const acceptedTime = new Date(acceptedTimestamp).getTime();
+            const targetTime = acceptedTime + 24 * 60 * 60 * 1000;
+            const now = new Date().getTime();
+            const difference = targetTime - now;
+
+            if (difference <= 0) {
+                setTimeLeft("00:00:00");
+                setIsFullyLocked(true);
+                clearInterval(interval);
+
+                supabase.rpc('lock_permanent_deal', { p_deal_id: dealId, p_funds_transferred: false }).then(() => {
+                    setDeal((prev: any) => prev ? { ...prev, status: 'Accepted' } : prev);
+                });
+            } else {
+                const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+                setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [deal, dealId]); // Added dealId to dependencies for completeness
+
     useEffect(() => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -134,7 +140,6 @@ export default function NegotiationRoomPage() {
 
     const handleAcceptConnection = async () => {
         setAccepting(true);
-        // Only update the deal status to Negotiating. The backend RLS protects the assets.
         const { error } = await supabase.from("deal_negotiations").update({ status: "Negotiating" }).eq("id", dealId);
         if (!error) {
             await supabase.from("deal_messages").insert({
@@ -147,31 +152,65 @@ export default function NegotiationRoomPage() {
         setAccepting(false);
     };
 
-    // New handler to confirm funds transfer and permanently lock the deal
-    const handleConfirmFunds = async (proof: { bank: string, mode: string, reference: string }) => {
-        const { error } = await supabase.rpc('lock_permanent_deal', {
-            p_deal_id: dealId,
-            p_funds_transferred: true,
-            p_bank_name: proof.bank,
-            p_transfer_mode: proof.mode,
-            p_transfer_ref: proof.reference
-        });
+    const handleConfirmFunds = async (action: 'submit_proof' | 'confirm_receipt', proof?: { bank: string, mode: string, reference: string }) => {
+        const isFounder = session?.user.id === deal.startup_id;
 
+        if (action === 'submit_proof' && !isFounder && proof) {
+            // Investor submits proof of transfer
+            const { error } = await supabase.rpc('lock_permanent_deal', {
+                p_deal_id: dealId,
+                p_funds_transferred: false, // Not fully transferred until founder confirms
+                p_bank_name: proof.bank,
+                p_transfer_mode: proof.mode,
+                p_transfer_ref: proof.reference
+            });
+
+            if (!error) {
+                await supabase.from("deal_messages").insert({
+                    deal_id: dealId, sender_id: session?.user.id,
+                    content: `*System:* The investor submitted proof of transfer (${proof.mode} via ${proof.bank}). Awaiting founder to confirm receipt of funds.`
+                });
+                // Keep chat open, update status to reflect waiting on founder
+                setDeal({ ...deal, status: 'Awaiting Receipt Confirmation' });
+            } else {
+                alert(`Error submitting proof: ${error.message}`);
+            }
+        }
+        else if (action === 'confirm_receipt' && isFounder) {
+            // Founder confirms the funds hit their account
+            const { error } = await supabase.from('deal_negotiations').update({
+                status: 'Accepted',
+                funds_transferred: true
+            }).eq('id', dealId);
+
+            if (!error) {
+                await supabase.from("deal_messages").insert({
+                    deal_id: dealId, sender_id: session?.user.id,
+                    content: `*System:* The founder confirmed receipt of funds. The deal is officially finalized, capital is locked, and platform facilitator fees have been recorded.`
+                });
+                setDeal({ ...deal, status: 'Accepted', funds_transferred: true });
+                setIsFullyLocked(true); // Now the deal is completely locked
+            } else {
+                alert(`Error confirming receipt: ${error.message}`);
+            }
+        }
+    };
+
+    const handleAppealDeal = async () => {
+        const { error } = await supabase.from("deal_negotiations").update({ status: "Disputed" }).eq("id", dealId);
         if (!error) {
             await supabase.from("deal_messages").insert({
                 deal_id: dealId, sender_id: session?.user.id,
-                content: `*System:* The investor submitted proof of transfer (${proof.mode} via ${proof.bank}). The deal is now permanently locked and recorded in the ledger.`
+                content: `*System:* A party has appealed the deal. The negotiation is now marked as Disputed and will be reviewed by the platform.`
             });
-            setDeal({ ...deal, status: 'Accepted', funds_transferred: true });
-            setIsFullyLocked(true);
+            setDeal({ ...deal, status: 'Disputed' });
         } else {
-            alert(`Error locking deal: ${error.message}`);
+            alert(`Error appealing deal: ${error.message}`);
         }
     };
 
     const handleUpdateDealStatus = async (newStatus: string, isCounterOffer: boolean, newTerms?: any) => {
 
-        // --- ATOMIC BACKEND TRANSACTION (START GRACE PERIOD) ---
         if (newStatus === "Pending Finalization" && newTerms) {
             const { data, error } = await supabase.rpc('finalize_deal', {
                 p_deal_id: dealId,
@@ -192,13 +231,11 @@ export default function NegotiationRoomPage() {
                 content: `*System:* locked the terms and initiated the 24-hour grace period. Transaction Hash: ${data.transaction_hash}`
             });
 
-            // Re-fetch the deal to get the new hash and ledger data
             const { data: updatedDeal } = await supabase.from("deal_negotiations").select("*").eq("id", dealId).single();
             if (updatedDeal) setDeal(updatedDeal);
             return;
         }
 
-        // --- STANDARD COUNTER OFFERS & CANCELLATIONS ---
         const payload: any = { status: newStatus };
 
         if (isCounterOffer && newTerms) {
@@ -292,7 +329,9 @@ export default function NegotiationRoomPage() {
     const isWaitingOnOther = deal.status === "Pending" && (isTargetedCounter ? !isFounder : isFounder);
     const connectionLocked = deal.status === "Pending";
 
-    const chatLocked = deal.status === "Accepted" || deal.status === "Rejected" || deal.status === "Cancelled" || isFullyLocked || connectionLocked;
+    // Chat is now ONLY locked if the initial connection hasn't been established. 
+    // It remains open during Disputed, Accepted, Rejected, and Cancelled states.
+    const chatLocked = connectionLocked;
 
     const offerHistory = deal.offer_history || [];
 
@@ -318,10 +357,11 @@ export default function NegotiationRoomPage() {
                             <span className="text-xs font-bold uppercase text-[var(--secondary)]/60 tracking-wider">Status:</span>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 
                                 ${isFullyLocked || deal.status === 'Accepted' ? 'text-emerald-600 bg-emerald-600/10' :
-                                    deal.status === 'Pending Finalization' ? 'text-amber-600 bg-amber-600/10' :
-                                        deal.status === 'Rejected' || deal.status === 'Cancelled' ? 'text-rose-600 bg-rose-600/10' :
-                                            'text-blue-600 bg-blue-600/10'}`}>
-                                {isFullyLocked ? "Finalized" : deal.status}
+                                    deal.status === 'Disputed' ? 'text-rose-600 bg-rose-600/10' :
+                                        deal.status === 'Pending Finalization' ? 'text-amber-600 bg-amber-600/10' :
+                                            deal.status === 'Rejected' || deal.status === 'Cancelled' ? 'text-rose-600 bg-rose-600/10' :
+                                                'text-blue-600 bg-blue-600/10'}`}>
+                                {deal.status === 'Accepted' ? "Finalized" : deal.status}
                             </span>
                         </div>
                     </div>
@@ -352,7 +392,6 @@ export default function NegotiationRoomPage() {
 
                 <div className={`grid lg:grid-cols-3 gap-8 items-start transition-opacity duration-500 ${connectionLocked ? 'opacity-40 pointer-events-none grayscale-[0.5]' : 'opacity-100'}`}>
 
-                    {/* COL 1: Live Term Sheet */}
                     <div className="lg:col-span-1 h-full min-h-[600px]">
                         <TermSheetPanel
                             deal={deal}
@@ -362,10 +401,10 @@ export default function NegotiationRoomPage() {
                             isFullyLocked={isFullyLocked}
                             onUpdateStatus={handleUpdateDealStatus}
                             onConfirmFunds={handleConfirmFunds}
+                            onAppeal={handleAppealDeal}
                         />
                     </div>
 
-                    {/* COL 2: Counter Offer Deal Board */}
                     <div className="lg:col-span-1 h-[600px] flex flex-col neu-flat-base rounded-3xl p-8 overflow-hidden">
                         <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 mb-6 shrink-0">
                             <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
@@ -413,7 +452,6 @@ export default function NegotiationRoomPage() {
                         </div>
                     </div>
 
-                    {/* COL 3: Context Links & Chat */}
                     <div className="lg:col-span-1 flex flex-col space-y-6 h-[600px]">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="neu-pressed-base border-transparent shadow-inner rounded-2xl p-4 space-y-1 relative">

@@ -20,21 +20,50 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
     const [formData, setFormData] = useState({
         title: existingDeck?.title || "",
         stage: existingDeck?.stage || "Pre-Seed",
+        entity_type: existingDeck?.entity_type || "Startup",
+        pitch_type: existingDeck?.pitch_type || "Product",
         elevator_pitch: existingDeck?.elevator_pitch || "",
         problem_statement: existingDeck?.problem_statement || "",
+        target_customer: existingDeck?.target_customer || "",
+        customer_segment: existingDeck?.customer_segment || "B2B",
+        industry: existingDeck?.industry || "",
         solution: existingDeck?.solution || "",
+        product_description: existingDeck?.product_description || "",
+        product_status: existingDeck?.product_status || "Concept",
+        key_features: existingDeck?.key_features || "",
+        value_proposition: existingDeck?.value_proposition || "",
         market_size: existingDeck?.market_size || "",
+        market_geography: existingDeck?.market_geography || "",
+        go_to_market: existingDeck?.go_to_market || "",
+        sales_channels: existingDeck?.sales_channels || "",
         business_model: existingDeck?.business_model || "",
+        revenue_streams: existingDeck?.revenue_streams || "",
+        pricing_model: existingDeck?.pricing_model || "",
         competitors: existingDeck?.competitors || "",
+        competitive_advantage: existingDeck?.competitive_advantage || "",
+        intellectual_property: existingDeck?.intellectual_property || "",
+        traction: existingDeck?.traction || "",
+        customer_count: existingDeck?.customer_count || "",
+        revenue: existingDeck?.revenue || "",
+        monthly_revenue: existingDeck?.monthly_revenue || "",
+        growth_rate: existingDeck?.growth_rate || "",
+        runway_months: existingDeck?.runway_months || "",
         funding_goal: existingDeck?.funding_goal || "",
         min_ticket: existingDeck?.min_ticket || "",
         valuation: existingDeck?.valuation || "",
         equity_offered: existingDeck?.equity_offered || "",
-        traction: existingDeck?.traction || "",
-        revenue: existingDeck?.revenue || "",
-        runway_months: existingDeck?.runway_months || "",
+        investment_instrument: existingDeck?.investment_instrument || "Equity",
         use_of_funds: existingDeck?.use_of_funds || "",
+        funding_milestones: existingDeck?.funding_milestones || "",
+        team_summary: existingDeck?.team_summary || "",
+        founder_background: existingDeck?.founder_background || "",
+        risks: existingDeck?.risks || "",
+        exit_strategy: existingDeck?.exit_strategy || "",
+        ask_summary: existingDeck?.ask_summary || "",
         deck_url: existingDeck?.deck_url || "",
+        demo_url: existingDeck?.demo_url || "",
+        website_url: existingDeck?.website_url || "",
+        video_url: existingDeck?.video_url || "",
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -68,6 +97,37 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
             use_of_funds: formData.use_of_funds,
             deck_url: formData.deck_url,
             target_bid_id: targetBidId || null,
+
+            // Extended pitch intelligence
+            entity_type: formData.entity_type,
+            pitch_type: formData.pitch_type,
+            target_customer: formData.target_customer,
+            customer_segment: formData.customer_segment,
+            industry: formData.industry,
+            product_description: formData.product_description,
+            product_status: formData.product_status,
+            key_features: formData.key_features,
+            value_proposition: formData.value_proposition,
+            market_geography: formData.market_geography,
+            go_to_market: formData.go_to_market,
+            sales_channels: formData.sales_channels,
+            revenue_streams: formData.revenue_streams,
+            pricing_model: formData.pricing_model,
+            competitive_advantage: formData.competitive_advantage,
+            intellectual_property: formData.intellectual_property,
+            customer_count: Number(formData.customer_count) || 0,
+            monthly_revenue: Number(formData.monthly_revenue) || 0,
+            growth_rate: Number(formData.growth_rate) || 0,
+            investment_instrument: formData.investment_instrument,
+            funding_milestones: formData.funding_milestones,
+            team_summary: formData.team_summary,
+            founder_background: formData.founder_background,
+            risks: formData.risks,
+            exit_strategy: formData.exit_strategy,
+            ask_summary: formData.ask_summary,
+            demo_url: formData.demo_url,
+            website_url: formData.website_url,
+            video_url: formData.video_url,
         };
 
         try {
@@ -91,7 +151,7 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                         investor_id: bidData.investor_id,
                         pitch_deck_id: currentPitchId,
                         bid_deck_id: targetBidId,
-                        status: "Pending",
+                        status: "In Negotiations",
                     }).select().single();
 
                     if (dealError) throw dealError;
@@ -124,7 +184,7 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                     <Target className="text-[var(--accent)] shrink-0" size={32} />
                     <div>
                         <h3 className="text-sm font-bold text-[var(--secondary)]">Targeted Mandate Application</h3>
-                        <p className="text-xs text-[var(--secondary)]/70 font-medium">Saving this pitch will instantly submit it and open a private deal negotiation thread[cite: 23].</p>
+                        <p className="text-xs text-[var(--secondary)]/70 font-medium">This saves the pitch and submits this version to the selected open mandate. Creating a normal pitch remains available independently.</p>
                     </div>
                 </div>
             )}
@@ -162,6 +222,140 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Elevator Pitch (Short Summary)</label>
                         <textarea required name="elevator_pitch" value={formData.elevator_pitch} onChange={handleChange} rows={2} placeholder="In one sentence, what do you do?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none transition neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]"></textarea>
+                    </div>
+                </div>
+
+
+                {/* Section 1A: Identity & Offering */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <FileText size={18} className="text-[var(--accent)]" /> Offering Profile
+                    </h2>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Entity Type</label>
+                            <select name="entity_type" value={formData.entity_type} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option className="bg-[var(--primary)]">Startup</option>
+                                <option className="bg-[var(--primary)]">Company</option>
+                                <option className="bg-[var(--primary)]">Founder</option>
+                                <option className="bg-[var(--primary)]">Project</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Pitch Type</label>
+                            <select name="pitch_type" value={formData.pitch_type} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option className="bg-[var(--primary)]">Product</option>
+                                <option className="bg-[var(--primary)]">Service</option>
+                                <option className="bg-[var(--primary)]">Business</option>
+                                <option className="bg-[var(--primary)]">Project</option>
+                                <option className="bg-[var(--primary)]">Technology</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Customer Segment</label>
+                            <select name="customer_segment" value={formData.customer_segment} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option className="bg-[var(--primary)]">B2B</option>
+                                <option className="bg-[var(--primary)]">B2C</option>
+                                <option className="bg-[var(--primary)]">B2B2C</option>
+                                <option className="bg-[var(--primary)]">Government</option>
+                                <option className="bg-[var(--primary)]">Enterprise</option>
+                                <option className="bg-[var(--primary)]">Mixed</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Product Status</label>
+                            <select name="product_status" value={formData.product_status} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option className="bg-[var(--primary)]">Concept</option>
+                                <option className="bg-[var(--primary)]">Prototype</option>
+                                <option className="bg-[var(--primary)]">MVP</option>
+                                <option className="bg-[var(--primary)]">Live</option>
+                                <option className="bg-[var(--primary)]">Scaling</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Target Customer</label>
+                            <textarea name="target_customer" value={formData.target_customer} onChange={handleChange} rows={3} placeholder="Who specifically buys or uses this offering?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Industry / Sector</label>
+                            <input name="industry" value={formData.industry} onChange={handleChange} placeholder="e.g. FinTech, Water, Health, SaaS, Manufacturing" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Product / Service Description</label>
+                            <textarea name="product_description" value={formData.product_description} onChange={handleChange} rows={4} placeholder="Describe exactly what is being offered, how it works, and what the customer receives." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Key Features / Deliverables</label>
+                            <textarea name="key_features" value={formData.key_features} onChange={handleChange} rows={4} placeholder="List the core features, deliverables, specifications, or service components." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Core Value Proposition</label>
+                        <textarea name="value_proposition" value={formData.value_proposition} onChange={handleChange} rows={3} placeholder="Why should a customer or investor choose this over existing alternatives?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                    </div>
+                </div>
+
+                {/* Section 1B: Market & Commercial Strategy */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Target size={18} className="text-[var(--accent)]" /> Market & Commercial Strategy
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Market Geography</label>
+                            <input name="market_geography" value={formData.market_geography} onChange={handleChange} placeholder="Countries, cities, regions, or markets served" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Go-to-Market Strategy</label>
+                            <textarea name="go_to_market" value={formData.go_to_market} onChange={handleChange} rows={2} placeholder="How will you acquire customers and scale distribution?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Sales Channels</label>
+                            <input name="sales_channels" value={formData.sales_channels} onChange={handleChange} placeholder="Direct sales, online, partners, distributors, tenders, etc." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Pricing Model</label>
+                            <select name="pricing_model" value={formData.pricing_model} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option value="">Select pricing model</option>
+                                <option className="bg-[var(--primary)]">Subscription</option>
+                                <option className="bg-[var(--primary)]">One-time Sale</option>
+                                <option className="bg-[var(--primary)]">Usage-based</option>
+                                <option className="bg-[var(--primary)]">Commission</option>
+                                <option className="bg-[var(--primary)]">Licensing</option>
+                                <option className="bg-[var(--primary)]">Retainer</option>
+                                <option className="bg-[var(--primary)]">Project-based</option>
+                                <option className="bg-[var(--primary)]">Hybrid</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Revenue Streams</label>
+                        <textarea name="revenue_streams" value={formData.revenue_streams} onChange={handleChange} rows={3} placeholder="Break down primary and secondary revenue sources." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                    </div>
+                </div>
+
+                {/* Section 1C: Defensibility */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Activity size={18} className="text-[var(--accent)]" /> Competitive Position & Defensibility
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Competitive Advantage / Moat</label>
+                            <textarea name="competitive_advantage" value={formData.competitive_advantage} onChange={handleChange} rows={3} placeholder="Technology, cost, distribution, data, brand, network effects, expertise, contracts, etc." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Intellectual Property</label>
+                            <textarea name="intellectual_property" value={formData.intellectual_property} onChange={handleChange} rows={3} placeholder="Patents, trademarks, proprietary technology, trade secrets, software, or other IP." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
                     </div>
                 </div>
 
@@ -228,6 +422,32 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                         </div>
                     </div>
 
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Customers / Users</label>
+                            <input type="number" name="customer_count" value={formData.customer_count} onChange={handleChange} placeholder="Optional" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-mono font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Monthly Revenue</label>
+                            <input type="number" name="monthly_revenue" value={formData.monthly_revenue} onChange={handleChange} placeholder="Optional" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-mono font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Growth Rate (%)</label>
+                            <input type="number" step="0.1" name="growth_rate" value={formData.growth_rate} onChange={handleChange} placeholder="Optional" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-mono font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Investment Instrument</label>
+                            <select name="investment_instrument" value={formData.investment_instrument} onChange={handleChange} className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]">
+                                <option className="bg-[var(--primary)]">Equity</option>
+                                <option className="bg-[var(--primary)]">SAFE</option>
+                                <option className="bg-[var(--primary)]">Convertible Note</option>
+                                <option className="bg-[var(--primary)]">Debt</option>
+                                <option className="bg-[var(--primary)]">Revenue Share</option>
+                                <option className="bg-[var(--primary)]">Strategic Investment</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Current Traction / Milestones</label>
@@ -240,6 +460,40 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                     </div>
                 </div>
 
+
+                {/* Section 3A: Execution, Team & Risk */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
+                        <Users size={18} className="text-[var(--accent)]" /> Team, Execution & Risk
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Team Summary</label>
+                            <textarea name="team_summary" value={formData.team_summary} onChange={handleChange} rows={4} placeholder="Who is executing the business and what are their relevant capabilities?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Founder / Management Background</label>
+                            <textarea name="founder_background" value={formData.founder_background} onChange={handleChange} rows={4} placeholder="Relevant experience, previous ventures, domain expertise, achievements." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Key Risks & Mitigation</label>
+                            <textarea name="risks" value={formData.risks} onChange={handleChange} rows={4} placeholder="Material commercial, technical, regulatory, operational, or funding risks and how they are addressed." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Exit / Strategic Outcome</label>
+                            <textarea name="exit_strategy" value={formData.exit_strategy} onChange={handleChange} rows={4} placeholder="Expected strategic outcome, acquisition potential, long-term ownership plan, or other investor liquidity path." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Funding Milestones</label>
+                        <textarea name="funding_milestones" value={formData.funding_milestones} onChange={handleChange} rows={3} placeholder="What measurable milestones will this capital achieve, and by when?" className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Investment Ask Summary</label>
+                        <textarea name="ask_summary" value={formData.ask_summary} onChange={handleChange} rows={3} placeholder="State the exact ask, preferred structure, strategic value sought, and what the investor receives." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-medium text-[var(--secondary)] focus:outline-none neu-pressed-base shadow-inner resize-none focus:ring-1 focus:ring-[var(--accent)]" />
+                    </div>
+                </div>
+
                 {/* Section 4: Attachments */}
                 <div className="space-y-6">
                     <h2 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
@@ -249,6 +503,20 @@ export default function PitchDeckBuilder({ existingDeck, userId, targetBidId }: 
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Full Pitch Deck URL (PDF/DocSend/Google Slides)</label>
                         <input type="url" name="deck_url" value={formData.deck_url} onChange={handleChange} placeholder="https://..." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--accent)] focus:outline-none transition neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Website</label>
+                            <input type="url" name="website_url" value={formData.website_url} onChange={handleChange} placeholder="https://..." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--accent)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Product Demo</label>
+                            <input type="url" name="demo_url" value={formData.demo_url} onChange={handleChange} placeholder="https://..." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--accent)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider">Pitch / Demo Video</label>
+                            <input type="url" name="video_url" value={formData.video_url} onChange={handleChange} placeholder="https://..." className="w-full bg-transparent border-transparent rounded-xl p-4 text-sm font-bold text-[var(--accent)] focus:outline-none neu-pressed-base shadow-inner focus:ring-1 focus:ring-[var(--accent)]" />
+                        </div>
                     </div>
                 </div>
 

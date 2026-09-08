@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import ArticlePublishModal from "@/components/research/ArticlePublishModal";
@@ -56,7 +57,6 @@ export default function ResearchPage() {
     fetchArticles();
   }, []);
 
-  // Handle the incoming data from your ArticlePublishModal
   const handleArticlePublished = async (newArticleData: { title: string; category: string; summary: string; content: string }) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
@@ -72,7 +72,7 @@ export default function ResearchPage() {
 
     if (!error) {
       setIsPublishModalOpen(false);
-      fetchArticles(); // Refresh the live feed
+      fetchArticles();
     }
   };
 
@@ -178,7 +178,7 @@ export default function ResearchPage() {
           </div>
         )}
 
-        {/* Featured Research Paper Banner (Only shows if articles exist and no filters are active) */}
+        {/* Featured Research Paper Banner */}
         {articles.length > 0 && !isFiltering && (
           <div className="neu-flat-base p-8 md:p-10 relative overflow-hidden group transition-all">
             <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
@@ -195,9 +195,11 @@ export default function ResearchPage() {
                 </span>
               </div>
 
-              <h2 className="text-2xl md:text-4xl font-black text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer">
-                {articles[0].title}
-              </h2>
+              <Link href={`/research/${articles[0].id}`}>
+                <h2 className="text-2xl md:text-4xl font-black text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer">
+                  {articles[0].title}
+                </h2>
+              </Link>
 
               <p className="text-[var(--secondary)]/80 text-sm leading-relaxed line-clamp-3 font-medium">
                 {articles[0].summary}
@@ -213,9 +215,12 @@ export default function ResearchPage() {
                   <span className="hidden sm:inline capitalize font-medium">{articles[0].author?.role}</span>
                 </div>
 
-                <span className="flex items-center gap-1 text-[var(--accent)] font-bold group-hover:underline cursor-pointer bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition">
+                <Link
+                  href={`/research/${articles[0].id}`}
+                  className="flex items-center gap-1 text-[var(--accent)] font-bold group-hover:underline cursor-pointer bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition"
+                >
                   Read Full Paper <ArrowUpRight size={14} />
-                </span>
+                </Link>
               </div>
             </div>
           </div>
@@ -242,9 +247,11 @@ export default function ResearchPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer leading-snug">
-                    {article.title}
-                  </h3>
+                  <Link href={`/research/${article.id}`}>
+                    <h3 className="text-lg font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition cursor-pointer leading-snug">
+                      {article.title}
+                    </h3>
+                  </Link>
 
                   <p className="text-xs text-[var(--secondary)]/70 leading-relaxed line-clamp-3 font-medium">
                     {article.summary}
@@ -257,9 +264,12 @@ export default function ResearchPage() {
                     <span className="text-[9px] uppercase tracking-wider text-[var(--secondary)]/50 font-bold">{new Date(article.created_at).toLocaleDateString()}</span>
                   </div>
 
-                  <button className="text-[var(--accent)] font-bold text-xs bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition">
+                  <Link
+                    href={`/research/${article.id}`}
+                    className="text-[var(--accent)] font-bold text-xs bg-transparent px-3 py-1.5 rounded-lg neu-btn shadow-none hover:shadow-inner transition"
+                  >
                     Read →
-                  </button>
+                  </Link>
                 </div>
               </motion.article>
             ))}

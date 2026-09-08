@@ -114,7 +114,9 @@ export default function FeedPage() {
   const statusColors = {
     online: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]",
     busy: "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]",
-    away: "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+    away: "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]",
+    banned: "bg-red-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]",
+    suspended: "bg-grey-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]",
   };
 
   return (

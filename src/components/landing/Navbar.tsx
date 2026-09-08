@@ -22,7 +22,7 @@ export default function Navbar() {
 
   const isGlassTheme = pathname === "/" || pathname === "/about" || pathname === "/pricing";
 
-  const userTier = session?.user?.user_metadata?.tier || session?.profile?.tier || 'freemium';
+  const userTier = session?.user?.user_metadata?.tier || (session as any)?.profile?.tier || 'freemium';
   const showPricing = !session || userTier === 'freemium';
 
   const menuGroups = [
@@ -55,10 +55,12 @@ export default function Navbar() {
   const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
   const homeRoute = session?.user ? "/dashboard" : "/";
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     online: "bg-emerald-500",
     busy: "bg-rose-500",
-    away: "bg-amber-400"
+    away: "bg-amber-400",
+    banned: "bg-red-500",
+    suspended: "bg-grey-500"
   };
 
   // Dark Theme 3D Button

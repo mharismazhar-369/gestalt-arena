@@ -30,7 +30,7 @@ export default function TierSwitcherBar() {
                 <Sparkles size={14} /> Sandbox Tier Switcher
               </span>
               <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-white/10">
-                Frontend Simulator
+                Simulator
               </span>
             </div>
 
@@ -46,11 +46,10 @@ export default function TierSwitcherBar() {
                   <button
                     key={t.id}
                     onClick={() => setTier(t.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
-                      isActive
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition ${isActive
                         ? "bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-400/50 text-white shadow-lg"
                         : "bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <Icon size={14} className={isActive ? "text-cyan-400" : "text-slate-400"} />

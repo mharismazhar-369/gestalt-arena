@@ -160,8 +160,8 @@ export default function Navbar() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 ${isGlassTheme
-                ? "bg-white/95 backdrop-blur-xl border border-white/80"
-                : "neu-flat-base border-t border-[var(--secondary)]/10"
+              ? "bg-white/95 backdrop-blur-xl border border-white/80"
+              : "neu-flat-base border-t border-[var(--secondary)]/10"
               }`}
           >
             {navLinks.map((link) => {
@@ -172,8 +172,8 @@ export default function Navbar() {
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors border-b last:border-0 ${isGlassTheme
-                      ? "text-slate-700 border-slate-100 hover:text-indigo-600"
-                      : "text-[var(--secondary)] border-[var(--secondary)]/5 hover:text-[var(--accent)]"
+                    ? "text-slate-700 border-slate-100 hover:text-indigo-600"
+                    : "text-[var(--secondary)] border-[var(--secondary)]/5 hover:text-[var(--accent)]"
                     }`}
                 >
                   <Icon size={16} />
@@ -228,7 +228,7 @@ export default function Navbar() {
                           : "neu-btn px-5 py-3 text-sm text-center font-bold"
                       }
                     >
-                      Join Platform
+                      Join Arena
                     </Link>
                   </>
                 )

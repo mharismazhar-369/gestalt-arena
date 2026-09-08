@@ -40,7 +40,7 @@ export async function sendConnectionRequest(receiverId: string) {
     return { success: true }
 }
 
-export async function updateConnectionStatus(formData: FormData) {
+export async function updateConnectionStatus(formData: FormData): Promise<void> {
     const supabase = await createClient()
 
     const connectionId = formData.get('connectionId') as string;
@@ -75,5 +75,5 @@ export async function updateConnectionStatus(formData: FormData) {
     }
 
     revalidatePath('/network')
-    return { success: true }
+    // No return statement here. Next.js forms expect void.
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
+import Background from "./Background";
 
 // Reusable animated Dial Chart component
 const DialChart = ({
@@ -135,6 +136,7 @@ export default function StatsSection() {
 
   return (
     <section id="stats" className="relative z-10 mx-auto max-w-7xl px-6 py-28">
+      <Background />
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}

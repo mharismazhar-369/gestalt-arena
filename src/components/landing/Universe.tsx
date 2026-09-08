@@ -2,8 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
-// Soft, light-theme compatible Aether colors (Emerald, Sky, Indigo, Slate)
-const COLORS = ["rgba(52, 211, 153, 0.4)", "rgba(125, 211, 252, 0.4)", "rgba(129, 140, 248, 0.3)", "rgba(148, 163, 184, 0.2)"];
+// Premium Aether colors (Teal, Emerald, Indigo, Purple, Slate)
+const COLORS = [
+  "rgba(20, 184, 166, 0.5)", // Teal
+  "rgba(16, 185, 129, 0.4)", // Emerald
+  "rgba(99, 102, 241, 0.4)", // Indigo
+  "rgba(168, 85, 247, 0.3)", // Purple
+  "rgba(148, 163, 184, 0.2)", // Slate
+];
 
 class AetherParticle {
   x: number;
@@ -12,13 +18,15 @@ class AetherParticle {
   vy: number;
   radius: number;
   color: string;
+  baseRadius: number;
 
   constructor(canvasWidth: number, canvasHeight: number) {
     this.x = Math.random() * canvasWidth;
     this.y = Math.random() * canvasHeight;
-    this.vx = (Math.random() - 0.5) * 0.8;
-    this.vy = (Math.random() - 0.5) * 0.8;
-    this.radius = Math.random() * 40 + 10;
+    this.vx = (Math.random() - 0.5) * 0.6;
+    this.vy = (Math.random() - 0.5) * 0.6;
+    this.baseRadius = Math.random() * 25 + 5;
+    this.radius = this.baseRadius;
     this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
   }
 
@@ -27,15 +35,25 @@ class AetherParticle {
     this.x += this.vx;
     this.y += this.vy;
 
-    // Slight repulsion from mouse
+    // Fluid repulsion from mouse
     if (mouse.x > 0 && mouse.y > 0) {
       const dx = mouse.x - this.x;
       const dy = mouse.y - this.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance < 150) {
-        this.x -= (dx / distance) * 1.5;
-        this.y -= (dy / distance) * 1.5;
+      const maxDistance = 250;
+
+      if (distance < maxDistance) {
+        const force = (maxDistance - distance) / maxDistance;
+        this.x -= (dx / distance) * force * 2.5;
+        this.y -= (dy / distance) * force * 2.5;
+        // Expand slightly when pushed
+        this.radius = this.baseRadius + (force * 15);
+      } else {
+        // Return to normal size
+        if (this.radius > this.baseRadius) this.radius -= 0.5;
       }
+    } else {
+       if (this.radius > this.baseRadius) this.radius -= 0.5;
     }
 
     // Screen wrap
@@ -76,20 +94,47 @@ export default function Universe() {
       canvas.width = width;
       canvas.height = height;
 
-      const particleCount = Math.floor((width * height) / 12000); // Fewer, larger particles for Aether
+      // Higher particle count for connection lines
+      const particleCount = Math.floor((width * height) / 8000); 
       particles = Array.from({ length: particleCount }, () => new AetherParticle(width, height));
+    };
+
+    const drawConnections = () => {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          // Connect particles that are close to each other
+          if (distance < 180) {
+            ctx.beginPath();
+            const opacity = 1 - (distance / 180);
+            ctx.strokeStyle = `rgba(148, 163, 184, ${opacity * 0.15})`;
+            ctx.lineWidth = 1;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+            ctx.closePath();
+          }
+        }
+      }
     };
 
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Apply a subtle blur to everything drawn on the canvas
-      ctx.filter = 'blur(12px)';
+      // Core Aether blur effect
+      ctx.filter = 'blur(8px)';
 
       particles.forEach(p => {
         p.update(width, height, mouse);
         p.draw(ctx);
       });
+
+      // Draw thin constellation lines
+      ctx.filter = 'blur(1px)';
+      drawConnections();
 
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -122,7 +167,6 @@ export default function Universe() {
   return (
     <canvas
       ref={canvasRef}
-      // Fixed position ensures it covers the whole screen while scrolling
       className="fixed inset-0 z-0 pointer-events-none"
       style={{ background: "transparent" }}
     />

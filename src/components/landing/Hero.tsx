@@ -1,73 +1,101 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import Link from "next/link";
 import { BriefcaseBusiness, ChevronRight, Zap, Sparkles } from "lucide-react";
+import Background from "./Background";
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" },
+  },
+};
 
 export default function Hero() {
   return (
-    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center pt-20">
+    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center pt-24 overflow-hidden">
+      {/* Background Aether Canvas Animation */}
+      <Background />
+
+      {/* Decorative subtle glowing orb behind the hero content */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-emerald-100/30 via-indigo-100/30 to-purple-100/30 rounded-full blur-[120px] pointer-events-none" />
+
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
-        className="relative p-8 md:p-16 max-w-5xl rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="relative z-10 p-10 md:p-16 max-w-5xl rounded-3xl bg-white/60 backdrop-blur-3xl border border-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)]"
       >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-gradient-to-b from-white to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+          <div className="absolute -inset-[100%] animate-[spin_20s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(192,132,252,0.1)_0%,rgba(52,211,153,0.1)_50%,rgba(192,132,252,0.1)_100%)] opacity-50" />
+          <div className="absolute inset-[1px] bg-white/70 rounded-[23px] backdrop-blur-xl" />
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 shadow-sm">
-            <Sparkles size={14} className="text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">
-              Welcome to Gestalt Arena
-            </span>
-          </div>
+        <div className="relative z-20">
+          <motion.div variants={itemVariants} className="flex justify-center mb-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100/80 bg-white/90 px-6 py-2.5 shadow-sm transition-transform hover:scale-105 cursor-default">
+              <Sparkles size={16} className="text-amber-500 animate-pulse" />
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-900">
+                Welcome to Gestalt Arena
+              </span>
+            </div>
+          </motion.div>
 
-          <h1 className="text-5xl md:text-7xl font-black leading-tight text-slate-900 tracking-tighter">
+          <motion.h1 
+            variants={itemVariants}
+            className="text-6xl md:text-8xl font-black leading-tight text-slate-900 tracking-tighter"
+          >
             Where
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600"> Capital </span>
+            <span className="relative whitespace-nowrap mx-3">
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600 drop-shadow-sm">Capital</span>
+            </span>
             Meets
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600"> Execution</span>
-          </h1>
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.4 }}
-          className="mt-8 mx-auto max-w-3xl text-sm md:text-base lg:text-lg text-slate-600 font-semibold leading-relaxed"
-        >
-          A brand new platform bringing investment opportunities and a space to raise funds. Whether you are an investor, founder, startup, or a company, you can showcase your capital power, idea, product, or services.
-          <br className="hidden md:block" /><br className="hidden md:block" />
-          Gestalt Arena is not for everyone; it is designed specifically for those who want to thrive in life. We bridge the gap between the two, helping investors find the best business models showcased by visionaries needing capital. We connect people across the globe—not limited to the digital world, but providing grounds for real-world pioneers like doctors, scientists, engineers, robotics experts, and skilled craftsmen.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.6 }}
-          className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6"
-        >
-          <Link href="/register?role=investor" className="group relative inline-flex h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full bg-slate-900 px-8 font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_rgba(15,23,42,0.2)] hover:shadow-[0_15px_30px_rgba(15,23,42,0.3)]">
-            <span className="absolute h-0 w-0 rounded-full bg-slate-700 transition-all duration-500 ease-out group-hover:h-56 group-hover:w-56" />
-            <span className="relative flex items-center gap-2 text-sm uppercase tracking-wider">
-              <BriefcaseBusiness size={18} /> Command Capital <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
+            <br className="hidden md:block" />
+            <span className="relative whitespace-nowrap">
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 drop-shadow-sm">Execution</span>
             </span>
-          </Link>
+          </motion.h1>
 
-          <Link href="/register?role=startup" className="group relative inline-flex h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full border border-indigo-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-8 font-bold text-white transition-all hover:scale-105 hover:shadow-[0_10px_30px_rgba(79,70,229,0.4)] active:scale-95">
-            <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <span className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
-            </span>
-            <span className="relative flex items-center gap-2 text-sm uppercase tracking-wider">
-              <Zap size={18} className="text-amber-300" /> Ignite Your Vision
-            </span>
-          </Link>
-        </motion.div>
+          <motion.p
+            variants={itemVariants}
+            className="mt-8 mx-auto max-w-2xl text-base md:text-lg text-slate-600 font-medium leading-relaxed"
+          >
+            A visionary platform uniting innovators and investors. We bridge the gap, helping backers find the best models showcased by pioneers needing capital&mdash;from digital startups to real-world experts.
+          </motion.p>
+
+          <motion.div
+            variants={itemVariants}
+            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6"
+          >
+            <Link href="/register?role=investor" className="group relative inline-flex h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full bg-slate-900 px-8 font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_rgba(15,23,42,0.15)] hover:shadow-[0_15px_30px_rgba(15,23,42,0.25)] border border-slate-800">
+              <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
+              <span className="relative flex items-center gap-2 text-sm uppercase tracking-wider">
+                <BriefcaseBusiness size={18} /> Enter as Investor <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+
+            <Link href="/register?role=startup" className="group relative inline-flex h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full bg-white px-8 font-bold text-indigo-600 transition-all hover:scale-105 active:scale-95 border border-indigo-200 shadow-[0_10px_20px_rgba(99,102,241,0.08)] hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] hover:border-indigo-300">
+              <span className="absolute inset-0 bg-indigo-50/50 transition-colors group-hover:bg-indigo-100/50" />
+              <span className="relative flex items-center gap-2 text-sm uppercase tracking-wider">
+                <Zap size={18} className="text-indigo-500" /> Enter As Startup
+              </span>
+            </Link>
+          </motion.div>
+        </div>
       </motion.div>
     </section>
   );

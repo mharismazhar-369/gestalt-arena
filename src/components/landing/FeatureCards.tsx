@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ShieldCheck, Globe2, Handshake, BadgeDollarSign, BellRing, Lock } from "lucide-react";
+import Background from "./Background";
 
 const features = [
   {
@@ -45,6 +46,7 @@ const features = [
 export default function FeatureCards() {
   return (
     <section id="features" className="relative z-10 mx-auto max-w-7xl px-6 py-28">
+      <Background />
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}

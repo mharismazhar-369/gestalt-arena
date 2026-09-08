@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat, Handshake } from "lucide-react";
+import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat, Handshake, Users, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -26,7 +26,6 @@ export default function NotificationDropdown() {
     const fetchNotifications = async () => {
       const { data } = await supabase
         .from("notifications")
-        // FIX: Added reference_id to the query
         .select(`id, type, is_read, message, created_at, reference_id, actor:profiles!actor_id(nickname, company_name)`)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
@@ -69,15 +68,15 @@ export default function NotificationDropdown() {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
   };
 
-  // Helper function to resolve the correct URL route
   const getNotificationLink = (type: string, refId: string) => {
-    if (!refId) return "#";
     switch (type) {
+      case "connection_request": return `/network`;
+      case "connection_accepted": return `/network`;
       case "negotiate":
-      case "deal_initiated": return `/negotiations/${refId}`;
+      case "deal_initiated": return refId ? `/negotiations/${refId}` : "#";
       case "rating":
-      case "interested": return `/startup/${refId}/pitch`;
-      case "bid": return `/bids/${refId}`;
+      case "interested": return refId ? `/startup/${refId}/pitch` : "#";
+      case "bid": return refId ? `/bids/${refId}` : "#";
       case "like":
       case "comment":
       case "reshare": return `/feed`;
@@ -87,6 +86,8 @@ export default function NotificationDropdown() {
 
   const getIcon = (type: string) => {
     switch (type) {
+      case "connection_request": return <Users size={16} className="text-[var(--accent)]" />;
+      case "connection_accepted": return <UserCheck size={16} className="text-emerald-600" />;
       case "like": return <Heart size={16} className="text-rose-600" />;
       case "reshare": return <Repeat size={16} className="text-emerald-600" />;
       case "comment": return <MessageCircle size={16} className="text-blue-600" />;

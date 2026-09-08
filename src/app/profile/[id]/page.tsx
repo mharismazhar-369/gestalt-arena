@@ -10,6 +10,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+import { sendConnectionRequest } from "@/actions/connections";
 import {
   UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2,
   Users, MessageSquare, Edit3, Globe, Link as LinkIcon,
@@ -93,7 +94,6 @@ export default function PublicProfilePage() {
       if (postsData) setRecentPosts(postsData);
 
       // 4. Fetch Network Connections & Status
-      // Assumes a 'connections' table with requester_id, receiver_id, and status columns
       const { count: connCount } = await supabase.from("connections").select("*", { count: "exact", head: true }).or(`requester_id.eq.${profileId},receiver_id.eq.${profileId}`).eq("status", "accepted");
       setConnectionCount(connCount || 0);
 
@@ -118,20 +118,13 @@ export default function PublicProfilePage() {
 
     setConnectionStatus('pending');
 
-    // Insert pending connection request
-    await supabase.from("connections").insert({
-      requester_id: session.user.id,
-      receiver_id: profileId,
-      status: 'pending'
-    });
-
-    // Fire notification to receiver
-    await supabase.from("notifications").insert({
-      user_id: profileId,
-      actor_id: session.user.id,
-      type: "connection_request",
-      message: "sent you a connection request."
-    });
+    try {
+      await sendConnectionRequest(profileId);
+    } catch (error: any) {
+      console.error(error);
+      setConnectionStatus('none');
+      alert(error.message || "Failed to send request.");
+    }
   };
 
   const renderDynamicBadges = () => {

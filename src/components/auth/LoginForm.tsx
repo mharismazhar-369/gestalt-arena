@@ -23,9 +23,22 @@ export default function LoginForm() {
   useEffect(() => {
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+
       if (session) {
+        // Intercept Auto-Login: Check status before routing
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("presence_status")
+          .eq("id", session.user.id)
+          .single();
+
         trackInteraction("CLICK", "auto_login_bypass_success");
-        router.push("/dashboard");
+
+        if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+          router.push("/warning");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         const savedEmail = localStorage.getItem("gestalt_saved_email");
         if (savedEmail) {
@@ -63,7 +76,7 @@ export default function LoginForm() {
     setError("");
     trackInteraction("CLICK", "login_submit_attempt", { rememberMe });
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password,
     });
@@ -72,14 +85,27 @@ export default function LoginForm() {
       setError(signInError.message);
       trackInteraction("CLICK", "login_submit_failed", { error: signInError.message });
       setLoading(false);
-    } else {
+    } else if (authData.user) {
       trackInteraction("CLICK", "login_submit_success");
+
       if (rememberMe) {
         localStorage.setItem("gestalt_saved_email", formData.email);
       } else {
         localStorage.removeItem("gestalt_saved_email");
       }
-      router.push("/dashboard");
+
+      // Intercept Manual Login: Check status before routing
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("presence_status")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+        router.push("/warning");
+      } else {
+        router.push("/dashboard");
+      }
     }
   };
 

@@ -8,13 +8,13 @@ import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutButton from "@/components/auth/LogoutButton";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
-import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare } from "lucide-react";
+import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare, ChevronDown, Store, Building } from "lucide-react";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Hooking into the new global status
   const { session, loading, status } = useAuth();
   const pathname = usePathname();
 
@@ -22,13 +22,34 @@ export default function Navbar() {
 
   const isGlassTheme = pathname === "/" || pathname === "/about" || pathname === "/pricing";
 
-  const navLinks = [
-    { href: "/browse/investors", label: "Investors", icon: Compass },
-    { href: "/browse/startups", label: "Startups", icon: Rocket },
-    { href: "/browse/bids", label: "Active Bids", icon: Tag },
-    { href: "/research", label: "Research", icon: BookOpen },
-    { href: "/pricing", label: "Pricing", icon: Tag },
-    { href: "/feed", label: "Arena Feed", icon: MessageSquare },
+  const userTier = session?.user?.user_metadata?.tier || session?.profile?.tier || 'freemium';
+  const showPricing = !session || userTier === 'freemium';
+
+  const menuGroups = [
+    {
+      label: "Vitrine",
+      icon: Compass,
+      items: [
+        { href: "/browse/investors", label: "Investors", icon: Building },
+        { href: "/browse/startups", label: "Startups", icon: Rocket },
+      ]
+    },
+    {
+      label: "Arena",
+      icon: Store,
+      items: [
+        { href: "/browse/bids", label: "Active Bids", icon: Tag },
+        { href: "/emporium", label: "Emporium", icon: Store },
+      ]
+    },
+    {
+      label: "Arena Lounge",
+      icon: MessageSquare,
+      items: [
+        { href: "/research", label: "Research", icon: BookOpen },
+        { href: "/feed", label: "Arena Feed", icon: MessageSquare },
+      ]
+    }
   ];
 
   const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
@@ -39,6 +60,15 @@ export default function Navbar() {
     busy: "bg-rose-500",
     away: "bg-amber-400"
   };
+
+  // Dark Theme 3D Button
+  const pushButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[var(--primary)] border border-[var(--secondary)]/10 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-4px_-4px_10px_rgba(255,255,255,0.05)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.5),inset_-4px_-4px_10px_rgba(255,255,255,0.05)] active:translate-y-[2px] text-[var(--secondary)] hover:text-[var(--accent)]";
+
+  // Light/Glass Theme 3D Button (Matches Image 2)
+  const glassPushButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[#f1f5f9] border border-white shadow-[4px_4px_10px_rgba(0,0,0,0.08),-4px_-4px_10px_rgba(255,255,255,0.9)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.08),inset_-4px_-4px_10px_rgba(255,255,255,0.9)] active:translate-y-[2px] text-slate-700 hover:text-emerald-600";
+
+  // Light/Glass Theme 3D Button with Glowing Edges (For CTA)
+  const glassJoinButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[#f1f5f9] border border-emerald-50/50 shadow-[4px_4px_10px_rgba(0,0,0,0.08),-4px_-4px_10px_rgba(255,255,255,0.9),0_0_15px_rgba(16,185,129,0.3)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.08),inset_-4px_-4px_10px_rgba(255,255,255,0.9)] active:translate-y-[2px] text-emerald-600 hover:text-emerald-500";
 
   return (
     <motion.header
@@ -67,23 +97,64 @@ export default function Navbar() {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-6 lg:flex">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${isGlassTheme
-                  ? "text-slate-600 hover:text-indigo-600"
-                  : "text-[var(--secondary)] hover:text-[var(--accent)]"
+        <nav className="hidden items-center gap-2 lg:flex relative">
+          {menuGroups.map((group) => (
+            <div
+              key={group.label}
+              className="relative"
+              onMouseEnter={() => setActiveDropdown(group.label)}
+              onMouseLeave={() => setActiveDropdown(null)}
+            >
+              <button
+                className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition-all duration-200 ${isGlassTheme
+                  ? "text-slate-600 hover:text-emerald-600 hover:bg-white/80 hover:shadow-[0_4px_10px_rgba(0,0,0,0.03)]"
+                  : "text-[var(--secondary)] hover:text-[var(--accent)] hover:bg-[var(--secondary)]/5 hover:shadow-[0_4px_10px_rgba(0,0,0,0.2)]"
                   }`}
               >
-                <Icon size={14} />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
+                <group.icon size={14} />
+                <span>{group.label}</span>
+                <ChevronDown size={12} className={`transition-transform duration-200 ${activeDropdown === group.label ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {activeDropdown === group.label && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 w-48 rounded-2xl overflow-hidden shadow-2xl border ${isGlassTheme ? "bg-white/95 border-slate-100 backdrop-blur-xl" : "neu-flat-base border-[var(--secondary)]/10"}`}
+                  >
+                    <div className="flex flex-col py-2">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-center gap-3 px-4 py-3 text-xs font-bold transition-all ${isGlassTheme ? "hover:bg-slate-50 text-slate-700 hover:text-emerald-600" : "hover:bg-[var(--secondary)]/5 text-[var(--secondary)] hover:text-[var(--accent)]"}`}
+                        >
+                          <item.icon size={14} />
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+
+          {showPricing && (
+            <Link
+              href="/pricing"
+              className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition-all duration-200 ${isGlassTheme
+                ? "text-slate-600 hover:text-emerald-600 hover:bg-white/80 hover:shadow-[0_4px_10px_rgba(0,0,0,0.03)]"
+                : "text-[var(--secondary)] hover:text-[var(--accent)] hover:bg-[var(--secondary)]/5 hover:shadow-[0_4px_10px_rgba(0,0,0,0.2)]"
+                }`}
+            >
+              <Tag size={14} />
+              <span>Pricing</span>
+            </Link>
+          )}
         </nav>
 
         {/* Desktop Actions */}
@@ -94,14 +165,10 @@ export default function Navbar() {
                 <NotificationDropdown />
                 <Link
                   href="/dashboard"
-                  className={
-                    isGlassTheme
-                      ? "flex items-center gap-2 px-5 py-2 rounded-full border border-slate-200 bg-white/50 text-xs font-bold text-slate-700 hover:bg-white hover:border-slate-300 transition-all"
-                      : "neu-pressed-base flex items-center gap-2 px-5 py-2 text-xs font-bold text-[var(--secondary)]"
-                  }
+                  className={isGlassTheme ? glassPushButtonClass : pushButtonClass}
                 >
                   <div className="relative flex items-center justify-center">
-                    <User size={14} className={isGlassTheme ? "text-indigo-600" : "text-[var(--accent)]"} />
+                    <User size={14} className={isGlassTheme ? "text-emerald-600" : "text-[var(--accent)]"} />
                     <span className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full border border-white ${statusColors[status || "online"]}`} />
                   </div>
                   <span>{userDisplayName}</span>
@@ -110,24 +177,10 @@ export default function Navbar() {
               </div>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className={
-                    isGlassTheme
-                      ? "px-5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
-                      : "neu-btn px-5 py-2 text-xs"
-                  }
-                >
+                <Link href="/login" className={isGlassTheme ? glassPushButtonClass : pushButtonClass}>
                   Login
                 </Link>
-                <Link
-                  href="/register"
-                  className={
-                    isGlassTheme
-                      ? "px-5 py-2 text-xs font-bold text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm"
-                      : "neu-pressed-base px-5 py-2 text-xs font-bold text-[var(--secondary)]"
-                  }
-                >
+                <Link href="/register" className={isGlassTheme ? glassJoinButtonClass : pushButtonClass}>
                   Join Platform
                 </Link>
               </>
@@ -140,11 +193,7 @@ export default function Navbar() {
           {isMounted && !loading && session && <NotificationDropdown />}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={
-              isGlassTheme
-                ? "p-2 text-slate-600 hover:text-indigo-600 focus:outline-none"
-                : "neu-pressed-base p-2 text-[var(--secondary)] hover:text-[var(--accent)] focus:outline-none"
-            }
+            className={isGlassTheme ? "p-2 text-slate-600 focus:outline-none" : "p-2 text-[var(--secondary)] hover:text-[var(--accent)] focus:outline-none"}
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -159,48 +208,38 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 ${isGlassTheme
-              ? "bg-white/95 backdrop-blur-xl border border-white/80"
-              : "neu-flat-base border-t border-[var(--secondary)]/10"
-              }`}
+            className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 overflow-y-auto max-h-[80vh] ${isGlassTheme ? "bg-white/95 backdrop-blur-xl border border-white/80" : "neu-flat-base border-t border-[var(--secondary)]/10"}`}
           >
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors border-b last:border-0 ${isGlassTheme
-                    ? "text-slate-700 border-slate-100 hover:text-indigo-600"
-                    : "text-[var(--secondary)] border-[var(--secondary)]/5 hover:text-[var(--accent)]"
-                    }`}
-                >
-                  <Icon size={16} />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
+            {menuGroups.map((group) => (
+              <div key={group.label} className="flex flex-col gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)] opacity-70 px-2">{group.label}</span>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors rounded-lg ${isGlassTheme ? "text-slate-700 hover:bg-slate-50" : "text-[var(--secondary)] hover:bg-[var(--secondary)]/5"}`}
+                  >
+                    <item.icon size={16} />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            ))}
+
+            {showPricing && (
+              <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors rounded-lg ${isGlassTheme ? "text-slate-700 hover:bg-slate-50" : "text-[var(--secondary)] hover:bg-[var(--secondary)]/5"}`}>
+                <Tag size={16} /><span>Pricing</span>
+              </Link>
+            )}
 
             {/* Mobile Auth Actions */}
-            <div className="pt-4 flex flex-col gap-3">
+            <div className="pt-4 flex flex-col gap-3 border-t border-[var(--secondary)]/10">
               {isMounted && (
                 !loading && session ? (
                   <>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={
-                        isGlassTheme
-                          ? "flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700"
-                          : "neu-btn flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold"
-                      }
-                    >
-                      <div className="relative">
-                        <User size={16} className={isGlassTheme ? "text-indigo-600" : "text-[var(--accent)]"} />
-                        <span className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white ${statusColors[status || "online"]}`} />
-                      </div>
-                      <span>Dashboard ({userDisplayName})</span>
+                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassPushButtonClass + " py-3" : pushButtonClass + " py-3"}>
+                      <User size={16} /> <span>Dashboard ({userDisplayName})</span>
                     </Link>
                     <div className="flex justify-center" onClick={() => setMobileMenuOpen(false)}>
                       <LogoutButton />
@@ -208,26 +247,10 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <Link
-                      href="/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={
-                        isGlassTheme
-                          ? "px-5 py-3 text-sm font-bold text-center text-slate-700 border border-slate-200 rounded-xl"
-                          : "neu-pressed-base px-5 py-3 text-sm text-center font-bold"
-                      }
-                    >
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassPushButtonClass + " py-3" : pushButtonClass + " py-3"}>
                       Login
                     </Link>
-                    <Link
-                      href="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={
-                        isGlassTheme
-                          ? "px-5 py-3 text-sm font-bold text-center text-white bg-slate-900 rounded-xl"
-                          : "neu-btn px-5 py-3 text-sm text-center font-bold"
-                      }
-                    >
+                    <Link href="/register" onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassJoinButtonClass + " py-3" : pushButtonClass + " py-3"}>
                       Join Arena
                     </Link>
                   </>

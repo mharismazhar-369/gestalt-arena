@@ -19,14 +19,19 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Fetch role from Supabase profiles table
+  // Fetch both role AND presence_status from Supabase profiles table
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, presence_status")
     .eq("id", user.id)
     .single();
 
-  // Role Routing Redirects
+  // 1. Strict Server-Side Security Guard
+  if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+    redirect("/warning");
+  }
+
+  // 2. Role Routing Redirects
   if (profile?.role === "investor") {
     redirect("/investor/dashboard");
   } else if (profile?.role === "startup") {
@@ -42,7 +47,7 @@ export default async function DashboardPage() {
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-4xl w-full relative z-10">
         <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 md:p-12 space-y-8 shadow-2xl">
-          
+
           <div className="border-b border-white/10 pb-6 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">

@@ -74,13 +74,17 @@ export default async function NetworkPage() {
                                         </div>
 
                                         <div className="flex items-center gap-3 w-full sm:w-auto">
-                                            <form action={updateConnectionStatus.bind(null, req.id, 'accepted')}>
+                                            <form action={updateConnectionStatus}>
+                                                <input type="hidden" name="connectionId" value={req.id} />
+                                                <input type="hidden" name="status" value="accepted" />
                                                 <button type="submit" className="flex items-center gap-2 py-2 px-4 text-xs neu-btn border-transparent text-emerald-600 hover:border-emerald-600 transition-all w-full sm:w-auto">
                                                     <UserCheck size={14} /> Accept
                                                 </button>
                                             </form>
 
-                                            <form action={updateConnectionStatus.bind(null, req.id, 'rejected')}>
+                                            <form action={updateConnectionStatus}>
+                                                <input type="hidden" name="connectionId" value={req.id} />
+                                                <input type="hidden" name="status" value="rejected" />
                                                 <button type="submit" className="flex items-center gap-2 py-2 px-4 text-xs neu-btn border-transparent text-rose-600 hover:border-rose-600 transition-all w-full sm:w-auto">
                                                     <X size={14} /> Decline
                                                 </button>

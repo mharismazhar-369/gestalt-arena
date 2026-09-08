@@ -8,20 +8,30 @@ import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutButton from "@/components/auth/LogoutButton";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
-import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare, ChevronDown, Store, Building } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare, ChevronDown, Store, Building, ShieldAlert } from "lucide-react";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const { session, loading, status } = useAuth();
   const pathname = usePathname();
 
-  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    setIsMounted(true);
+    if (session?.user?.id) {
+      const fetchRole = async () => {
+        const { data } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        if (data) setUserRole(data.role);
+      };
+      fetchRole();
+    }
+  }, [session]);
 
   const isGlassTheme = pathname === "/" || pathname === "/about" || pathname === "/pricing";
-
   const userTier = session?.user?.user_metadata?.tier || (session as any)?.profile?.tier || 'freemium';
   const showPricing = !session || userTier === 'freemium';
 
@@ -59,17 +69,12 @@ export default function Navbar() {
     online: "bg-emerald-500",
     busy: "bg-rose-500",
     away: "bg-amber-400",
-    banned: "bg-red-500",
-    suspended: "bg-grey-500"
+    banned: "bg-red-950",
+    suspended: "bg-blue-950"
   };
 
-  // Dark Theme 3D Button
   const pushButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[var(--primary)] border border-[var(--secondary)]/10 shadow-[4px_4px_10px_rgba(0,0,0,0.5),-4px_-4px_10px_rgba(255,255,255,0.05)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.5),inset_-4px_-4px_10px_rgba(255,255,255,0.05)] active:translate-y-[2px] text-[var(--secondary)] hover:text-[var(--accent)]";
-
-  // Light/Glass Theme 3D Button (Matches Image 2)
   const glassPushButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[#f1f5f9] border border-white shadow-[4px_4px_10px_rgba(0,0,0,0.08),-4px_-4px_10px_rgba(255,255,255,0.9)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.08),inset_-4px_-4px_10px_rgba(255,255,255,0.9)] active:translate-y-[2px] text-slate-700 hover:text-emerald-600";
-
-  // Light/Glass Theme 3D Button with Glowing Edges (For CTA)
   const glassJoinButtonClass = "relative flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-xl transition-all duration-150 ease-in-out bg-[#f1f5f9] border border-emerald-50/50 shadow-[4px_4px_10px_rgba(0,0,0,0.08),-4px_-4px_10px_rgba(255,255,255,0.9),0_0_15px_rgba(16,185,129,0.3)] active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.08),inset_-4px_-4px_10px_rgba(255,255,255,0.9)] active:translate-y-[2px] text-emerald-600 hover:text-emerald-500";
 
   return (
@@ -86,7 +91,6 @@ export default function Navbar() {
             : "neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4 relative z-20"
         }
       >
-        {/* Brand */}
         <div className="flex items-center gap-4">
           <Link
             href={homeRoute}
@@ -98,7 +102,6 @@ export default function Navbar() {
           <BetaBadge variant="pill" className="hidden sm:inline-flex opacity-70" />
         </div>
 
-        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-2 lg:flex relative">
           {menuGroups.map((group) => (
             <div
@@ -159,11 +162,21 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* Desktop Actions */}
         <div className="hidden items-center gap-4 md:flex">
           {isMounted && (
             !loading && session ? (
               <div className="flex items-center gap-4">
+                {userRole === 'admin' && (
+                  <Link
+                    href="/admin/dashboard"
+                    className={isGlassTheme
+                      ? "flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold hover:bg-rose-100 transition-all shadow-sm"
+                      : "flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold hover:bg-rose-500/20 transition-all shadow-[0_0_10px_rgba(244,63,94,0.1)]"}
+                  >
+                    <ShieldAlert size={14} /> Matrix
+                  </Link>
+                )}
+
                 <NotificationDropdown />
                 <Link
                   href="/dashboard"
@@ -190,7 +203,6 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Toggle */}
         <div className="flex items-center gap-3 lg:hidden">
           {isMounted && !loading && session && <NotificationDropdown />}
           <button
@@ -202,7 +214,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -235,11 +246,15 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Mobile Auth Actions */}
             <div className="pt-4 flex flex-col gap-3 border-t border-[var(--secondary)]/10">
               {isMounted && (
                 !loading && session ? (
                   <>
+                    {userRole === 'admin' && (
+                      <Link href="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors rounded-lg ${isGlassTheme ? "text-rose-600 hover:bg-rose-50" : "text-rose-500 hover:bg-rose-500/10"}`}>
+                        <ShieldAlert size={16} /><span>Enter Matrix</span>
+                      </Link>
+                    )}
                     <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassPushButtonClass + " py-3" : pushButtonClass + " py-3"}>
                       <User size={16} /> <span>Dashboard ({userDisplayName})</span>
                     </Link>

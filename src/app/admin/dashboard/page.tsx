@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ShieldAlert, Activity, Users, Ban, Trash2, Unlock, AlertTriangle, Terminal } from "lucide-react";
 import { motion } from "framer-motion";
+import { executeModeration } from "@/app/admin/actions";
 
 // --- Types based on your Schema ---
 type AdminUser = {
@@ -87,25 +88,12 @@ export default function GestaltCommandCenter() {
         addLog(`[WARN] Initiating hard delete for ${userId}`);
         await supabase.from("profiles").delete().eq("id", userId);
       } else {
+        if (!session?.user?.id) throw new Error("Admin session lost");
+
+        // Execute Server Action to bypass RLS
+        await executeModeration(session.user.id, userId, action);
+
         const newStatus = action === 'ban' ? 'banned' : action === 'suspend' ? 'suspended' : 'online';
-
-        // 1. Update Profile Status
-        await supabase.from("profiles").update({ presence_status: newStatus }).eq("id", userId);
-
-        // 2. Dispatch System Notification to User
-        if (session?.user?.id) {
-          const message = action === 'ban' ? 'Your account has been permanently banned for violating platform guidelines.'
-            : action === 'suspend' ? 'Your account has been temporarily suspended pending an administrative review.'
-              : 'Your account access has been fully restored. Welcome back to the Arena.';
-
-          await supabase.from("notifications").insert({
-            user_id: userId,
-            actor_id: session.user.id, // The Admin's ID
-            type: "system_alert",
-            message: message
-          });
-        }
-
         addLog(`[MOD] User ${userId} status updated to ${newStatus}`);
       }
       fetchSystemTelemetry();

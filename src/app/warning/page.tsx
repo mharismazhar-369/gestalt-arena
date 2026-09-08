@@ -12,13 +12,6 @@ export default function WarningPage() {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
 
-    useEffect(() => {
-        setIsMounted(true);
-        if (!loading && status !== "banned" && status !== "suspended") {
-            router.push("/dashboard");
-        }
-    }, [status, loading, router]);
-
     if (!isMounted || loading) return null;
 
     const isSuspended = status === "suspended";
@@ -30,8 +23,8 @@ export default function WarningPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={`max-w-2xl w-full p-10 md:p-14 rounded-3xl border relative overflow-hidden shadow-2xl backdrop-blur-xl bg-[#0a0a0a]/80 ${isSuspended
-                        ? "border-blue-500/30 shadow-[inset_0_0_60px_rgba(59,130,246,0.1)]"
-                        : "border-rose-600/30 shadow-[inset_0_0_60px_rgba(225,29,72,0.1)]"
+                    ? "border-blue-500/30 shadow-[inset_0_0_60px_rgba(59,130,246,0.1)]"
+                    : "border-rose-600/30 shadow-[inset_0_0_60px_rgba(225,29,72,0.1)]"
                     }`}
             >
                 {/* Animated Background Glow */}
@@ -41,8 +34,8 @@ export default function WarningPage() {
 
                     {/* Icon Header */}
                     <div className={`mx-auto w-24 h-24 rounded-2xl flex items-center justify-center border shadow-inner ${isSuspended
-                            ? "bg-blue-950/30 border-blue-500/40 text-blue-400"
-                            : "bg-rose-950/30 border-rose-500/40 text-rose-500"
+                        ? "bg-blue-950/30 border-blue-500/40 text-blue-400"
+                        : "bg-rose-950/30 border-rose-500/40 text-rose-500"
                         }`}>
                         {isSuspended ? <AlertOctagon size={48} /> : <ShieldAlert size={48} />}
                     </div>
@@ -80,8 +73,8 @@ export default function WarningPage() {
                         <a
                             href="mailto:hanniball.lecter420@gmail.com"
                             className={`mt-2 flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all border ${isSuspended
-                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
-                                    : "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20"
+                                ? "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
+                                : "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20"
                                 }`}
                         >
                             <Mail size={16} />

@@ -28,9 +28,9 @@ export default async function InvestorLayout({
         redirect("/warning");
     }
 
-    // 2. Role Enforcement (Optional but recommended)
-    if (profile?.role !== "startup" && profile?.role !== "admin") {
-        redirect("/dashboard"); // Sends them back to the router if they aren't a founder
+    // 2. Role Enforcement: Allow ONLY Investors and Admins
+    if (profile?.role !== "investor" && profile?.role !== "admin") {
+        redirect("/dashboard"); // Sends non-investors back to the main router
     }
 
     return <>{children}</>;

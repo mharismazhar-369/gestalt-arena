@@ -22,17 +22,21 @@ export default function LoginForm() {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Force strict server validation to kill local storage ghost sessions
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (session) {
+      if (user) {
         // Intercept Auto-Login: Check status before routing
         const { data: profile } = await supabase
           .from("profiles")
           .select("presence_status")
-          .eq("id", session.user.id)
+          .eq("id", user.id)
           .single();
 
         trackInteraction("CLICK", "auto_login_bypass_success");
+
+        // Force Next.js to rebuild server context with fresh cookies
+        router.refresh();
 
         if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
           router.push("/warning");
@@ -93,6 +97,9 @@ export default function LoginForm() {
       } else {
         localStorage.removeItem("gestalt_saved_email");
       }
+
+      // Force Next.js to rebuild server context with fresh cookies before routing
+      router.refresh();
 
       // Intercept Manual Login: Check status before routing
       const { data: profile } = await supabase

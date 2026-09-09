@@ -35,6 +35,15 @@ export default function Navbar() {
   const userTier = session?.user?.user_metadata?.tier || (session as any)?.profile?.tier || 'freemium';
   const showPricing = !session || userTier === 'freemium';
 
+  // Dynamic Routing Logic
+  const dashboardRoute = userRole === 'admin' ? '/admin/dashboard'
+    : userRole === 'investor' ? '/investor/dashboard'
+      : userRole === 'startup' ? '/startup/dashboard'
+        : '/dashboard';
+
+  const homeRoute = session?.user ? dashboardRoute : "/";
+  const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
+
   const menuGroups = [
     {
       label: "Vitrine",
@@ -61,9 +70,6 @@ export default function Navbar() {
       ]
     }
   ];
-
-  const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
-  const homeRoute = session?.user ? "/dashboard" : "/";
 
   const statusColors: Record<string, string> = {
     online: "bg-emerald-500",
@@ -179,7 +185,7 @@ export default function Navbar() {
 
                 <NotificationDropdown />
                 <Link
-                  href="/dashboard"
+                  href={dashboardRoute}
                   className={isGlassTheme ? glassPushButtonClass : pushButtonClass}
                 >
                   <div className="relative flex items-center justify-center">
@@ -255,7 +261,7 @@ export default function Navbar() {
                         <ShieldAlert size={16} /><span>Enter Matrix</span>
                       </Link>
                     )}
-                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassPushButtonClass + " py-3" : pushButtonClass + " py-3"}>
+                    <Link href={dashboardRoute} onClick={() => setMobileMenuOpen(false)} className={isGlassTheme ? glassPushButtonClass + " py-3" : pushButtonClass + " py-3"}>
                       <User size={16} /> <span>Dashboard ({userDisplayName})</span>
                     </Link>
                     <div className="flex justify-center" onClick={() => setMobileMenuOpen(false)}>

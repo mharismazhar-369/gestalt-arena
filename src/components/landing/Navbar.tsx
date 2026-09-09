@@ -15,7 +15,9 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false); // Controls the Matrix Button
 
   const { session, loading, status } = useAuth();
   const pathname = usePathname();
@@ -24,8 +26,16 @@ export default function Navbar() {
     setIsMounted(true);
     if (session?.user?.id) {
       const fetchRole = async () => {
-        const { data } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-        if (data) setUserRole(data.role);
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, is_admin')
+          .eq('id', session.user.id)
+          .single();
+
+        if (data) {
+          setUserRole(data.role);
+          setIsAdmin(data.is_admin || false); // Correctly sets state from DB
+        }
       };
       fetchRole();
     }
@@ -35,11 +45,10 @@ export default function Navbar() {
   const userTier = session?.user?.user_metadata?.tier || (session as any)?.profile?.tier || 'freemium';
   const showPricing = !session || userTier === 'freemium';
 
-  // Dynamic Routing Logic
-  const dashboardRoute = userRole === 'admin' ? '/admin/dashboard'
-    : userRole === 'investor' ? '/investor/dashboard'
-      : userRole === 'startup' ? '/startup/dashboard'
-        : '/dashboard';
+  // Dynamic Routing Logic: Profiles route to their respective dashboards
+  const dashboardRoute = userRole === 'investor' ? '/investor/dashboard'
+    : userRole === 'startup' ? '/startup/dashboard'
+      : '/dashboard';
 
   const homeRoute = session?.user ? dashboardRoute : "/";
   const userDisplayName = session?.user?.email?.split("@")[0] || "My Profile";
@@ -172,7 +181,9 @@ export default function Navbar() {
           {isMounted && (
             !loading && session ? (
               <div className="flex items-center gap-4">
-                {userRole === 'admin' && (
+
+                {/* MATRIX BUTTON - Now explicitly listens to isAdmin */}
+                {isAdmin && (
                   <Link
                     href="/admin/dashboard"
                     className={isGlassTheme
@@ -184,6 +195,7 @@ export default function Navbar() {
                 )}
 
                 <NotificationDropdown />
+
                 <Link
                   href={dashboardRoute}
                   className={isGlassTheme ? glassPushButtonClass : pushButtonClass}
@@ -256,7 +268,8 @@ export default function Navbar() {
               {isMounted && (
                 !loading && session ? (
                   <>
-                    {userRole === 'admin' && (
+                    {/* MATRIX BUTTON MOBILE - Now explicitly listens to isAdmin */}
+                    {isAdmin && (
                       <Link href="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors rounded-lg ${isGlassTheme ? "text-rose-600 hover:bg-rose-50" : "text-rose-500 hover:bg-rose-500/10"}`}>
                         <ShieldAlert size={16} /><span>Enter Matrix</span>
                       </Link>

@@ -32,12 +32,14 @@ export default async function DashboardPage() {
   }
 
   // 2. Role Routing Redirects
-  if (profile?.role === "investor") {
+  const userRole = (profile?.role || "").toLowerCase().trim();
+
+  if (userRole === "investor") {
     redirect("/investor/dashboard");
-  } else if (profile?.role === "startup") {
+  } else if (userRole === "startup") {
     redirect("/startup/dashboard");
-  } else if (profile?.role === "admin") {
-    redirect("/admin/dashboard");
+  } else if (userRole === "admin") {
+    redirect("/admin/dashboard"); // This prevents you from getting stuck!
   }
 
   // Fallback UI if role is not yet specified in profiles table

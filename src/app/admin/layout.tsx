@@ -9,29 +9,26 @@ export default async function AdminLayout({
 }) {
     const supabase = await createClient();
 
-    // 1. Verify Session
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
         redirect("/login");
     }
 
-    // 2. Server-side Role Check
     const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("is_admin, presence_status")
         .eq("id", user.id)
         .single();
 
-    if (!profile || profile.role !== "admin") {
-        redirect("/feed");
+    if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+        redirect("/warning");
     }
 
-    return (
-        <div className="min-h-screen bg-[#050505] text-[#00f3ff] antialiased">
-            {children}
-        </div>
-    );
+    // Strict Server-Side Admin Enforcement
+    if (profile?.is_admin !== true) {
+        redirect("/dashboard");
+    }
+
+    return <>{children}</>;
 }

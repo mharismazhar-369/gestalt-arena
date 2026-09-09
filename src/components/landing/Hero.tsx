@@ -32,7 +32,7 @@ export default function Hero() {
       <Background />
 
       {/* Decorative subtle glowing orb behind the hero content */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-emerald-100/30 via-indigo-100/30 to-purple-100/30 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-gradient-to-tr from-emerald-100/30 via-indigo-100/30 to-purple-100/30 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div
         variants={containerVariants}

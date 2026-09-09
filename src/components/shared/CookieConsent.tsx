@@ -97,7 +97,7 @@ export default function CookieConsent() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="fixed bottom-6 right-6 left-6 md:left-auto md:w-[450px] z-[100]"
+          className="fixed bottom-6 right-6 left-6 md:left-auto max-w-[90vw] w-full md:max-w-[450px] z-[100]"
         >
           <div className="neu-flat-base rounded-3xl p-6 shadow-2xl border border-blue-500/20 bg-[var(--primary)]/95 backdrop-blur-xl flex flex-col space-y-4">
 

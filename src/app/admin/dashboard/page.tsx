@@ -21,6 +21,7 @@ type AdminUser = {
   username: string | null;
   email: string | null;
   role: string;
+  is_admin: boolean | null;
   presence_status: string;
   created_at: string;
   profile_completed: boolean | null;
@@ -107,7 +108,8 @@ export default function GestaltCommandCenter() {
     try {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, username, email, role, presence_status, created_at, profile_completed, tier, company_name, industry, country, city")
+        // ADD is_admin TO THIS SELECT STATEMENT:
+        .select("id, username, email, role, is_admin, presence_status, created_at, profile_completed, tier, company_name, industry, country, city")
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -168,6 +170,7 @@ export default function GestaltCommandCenter() {
         const pitch = pitchMap.get(p.id) || { total: 0, solo: 0, bid: 0 };
         return {
           ...p,
+          is_admin: p.is_admin || false,
           verification_status: verification.get(p.id) || null,
           pitch_decks: pitch.total,
           solo_pitch_decks: pitch.solo,

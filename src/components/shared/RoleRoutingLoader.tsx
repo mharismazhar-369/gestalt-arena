@@ -27,8 +27,7 @@ export default function RoleRoutingLoader({
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#F8FAFC] px-6 backdrop-blur-sm">
 
       {/* Ambient Digital Glow */}
-      <div className={`absolute h-[500px] w-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-700 ${isDenied ? "bg-rose-500/10" : "bg-indigo-500/10"
-        }`} />
+      <div className={`absolute w-[80vw] h-[80vw] max-w-[500px] max-h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-700 ${isDenied ? "bg-rose-500/10" : "bg-indigo-500/10"}`} />
 
       <div className="relative z-10 flex flex-col items-center text-center space-y-8 max-w-sm">
 

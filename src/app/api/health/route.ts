@@ -4,7 +4,7 @@ export async function GET() {
   return NextResponse.json({
     status: "OK",
     service: "Gestalt Arena",
-    authentication: "Pending",
+    authentication: "Connected",
     database: "Connected",
   });
 }

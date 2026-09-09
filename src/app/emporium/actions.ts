@@ -4,16 +4,25 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-
-// The Service Role client bypasses RLS for administrative financial updates
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createServerClient } from '@supabase/ssr';
 
 /**
- * Validates the session and returns the secure user ID from the browser cookies.
+ * Lazy initializer for the administrative Supabase client.
+ * Prevents build-time compiler crashes when environment variables are missing during static evaluation.
+ */
+const getSupabaseAdmin = () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+        throw new Error("Cannot execute transaction: Missing Supabase environment variables.");
+    }
+
+    return createClient(url, key);
+};
+
+/**
+ * Validates the session and returns the secure user ID from browser cookies.
  */
 async function getSecureSession() {
     const cookieStore = await cookies();
@@ -22,7 +31,7 @@ async function getSecureSession() {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Critical System Error: Missing Supabase environment variables.");
+        throw new Error("Cannot verify session: Missing Supabase environment variables.");
     }
 
     const supabaseAuth = createServerClient(
@@ -38,7 +47,9 @@ async function getSecureSession() {
                         cookiesToSet.forEach(({ name, value, options }) => {
                             cookieStore.set({ name, value, ...options });
                         });
-                    } catch (error) { }
+                    } catch (error) {
+                        // Safe to ignore during server action evaluation
+                    }
                 },
             },
         }
@@ -55,52 +66,11 @@ async function getSecureSession() {
 }
 
 // ==========================================
-// 1. DATA FETCHING (Dictionaries & Feed)
-// ==========================================
-
-export async function getEmporiumConfig() {
-    const [categories, roles, tiers] = await Promise.all([
-        supabaseAdmin.from('platform_categories').select('*'),
-        supabaseAdmin.from('platform_roles').select('*'),
-        supabaseAdmin.from('platform_tiers').select('*')
-    ]);
-
-    return {
-        categories: categories.data || [],
-        targetRoles: roles.data || [],
-        tiers: tiers.data || []
-    };
-}
-
-export async function getCampaignsFromDB() {
-    const { data, error } = await supabaseAdmin
-        .from('campaigns')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) return [];
-
-    return (data || []).map(ad => ({
-        ...ad,
-        targetRole: ad.target_role,
-        ctaText: ad.cta_text,
-        ctaUrl: ad.cta_url,
-        durationDays: ad.duration_days,
-        createdAt: ad.created_at,
-        metrics: {
-            impressions: ad.impressions || 0,
-            clicks: ad.clicks || 0,
-            ctr: 0,
-            conversions: ad.conversions || 0
-        }
-    }));
-}
-
-// ==========================================
-// 2. CAMPAIGN CREATION & LIFECYCLE
+// 1. CAMPAIGN CREATION & LIFECYCLE
 // ==========================================
 
 export async function createCampaign(formData: any) {
+    const supabaseAdmin = getSupabaseAdmin();
     const userId = await getSecureSession();
     const campaignId = `ad-${Date.now()}`;
 
@@ -132,6 +102,7 @@ export async function createCampaign(formData: any) {
 }
 
 export async function updateCampaignStatus(campaignId: string, newStatus: string) {
+    const supabaseAdmin = getSupabaseAdmin();
     const userId = await getSecureSession();
 
     const { error } = await supabaseAdmin
@@ -146,10 +117,11 @@ export async function updateCampaignStatus(campaignId: string, newStatus: string
 }
 
 // ==========================================
-// 3. FINANCIAL TRANSACTIONS (Zero Trust)
+// 2. FINANCIAL TRANSACTIONS (Zero Trust)
 // ==========================================
 
 export async function processCheckout(formData: FormData) {
+    const supabaseAdmin = getSupabaseAdmin();
     const userId = await getSecureSession();
     const campaignId = formData.get('campaignId') as string;
     const amount = Number(formData.get('amount'));
@@ -165,7 +137,7 @@ export async function processCheckout(formData: FormData) {
         throw new Error("Insufficient Gestalt Credits or wallet not found.");
     }
 
-    // 2. Deduct credits STRICTLY (Forces an error if 0 rows update)
+    // 2. Deduct credits STRICTLY (Forces an explicit error if zero rows update)
     const { error: deductError } = await supabaseAdmin
         .from('user_wallets')
         .update({ balance: wallet.balance - amount })
@@ -178,7 +150,7 @@ export async function processCheckout(formData: FormData) {
         throw new Error("Transaction failed during credit deduction.");
     }
 
-    // 3. Write to immutable ledger
+    // 3. Write to immutable transaction ledger
     const { error: ledgerError } = await supabaseAdmin.from('transaction_ledger').insert([{
         user_id: userId,
         campaign_id: campaignId,
@@ -202,7 +174,7 @@ export async function processCheckout(formData: FormData) {
         throw new Error("Database failed to update campaign status.");
     }
 
-    // 5. Nuke the Next.js cache for the entire Emporium layout tree
+    // 5. Invalidate Next.js cache for the entire Emporium layout hierarchy
     revalidatePath('/emporium', 'layout');
     redirect(`/emporium/${campaignId}?success=true`);
 }

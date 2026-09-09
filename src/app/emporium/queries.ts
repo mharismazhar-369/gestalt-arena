@@ -1,11 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization with a safety net for the build compiler
+const getSupabaseAdmin = () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // If keys are missing (e.g., during cloud deployment), return null instead of crashing
+    if (!url || !key) {
+        console.warn("⚠️ Supabase keys missing. Operating in degraded mode.");
+        return null;
+    }
+
+    return createClient(url, key);
+};
 
 export async function getEmporiumConfig() {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Fallback dictionary if the database connection cannot be established
+    if (!supabaseAdmin) {
+        return { categories: [], targetRoles: [], tiers: [] };
+    }
+
     const [categories, roles, tiers] = await Promise.all([
         supabaseAdmin.from('platform_categories').select('*'),
         supabaseAdmin.from('platform_roles').select('*'),
@@ -20,6 +36,11 @@ export async function getEmporiumConfig() {
 }
 
 export async function getCampaignsFromDB() {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Return an empty feed if the database connection cannot be established
+    if (!supabaseAdmin) return [];
+
     const { data, error } = await supabaseAdmin
         .from('campaigns')
         .select('*')

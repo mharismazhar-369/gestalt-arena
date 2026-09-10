@@ -5,7 +5,6 @@ import { UserTierProvider } from "@/components/context/UserTierContext";
 import { ChatProvider } from "@/components/context/ChatContext";
 import { ThemeProvider } from "@/components/context/ThemeProvider";
 import CookieConsent from "@/components/shared/CookieConsent";
-import TierSwitcherBar from "@/components/shared/TierSwitcherBar";
 import OnboardingWrapper from "@/components/onboarding/OnboardingWrapper";
 
 export const metadata: Metadata = {
@@ -23,7 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ChatProvider>
                 {children}
                 <CookieConsent />
-                <TierSwitcherBar />
                 <OnboardingWrapper />
               </ChatProvider>
             </UserTierProvider>

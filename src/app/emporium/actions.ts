@@ -93,8 +93,8 @@ export async function createCampaign(formData: any) {
     const { error } = await supabaseAdmin.from('campaigns').insert([newCampaign]);
 
     if (error) {
-        console.error("SUPABASE INSERTION ERROR:", error);
-        throw new Error("Failed to secure campaign payload.");
+        console.error("❌ SUPABASE INSERTION ERROR:", error);
+        throw new Error(`Database Insertion Failed: ${error.message} (${error.code})`);
     }
 
     revalidatePath('/emporium');

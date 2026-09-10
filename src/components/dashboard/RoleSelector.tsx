@@ -12,17 +12,20 @@ export default function RoleSelector({ userId }: { userId: string }) {
     const handleRoleSelection = async (role: "investor" | "startup") => {
         setLoading(role);
 
-        const { error } = await supabase
+        // Append .select().single() to force an error if RLS blocks the update or the row is missing
+        const { data, error } = await supabase
             .from("profiles")
             .update({ role: role })
-            .eq("id", userId);
+            .eq("id", userId)
+            .select()
+            .single();
 
-        if (!error) {
-            // Force a hard browser navigation instead of a soft Next.js router push
+        if (!error && data) {
             window.location.href = `/${role}/dashboard`;
         } else {
+            console.error("Role Update Failed:", error);
             setLoading(null);
-            alert("Failed to assign role. Please try again.");
+            alert(`Failed to assign role: ${error?.message || "Profile row not found or RLS policy blocked the update."}`);
         }
     };
 

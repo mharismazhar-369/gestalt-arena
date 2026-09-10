@@ -1,89 +1,74 @@
-export const dynamic = "force-dynamic";
+"use client";
 
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import LogoutButton from "@/components/auth/LogoutButton";
-import Navbar from "@/components/landing/Navbar";
-import Footer from "@/components/landing/Footer";
-import BetaBadge from "@/components/shared/BetaBadge";
-import RoleSelector from "@/components/dashboard/RoleSelector";
-import { Sparkles } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { Compass, Rocket, Loader2 } from "lucide-react";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+export default function RoleSelector({ userId }: { userId: string }) {
+  const [loading, setLoading] = useState<string | null>(null);
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const handleRoleSelection = async (role: "investor" | "startup") => {
+    setLoading(role);
 
-  if (error || !user) {
-    redirect("/login");
-  }
+    // Attempt to update the existing profile row
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ role: role })
+      .eq("id", userId)
+      .select();
 
-  // Fetch both role AND presence_status from Supabase profiles table
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, presence_status")
-    .eq("id", user.id)
-    .single();
+    if (error) {
+      console.error("Role Update Error:", error);
+      setLoading(null);
+      alert(`Database error: ${error.message}`);
+      return;
+    }
 
-  // 1. Strict Server-Side Security Guard
-  if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
-    redirect("/warning");
-  }
+    // If the update succeeded but 0 rows were affected, the profile is missing
+    if (!data || data.length === 0) {
+      console.warn("No rows updated. Attempting forced upsert...");
 
-  // 2. Role Routing Redirects
-  const userRole = (profile?.role || "").toLowerCase().trim();
+      // Failsafe: Upsert the row if it was completely missing
+      const { error: upsertError } = await supabase
+        .from("profiles")
+        .upsert({ id: userId, role: role, profile_completed: false, presence_status: 'online' });
 
-  if (userRole === "investor") {
-    redirect("/investor/dashboard");
-  } else if (userRole === "startup") {
-    redirect("/startup/dashboard");
-  } else if (userRole === "admin") {
-    redirect("/admin/dashboard"); // This prevents you from getting stuck!
-  }
+      if (upsertError) {
+        setLoading(null);
+        alert("Critical error: Profile row is missing and could not be created.");
+        return;
+      }
+    }
 
-  // Fallback UI if role is not yet specified in profiles table
+    // Success: Force a hard browser navigation to break the cache
+    window.location.href = `/${role}/dashboard`;
+  };
+
   return (
-    <div className="min-h-screen bg-[#02040a] text-white flex flex-col justify-between trionn-grid-bg relative">
-      <Navbar />
-
-      <main className="pt-32 pb-24 px-6 mx-auto max-w-4xl w-full relative z-10">
-        <div className="trionn-glass-card rounded-3xl border border-white/10 p-8 md:p-12 space-y-8 shadow-2xl">
-
-          <div className="border-b border-white/10 pb-6 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
-                <Sparkles size={14} /> Profile Verification Required
-              </div>
-              <h1 className="text-3xl font-black text-white">Select Arena Role</h1>
-            </div>
-            <BetaBadge variant="pill" />
-          </div>
-
-          <div className="space-y-4 text-slate-300 text-sm leading-relaxed">
-            <p>
-              Your account (<strong className="text-white font-mono">{user.email}</strong>) is authenticated, but your profile role in the <code className="text-cyan-400 font-mono">profiles</code> table is pending setup.
-            </p>
-            <p>
-              Please choose your primary platform role to complete routing:
-            </p>
-
-            {/* Replaced static links with active mutation component */}
-            <RoleSelector userId={user.id} />
-
-          </div>
-
-          <div className="border-t border-white/10 pt-6 flex items-center justify-between text-xs text-slate-400">
-            <span>User ID: <code className="text-slate-300 font-mono">{user.id}</code></span>
-            <LogoutButton />
-          </div>
-
+    <div className="grid md:grid-cols-2 gap-6 pt-4">
+      <button
+        onClick={() => handleRoleSelection("investor")}
+        disabled={!!loading}
+        className="trionn-glass rounded-2xl border border-cyan-500/30 p-6 space-y-3 hover:border-cyan-400 transition group text-left disabled:opacity-50 relative"
+      >
+        <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 w-fit">
+          {loading === "investor" ? <Loader2 className="animate-spin" size={24} /> : <Compass size={24} />}
         </div>
-      </main>
+        <h3 className="text-lg font-bold text-white group-hover:text-cyan-300">Investor Account</h3>
+        <p className="text-xs text-slate-400">Browse startups, review pitch decks, and allocate capital.</p>
+      </button>
 
-      <Footer />
+      <button
+        onClick={() => handleRoleSelection("startup")}
+        disabled={!!loading}
+        className="trionn-glass rounded-2xl border border-violet-500/30 p-6 space-y-3 hover:border-violet-400 transition group text-left disabled:opacity-50 relative"
+      >
+        <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400 w-fit">
+          {loading === "startup" ? <Loader2 className="animate-spin" size={24} /> : <Rocket size={24} />}
+        </div>
+        <h3 className="text-lg font-bold text-white group-hover:text-violet-300">Startup Founder</h3>
+        <p className="text-xs text-slate-400">Publish pitch cards, connect with VCs, and track raises.</p>
+      </button>
     </div>
   );
 }

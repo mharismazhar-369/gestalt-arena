@@ -18,8 +18,8 @@ export default function RoleSelector({ userId }: { userId: string }) {
             .eq("id", userId);
 
         if (!error) {
-            router.push(`/${role}/dashboard`);
-            router.refresh();
+            // Force a hard browser navigation instead of a soft Next.js router push
+            window.location.href = `/${role}/dashboard`;
         } else {
             setLoading(null);
             alert("Failed to assign role. Please try again.");

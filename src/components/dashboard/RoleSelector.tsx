@@ -10,7 +10,6 @@ export default function RoleSelector({ userId }: { userId?: string }) {
     const handleRoleSelection = async (role: "investor" | "startup") => {
         setLoading(role);
 
-        // 1. Fetch user directly on the client to guarantee a valid UUID string
         const { data: { user } } = await supabase.auth.getUser();
         const activeUserId = user?.id || userId;
 
@@ -20,7 +19,6 @@ export default function RoleSelector({ userId }: { userId?: string }) {
             return;
         }
 
-        // 2. Attempt to update the existing profile row
         const { data, error } = await supabase
             .from("profiles")
             .update({ role: role })
@@ -34,11 +32,7 @@ export default function RoleSelector({ userId }: { userId?: string }) {
             return;
         }
 
-        // 3. If the update succeeded but 0 rows were affected, the profile is missing
         if (!data || data.length === 0) {
-            console.warn("No rows updated. Attempting forced upsert...");
-
-            // Failsafe: Upsert the row if it was completely missing
             const { error: upsertError } = await supabase
                 .from("profiles")
                 .upsert({
@@ -55,7 +49,6 @@ export default function RoleSelector({ userId }: { userId?: string }) {
             }
         }
 
-        // Success: Force a hard browser navigation to break the cache
         window.location.href = `/${role}/dashboard`;
     };
 
@@ -64,25 +57,25 @@ export default function RoleSelector({ userId }: { userId?: string }) {
             <button
                 onClick={() => handleRoleSelection("investor")}
                 disabled={!!loading}
-                className="trionn-glass rounded-2xl border border-cyan-500/30 p-6 space-y-3 hover:border-cyan-400 transition group text-left disabled:opacity-50 relative"
+                className="neu-pressed-base rounded-2xl p-6 space-y-3 transition-all duration-200 group text-left disabled:opacity-50 relative border border-[var(--secondary)]/5 hover:border-[var(--accent)]/30"
             >
-                <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 w-fit">
+                <div className="p-3 rounded-xl bg-[var(--secondary)]/5 text-[var(--accent)] w-fit">
                     {loading === "investor" ? <Loader2 className="animate-spin" size={24} /> : <Compass size={24} />}
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-cyan-300">Investor Account</h3>
-                <p className="text-xs text-slate-400">Browse startups, review pitch decks, and allocate capital.</p>
+                <h3 className="text-lg font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition-colors">Investor Account</h3>
+                <p className="text-xs text-[var(--secondary)]/70">Browse startups, review pitch decks, and allocate capital.</p>
             </button>
 
             <button
                 onClick={() => handleRoleSelection("startup")}
                 disabled={!!loading}
-                className="trionn-glass rounded-2xl border border-violet-500/30 p-6 space-y-3 hover:border-violet-400 transition group text-left disabled:opacity-50 relative"
+                className="neu-pressed-base rounded-2xl p-6 space-y-3 transition-all duration-200 group text-left disabled:opacity-50 relative border border-[var(--secondary)]/5 hover:border-[var(--accent)]/30"
             >
-                <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400 w-fit">
+                <div className="p-3 rounded-xl bg-[var(--secondary)]/5 text-[var(--accent)] w-fit">
                     {loading === "startup" ? <Loader2 className="animate-spin" size={24} /> : <Rocket size={24} />}
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-violet-300">Startup Founder</h3>
-                <p className="text-xs text-slate-400">Publish pitch cards, connect with VCs, and track raises.</p>
+                <h3 className="text-lg font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition-colors">Startup Founder</h3>
+                <p className="text-xs text-[var(--secondary)]/70">Publish pitch cards, connect with VCs, and track raises.</p>
             </button>
         </div>
     );

@@ -1,74 +1,81 @@
-"use client";
+export const dynamic = "force-dynamic";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
-import { Compass, Rocket, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import LogoutButton from "@/components/auth/LogoutButton";
+import Navbar from "@/components/landing/Navbar";
+import Footer from "@/components/landing/Footer";
+import BetaBadge from "@/components/shared/BetaBadge";
+import RoleSelector from "@/components/dashboard/RoleSelector";
+import { Sparkles } from "lucide-react";
 
-export default function RoleSelector({ userId }: { userId: string }) {
-  const [loading, setLoading] = useState<string | null>(null);
+export default async function DashboardPage() {
+  const supabase = await createClient();
 
-  const handleRoleSelection = async (role: "investor" | "startup") => {
-    setLoading(role);
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-    // Attempt to update the existing profile row
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ role: role })
-      .eq("id", userId)
-      .select();
+  if (error || !user) {
+    redirect("/login");
+  }
 
-    if (error) {
-      console.error("Role Update Error:", error);
-      setLoading(null);
-      alert(`Database error: ${error.message}`);
-      return;
-    }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, presence_status")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    // If the update succeeded but 0 rows were affected, the profile is missing
-    if (!data || data.length === 0) {
-      console.warn("No rows updated. Attempting forced upsert...");
+  if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+    redirect("/warning");
+  }
 
-      // Failsafe: Upsert the row if it was completely missing
-      const { error: upsertError } = await supabase
-        .from("profiles")
-        .upsert({ id: userId, role: role, profile_completed: false, presence_status: 'online' });
+  const userRole = (profile?.role || "").toLowerCase().trim();
 
-      if (upsertError) {
-        setLoading(null);
-        alert("Critical error: Profile row is missing and could not be created.");
-        return;
-      }
-    }
-
-    // Success: Force a hard browser navigation to break the cache
-    window.location.href = `/${role}/dashboard`;
-  };
+  if (userRole === "investor") {
+    redirect("/investor/dashboard");
+  } else if (userRole === "startup") {
+    redirect("/startup/dashboard");
+  } else if (userRole === "admin") {
+    redirect("/admin/dashboard");
+  }
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 pt-4">
-      <button
-        onClick={() => handleRoleSelection("investor")}
-        disabled={!!loading}
-        className="trionn-glass rounded-2xl border border-cyan-500/30 p-6 space-y-3 hover:border-cyan-400 transition group text-left disabled:opacity-50 relative"
-      >
-        <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 w-fit">
-          {loading === "investor" ? <Loader2 className="animate-spin" size={24} /> : <Compass size={24} />}
-        </div>
-        <h3 className="text-lg font-bold text-white group-hover:text-cyan-300">Investor Account</h3>
-        <p className="text-xs text-slate-400">Browse startups, review pitch decks, and allocate capital.</p>
-      </button>
+    <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
+      <Navbar />
 
-      <button
-        onClick={() => handleRoleSelection("startup")}
-        disabled={!!loading}
-        className="trionn-glass rounded-2xl border border-violet-500/30 p-6 space-y-3 hover:border-violet-400 transition group text-left disabled:opacity-50 relative"
-      >
-        <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400 w-fit">
-          {loading === "startup" ? <Loader2 className="animate-spin" size={24} /> : <Rocket size={24} />}
+      <main className="pt-32 pb-24 px-6 mx-auto max-w-4xl w-full relative z-10">
+        <div className="neu-flat-base rounded-3xl p-8 md:p-12 space-y-8 relative overflow-hidden">
+
+          <div className="border-b border-[var(--secondary)]/10 pb-6 flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-1">
+                <Sparkles size={14} /> Profile Verification Required
+              </div>
+              <h1 className="text-3xl font-black text-[var(--secondary)]">Select Arena Role</h1>
+            </div>
+            <BetaBadge variant="pill" />
+          </div>
+
+          <div className="space-y-4 text-[var(--secondary)]/80 text-sm leading-relaxed">
+            <p>
+              Your account (<strong className="font-mono text-[var(--secondary)]">{user.email}</strong>) is authenticated, but your profile role is pending setup.
+            </p>
+            <p>
+              Please choose your primary platform role to complete routing:
+            </p>
+
+            <RoleSelector userId={user.id} />
+
+          </div>
+
+          <div className="border-t border-[var(--secondary)]/10 pt-6 flex items-center justify-between text-xs text-[var(--secondary)]/60">
+            <span>User ID: <code className="font-mono">{user.id}</code></span>
+            <LogoutButton />
+          </div>
+
         </div>
-        <h3 className="text-lg font-bold text-white group-hover:text-violet-300">Startup Founder</h3>
-        <p className="text-xs text-slate-400">Publish pitch cards, connect with VCs, and track raises.</p>
-      </button>
+      </main>
+
+      <Footer />
     </div>
   );
 }

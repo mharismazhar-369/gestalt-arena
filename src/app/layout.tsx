@@ -8,8 +8,8 @@ import CookieConsent from "@/components/shared/CookieConsent";
 import OnboardingWrapper from "@/components/onboarding/OnboardingWrapper";
 
 export const metadata: Metadata = {
-  title: "Gestalt Arena | Market Execution Infrastructure",
-  description: "Neumorphic matchmaking marketplace connecting verified investors, founders, and startups globally.",
+  title: "Gestalt Arena | Where Capital Meets Execution",
+  description: "Platform connecting Investors, Founders, Startups and supporting Ideas Globally.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

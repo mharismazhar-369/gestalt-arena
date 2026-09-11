@@ -9,6 +9,62 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BookOpen, Calendar, ArrowLeft, Clock, FileText, ThumbsUp, ThumbsDown, Share2, Trash2, CheckCircle2 } from "lucide-react";
+import { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+
+type Props = {
+    params: { id: string }
+};
+
+// Next.js automatically calls this before rendering the page
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const supabase = await createClient();
+
+    // Fetch just the fields needed for the preview card
+    const { data: article } = await supabase
+        .from('research') // Update to your actual table name if different
+        .select('title, excerpt, image_url')
+        .eq('id', params.id)
+        .maybeSingle();
+
+    if (!article) {
+        return {
+            title: 'Article Not Found | Gestalt Arena',
+        };
+    }
+
+    return {
+        title: `${article.title} | Gestalt Arena`,
+        description: article.excerpt,
+        openGraph: {
+            title: article.title,
+            description: article.excerpt,
+            url: `https://www.gestalt-arena.com/research/${params.id}`,
+            siteName: 'Gestalt Arena',
+            images: [
+                {
+                    // Fallback to a default image if the article doesn't have one
+                    url: article.image_url || 'https://www.gestalt-arena.com/default-og-image.jpg',
+                    width: 1200,
+                    height: 630,
+                    alt: article.title,
+                },
+            ],
+            type: 'article',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: article.title,
+            description: article.excerpt,
+            images: [article.image_url || 'https://www.gestalt-arena.com/default-og-image.jpg'],
+        }
+    };
+}
+
+
+
+
+
 
 export default function SingleArticlePage() {
     const params = useParams();

@@ -1,44 +1,49 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ShieldCheck, Globe2, Handshake, BadgeDollarSign, BellRing, Lock } from "lucide-react";
+import { FileText, Globe2, Handshake, BadgeDollarSign, Store, Layers } from "lucide-react";
 import Background from "./Background";
 
 const features = [
   {
     icon: Handshake,
-    title: "Smart Matchmaking",
+    title: "Smart Discovery",
     description: "Discover founders, startups and investors through an intelligent marketplace.",
     accent: "text-emerald-500 bg-emerald-50 border-emerald-100",
   },
+
   {
-    icon: ShieldCheck,
-    title: "Verified Profiles",
-    description: "Investor nicknames with startup business information for greater trust.",
+    icon: FileText,
+    title: "Mandates & Pitch Decks",
+    description: "Explore investor mandates and founder pitch decks to discover aligned opportunities.",
     accent: "text-indigo-500 bg-indigo-50 border-indigo-100",
   },
+
   {
-    icon: Lock,
-    title: "Private Messaging",
-    description: "Secure conversations with spam protection and daily interaction limits.",
+    icon: Store,
+    title: "Emporium",
+    description: "Showcase and discover startups, companies, products and services in one marketplace.",
     accent: "text-rose-500 bg-rose-50 border-rose-100",
   },
+
   {
     icon: BadgeDollarSign,
-    title: "Investment Types",
-    description: "Seed, Angel, VC, Private Equity, Revenue Share, Grants and Debt.",
+    title: "Investor Types",
+    description: "Connect with Angels, Solo Investors, VCs, Family Offices, Private Equity and Strategic Investors.",
     accent: "text-amber-500 bg-amber-50 border-amber-100",
   },
+
   {
-    icon: BellRing,
-    title: "Notifications",
-    description: "Receive real-time updates for negotiations, messages and opportunities.",
+    icon: Layers,
+    title: "Startup Types",
+    description: "Discover businesses across startups, SMEs, manufacturers, service providers, innovators and emerging ventures.",
     accent: "text-purple-500 bg-purple-50 border-purple-100",
   },
+
   {
     icon: Globe2,
-    title: "Global Platform",
-    description: "Connect founders and investors from countries around the world.",
+    title: "Industries & Innovation",
+    description: "Explore opportunities across IT, engineering, medical sciences, robotics, manufacturing, energy, agriculture and more.",
     accent: "text-sky-500 bg-sky-50 border-sky-100",
   },
 ];
@@ -55,10 +60,10 @@ export default function FeatureCards() {
         className="text-center"
       >
         <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-          Platform Features
+          Arena Features
         </h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
-          Built to safely connect entrepreneurs, founders and investors while keeping the platform simple, secure and transparent.
+          Built to safely connect Entrepreneurs, Founders and Investors while keeping the platform simple, secure and transparent.
         </p>
       </motion.div>
 

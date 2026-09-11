@@ -55,7 +55,7 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          <motion.h1 
+          <motion.h1
             variants={itemVariants}
             className="text-6xl md:text-8xl font-black leading-tight text-slate-900 tracking-tighter"
           >
@@ -74,7 +74,7 @@ export default function Hero() {
             variants={itemVariants}
             className="mt-8 mx-auto max-w-2xl text-base md:text-lg text-slate-600 font-medium leading-relaxed"
           >
-            A visionary platform uniting innovators and investors. We bridge the gap, helping backers find the best models showcased by pioneers needing capital&mdash;from digital startups to real-world experts.
+            A visionary platform uniting Innovators and Investors. We bridge the gap, helping backers find the best Business Models showcased by Pioneers needing capital from Digital Startups to Real-World experts.
           </motion.p>
 
           <motion.div

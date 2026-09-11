@@ -67,7 +67,7 @@ export default function RegisterForm() {
           <Briefcase className="text-[#81D4FA]" size={20} />
         </motion.div>
         <h1 className="text-2xl font-black text-[#4A148C]">Join the Arena</h1>
-        <p className="text-[#4A148C]/60 text-xs font-medium px-4">Create your account to access the ecosystem.</p>
+        <p className="text-[#4A148C]/60 text-xs font-medium px-4">Selecte Your Role & Create your account to access the ecosystem.</p>
       </div>
 
       <AnimatePresence>

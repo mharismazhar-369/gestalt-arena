@@ -148,7 +148,7 @@ export default function StatsSection() {
           Platform at a Glance
         </h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
-          Built to connect opportunities—not process investments. Browse freely, connect securely, and negotiate independently.
+          Built for discovering and connecting opportunities & showcasing yourself. Browse freely, connect securely, and negotiate on your own terms.
         </p>
       </motion.div>
 
@@ -159,14 +159,14 @@ export default function StatsSection() {
         className="mt-16 mx-auto max-w-4xl rounded-3xl border border-white/80 bg-white/70 p-8 md:p-12 backdrop-blur-xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-around gap-8 transition-all"
       >
         <div className="text-center">
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Total Capital Locked</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Total Capital Raised</p>
           <h3 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-500">
             ${lockedCapital.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </h3>
         </div>
         <div className="hidden md:block w-px h-16 bg-slate-200"></div>
         <div className="text-center">
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Platform Fees Generated</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Platform Revenue</p>
           <h3 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 to-purple-500">
             ${facilitatorFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </h3>
@@ -177,7 +177,7 @@ export default function StatsSection() {
         <DialChart
           title="Registered Investors"
           count={investorCount}
-          target={500}
+          target={1000}
           colorHex="#3b82f6"
           delay={0.1}
         />

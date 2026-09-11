@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, ThumbsDown, MessageSquare, Repeat, Share2, Bookmark } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, ThumbsDown, MessageSquare, Repeat, Share2, Bookmark, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { toggleLike, toggleDislike, toggleBookmark, createNotification } from "@/lib/api";
-import Link from "next/link";
 import CommentBox from "./CommentBox";
 
 const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
@@ -35,6 +35,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post, dbPost, currentUserId, onUpdate }: PostCardProps) {
+  const router = useRouter();
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
 
@@ -180,6 +181,52 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!currentUserId || !dbPost) return;
+
+    // Client-side ownership check
+    if (dbPost.author_id !== currentUserId) {
+      setErrorMsg("You can only delete your own posts.");
+      setTimeout(() => setErrorMsg(""), 3000);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this post? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", dbPost.id)
+        .eq("author_id", currentUserId);
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccessMsg("Post deleted successfully.");
+
+      if (onUpdate) {
+        onUpdate();
+      }
+
+      router.push("/feed");
+      router.refresh();
+    } catch (error) {
+      console.error("Delete post error:", error);
+
+      setErrorMsg("Failed to delete post. Please try again.");
+      setTimeout(() => setErrorMsg(""), 3000);
+    }
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 15 }}
@@ -196,23 +243,45 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <Link href={`/profile/${dbPost?.author_id}`} className="font-bold text-sm text-[var(--secondary)] hover:text-[var(--accent)] transition">
-                {post.authorName}
-              </Link>
-              <span className="neu-pressed-base border-transparent shadow-inner px-2 py-0.5 text-[10px] font-bold capitalize text-[var(--accent)]">
-                {post.tier}
-              </span>
+              {currentUserId === dbPost?.author_id && (
+                <button
+                  type="button"
+                  onClick={handleDeletePost}
+                  className="text-[var(--secondary)]/50 hover:text-rose-600 bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
+                  aria-label="Delete post"
+                  title="Delete post"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleToggleBookmark}
+                className={`transition bg-transparent p-2 rounded-lg ${bookmarked
+                  ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
+                  : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"
+                  }`}
+                aria-label="Save"
+                title="Save post"
+              >
+                <Bookmark
+                  size={14}
+                  className={bookmarked ? "fill-[var(--accent)]" : ""}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={sharePost}
+                className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
+                aria-label="Share"
+                title="Share post"
+              >
+                <Share2 size={14} />
+              </button>
             </div>
-            <p className="text-xs text-[var(--secondary)]/60 font-bold">{post.authorRole} • {post.timestamp}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleToggleBookmark} className={`transition bg-transparent p-2 rounded-lg ${bookmarked ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]" : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"}`} aria-label="Save">
-            <Bookmark size={14} className={bookmarked ? "fill-[var(--accent)]" : ""} />
-          </button>
-          <button onClick={sharePost} className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition" aria-label="Share">
-            <Share2 size={14} />
-          </button>
         </div>
       </div>
 

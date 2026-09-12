@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import Background from "./Background";
 
-// Reusable animated Dial Chart component
 const DialChart = ({
   title,
   count,
@@ -34,22 +33,10 @@ const DialChart = ({
     >
       <div className="relative flex items-center justify-center w-32 h-32">
         <svg className="w-full h-full transform -rotate-90">
-          <circle
-            cx="64"
-            cy="64"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="8"
-            fill="transparent"
-            className="text-slate-100"
-          />
+          <circle cx="64" cy="64" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
           <motion.circle
-            cx="64"
-            cy="64"
-            r={radius}
-            stroke={colorHex}
-            strokeWidth="8"
-            fill="transparent"
+            cx="64" cy="64" r={radius}
+            stroke={colorHex} strokeWidth="8" fill="transparent"
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             whileInView={{ strokeDashoffset }}
@@ -59,14 +46,10 @@ const DialChart = ({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-slate-800">
-            {count.toLocaleString()}
-          </span>
+          <span className="text-2xl font-black text-slate-800">{count.toLocaleString()}</span>
         </div>
       </div>
-      <h3 className="mt-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-center">
-        {title}
-      </h3>
+      <h3 className="mt-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-center">{title}</h3>
     </motion.div>
   );
 };
@@ -74,6 +57,8 @@ const DialChart = ({
 export default function StatsSection() {
   const [lockedCapital, setLockedCapital] = useState<number>(0);
   const [facilitatorFees, setFacilitatorFees] = useState<number>(0);
+  const [fundraisingRequests, setFundraisingRequests] = useState<number>(0);
+  const [deploymentMandates, setDeploymentMandates] = useState<number>(0);
 
   const [investorCount, setInvestorCount] = useState<number>(0);
   const [startupCount, setStartupCount] = useState<number>(0);
@@ -81,27 +66,27 @@ export default function StatsSection() {
   const [visitorCount, setVisitorCount] = useState<number>(0);
 
   useEffect(() => {
-    // 1. Push: Register a unique visit for this session
     async function recordVisit() {
       if (!sessionStorage.getItem('has_visited')) {
         const { error } = await supabase.from('site_visits').insert([{ user_agent: navigator.userAgent }]);
-        if (!error) {
-          sessionStorage.setItem('has_visited', 'true');
-        }
+        if (!error) sessionStorage.setItem('has_visited', 'true');
       }
     }
     recordVisit();
 
-    // 2. Pull: Fetch all live stats across tables securely
     async function fetchPlatformStats() {
-      // 1. Fetch total capital using our robust database RPC function
-      const { data: capitalTotal } = await supabase.rpc('get_total_platform_capital');
-      const totalCapital = Number(capitalTotal) || 0;
+      // Fetch extended financial metrics via RPC
+      const { data: statsData } = await supabase.rpc('get_platform_extended_stats');
+      if (statsData && statsData.length > 0) {
+        const row = statsData[0];
+        const raised = Number(row.total_capital_raised) || 0;
+        setLockedCapital(raised);
+        setFacilitatorFees(raised * 0.02);
+        setFundraisingRequests(Number(row.total_fundraising_requests) || 0);
+        setDeploymentMandates(Number(row.total_deployment_mandates) || 0);
+      }
 
-      setLockedCapital(totalCapital);
-      setFacilitatorFees(totalCapital * 0.02);
-
-      // 2. User Counts
+      // User Counts & Visits
       const [investors, startups, visits] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'investor'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'startup'),
@@ -112,12 +97,8 @@ export default function StatsSection() {
       if (startups.count !== null) setStartupCount(startups.count);
       if (visits.count !== null) setVisitorCount(visits.count);
 
-      // 3. Countries Count
-      const { data: countryData } = await supabase
-        .from('profiles')
-        .select('country')
-        .not('country', 'is', null);
-
+      // Unique Countries Count
+      const { data: countryData } = await supabase.from('profiles').select('country').not('country', 'is', null);
       if (countryData) {
         const uniqueCountries = new Set(countryData.map(p => p.country));
         setCountryCount(uniqueCountries.size);
@@ -130,71 +111,50 @@ export default function StatsSection() {
   return (
     <section id="stats" className="relative z-10 mx-auto max-w-7xl px-6 py-28">
       <Background />
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="text-center"
-      >
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-          Platform at a Glance
-        </h2>
+      <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center">
+        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Platform at a Glance</h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
           Built for discovering and connecting opportunities & showcasing yourself. Browse freely, connect securely, and negotiate on your own terms.
         </p>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="mt-16 mx-auto max-w-4xl rounded-3xl border border-white/80 bg-white/75 p-8 md:p-12 backdrop-blur-xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-around gap-8 transition-all"
-      >
-        <div className="text-center">
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Total Capital Raised</p>
-          <h3 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-500">
+      {/* Main Financial Metrics Grid */}
+      <div className="mt-16 mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl border border-white/80 bg-white/75 p-6 backdrop-blur-xl shadow-sm text-center">
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-2">Total Capital Raised</p>
+          <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-500">
             ${lockedCapital.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </h3>
-        </div>
-        <div className="hidden md:block w-px h-16 bg-slate-200"></div>
-        <div className="text-center">
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Platform Revenue</p>
-          <h3 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 to-purple-500">
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl border border-white/80 bg-white/75 p-6 backdrop-blur-xl shadow-sm text-center">
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-2">Fund Raising Requests</p>
+          <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-500 to-cyan-500">
+            ${fundraisingRequests.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </h3>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl border border-white/80 bg-white/75 p-6 backdrop-blur-xl shadow-sm text-center">
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-2">Capital Deployment Mandates</p>
+          <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 to-purple-500">
+            ${deploymentMandates.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </h3>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl border border-white/80 bg-white/75 p-6 backdrop-blur-xl shadow-sm text-center">
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-2">Platform Revenue (2%)</p>
+          <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-fuchsia-500 to-pink-500">
             ${facilitatorFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </h3>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
+      {/* Dial Charts Grid */}
       <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
-        <DialChart
-          title="Registered Investors"
-          count={investorCount}
-          target={1000}
-          colorHex="#3b82f6"
-          delay={0.1}
-        />
-        <DialChart
-          title="Startup Founders"
-          count={startupCount}
-          target={1000}
-          colorHex="#8b5cf6"
-          delay={0.2}
-        />
-        <DialChart
-          title="Global Reach (Countries)"
-          count={countryCount}
-          target={195}
-          colorHex="#f59e0b"
-          delay={0.3}
-        />
-        <DialChart
-          title="Total Visitors"
-          count={visitorCount}
-          target={10000}
-          colorHex="#10b981"
-          delay={0.4}
-        />
+        <DialChart title="Registered Investors" count={investorCount} target={1000} colorHex="#3b82f6" delay={0.1} />
+        <DialChart title="Startup Founders" count={startupCount} target={1000} colorHex="#8b5cf6" delay={0.2} />
+        <DialChart title="Global Reach (Countries)" count={countryCount} target={195} colorHex="#f59e0b" delay={0.3} />
+        <DialChart title="Total Visitors" count={visitorCount} target={10000} colorHex="#10b981" delay={0.4} />
       </div>
     </section>
   );

@@ -1,50 +1,45 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Globe2, Handshake, BadgeDollarSign, Store, Layers } from "lucide-react";
+import { Compass, Presentation, Store, Briefcase, Rocket, Cpu } from "lucide-react";
 import Background from "./Background";
 
 const features = [
   {
-    icon: Handshake,
+    icon: Compass,
     title: "Smart Discovery",
-    description: "Discover founders, startups and investors through an intelligent marketplace.",
-    accent: "text-emerald-500 bg-emerald-50 border-emerald-100",
+    description: "Connect intelligently with verified founders, scaling startups, and active capital partners through our curated marketplace.",
+    accent: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
   },
-
   {
-    icon: FileText,
+    icon: Presentation,
     title: "Mandates & Pitch Decks",
-    description: "Explore investor mandates and founder pitch decks to discover aligned opportunities.",
-    accent: "text-indigo-500 bg-indigo-50 border-indigo-100",
+    description: "Explore precise investor capital mandates and founder pitch decks designed to align ticket sizes and sector goals instantly.",
+    accent: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20",
   },
-
   {
     icon: Store,
-    title: "Emporium",
-    description: "Showcase and discover startups, companies, products and services in one marketplace.",
-    accent: "text-rose-500 bg-rose-50 border-rose-100",
+    title: "Emporium Marketplace",
+    description: "Showcase and discover commercial software solutions, physical products, enterprise services, and innovative company offerings.",
+    accent: "text-rose-500 bg-rose-500/10 border-rose-500/20",
   },
-
   {
-    icon: BadgeDollarSign,
-    title: "Investor Types",
-    description: "Connect with Angels, Solo Investors, VCs, Family Offices, Private Equity and Strategic Investors.",
-    accent: "text-amber-500 bg-amber-50 border-amber-100",
+    icon: Briefcase,
+    title: "Investor Categories",
+    description: "Engage directly with Angel Investors, Venture Capitalists (VCs), Family Offices, Corporate Venture Funds, and Private Equity syndicates.",
+    accent: "text-amber-500 bg-amber-500/10 border-amber-500/20",
   },
-
   {
-    icon: Layers,
-    title: "Startup Types",
-    description: "Discover businesses across startups, SMEs, manufacturers, service providers, innovators and emerging ventures.",
-    accent: "text-purple-500 bg-purple-50 border-purple-100",
+    icon: Rocket,
+    title: "Venture Classifications",
+    description: "Fundraise or invest across early-stage tech startups, growth-stage SMEs, hardware innovators, and capital-intensive industrial enterprises.",
+    accent: "text-purple-500 bg-purple-500/10 border-purple-500/20",
   },
-
   {
-    icon: Globe2,
-    title: "Industries & Innovation",
-    description: "Explore opportunities across IT, engineering, medical sciences, robotics, manufacturing, energy, agriculture and more.",
-    accent: "text-sky-500 bg-sky-50 border-sky-100",
+    icon: Cpu,
+    title: "Real-Life Fundable Industries",
+    description: "Secure funding for high-impact sectors including Artificial Intelligence, Renewable Energy, Biotech, Advanced Robotics, FinTech, and Aerospace.",
+    accent: "text-sky-500 bg-sky-500/10 border-sky-500/20",
   },
 ];
 
@@ -59,10 +54,10 @@ export default function FeatureCards() {
         transition={{ duration: 0.7 }}
         className="text-center"
       >
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-black text-[var(--secondary)] tracking-tight">
           Arena Features
         </h2>
-        <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
+        <p className="mx-auto mt-6 max-w-3xl text-lg text-[var(--secondary)]/70 font-medium leading-relaxed">
           Built to safely connect Entrepreneurs, Founders and Investors while keeping the platform simple, secure and transparent.
         </p>
       </motion.div>
@@ -78,15 +73,15 @@ export default function FeatureCards() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.08, duration: 0.5 }}
               whileHover={{ y: -8 }}
-              className="rounded-3xl border border-white/80 bg-white/70 p-8 backdrop-blur-xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)]"
+              className="neu-flat-base p-8 flex flex-col items-center text-center transition-shadow hover:shadow-lg"
             >
-              <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border ${feature.accent}`}>
-                <Icon size={24} />
+              <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border shadow-inner ${feature.accent}`}>
+                <Icon size={28} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">
+              <h3 className="text-xl font-bold text-[var(--secondary)]">
                 {feature.title}
               </h3>
-              <p className="mt-3 leading-relaxed text-slate-600 font-medium text-sm">
+              <p className="mt-3 leading-relaxed text-[var(--secondary)]/70 font-medium text-sm">
                 {feature.description}
               </p>
             </motion.div>

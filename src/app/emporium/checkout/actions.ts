@@ -84,11 +84,19 @@ export async function processCheckout(formData: FormData) {
     transaction_type: 'campaign_deployment'
   }]);
 
-  // 6. Activate the campaign
-  await supabaseAdmin
+  // 6. Activate the campaign and mark payment status as 'paid' to pass database trigger validation
+  const { error: updateError } = await supabaseAdmin
     .from('campaigns')
-    .update({ status: 'active', published_at: new Date().toISOString() })
+    .update({
+      status: 'active',
+      payment_status: 'paid',
+      published_at: new Date().toISOString()
+    })
     .eq('id', campaignId);
+
+  if (updateError) {
+    throw new Error(`Campaign Activation Failed: ${updateError.message}`);
+  }
 
   revalidatePath('/emporium', 'layout');
   redirect(`/emporium/${campaignId}?success=true`);

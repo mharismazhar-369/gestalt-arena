@@ -1,3 +1,5 @@
+// Location: SRC/components/emporium/EmporiumClientBoard.tsx
+
 'use client';
 
 import React, { useState } from 'react';
@@ -7,7 +9,7 @@ import EmporiumAdBuilder from './EmporiumAdBuilder';
 import { updateCampaignStatus, softDeleteCampaign } from '@/app/emporium/actions';
 import {
     Store, Plus, Search, ExternalLink, Trash2,
-    Play, Pause, X, Mail, Building2, Layers, ArrowLeft
+    Play, Pause, X, Mail, Building2, Layers, ArrowLeft, User
 } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
@@ -49,31 +51,31 @@ export default function EmporiumClientBoard({
     });
 
     return (
-        <div className="space-y-12 relative w-full">
+        <div className="space-y-12 relative w-full text-[var(--secondary)]">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-8 pt-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 neu-flat-base p-8 relative overflow-hidden">
                 <div className="flex items-center gap-4">
                     {/* Integrated Back Button */}
                     <button
                         onClick={() => router.back()}
-                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-zinc-400 hover:text-white transition-all shadow-lg flex items-center justify-center group"
+                        className="neu-btn p-3 text-[var(--secondary)]/70 hover:text-[var(--accent)] transition-all flex items-center justify-center group rounded-2xl"
                         title="Go back"
                     >
                         <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                     </button>
 
-                    <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-2xl text-orange-500 shadow-xl">
+                    <div className="neu-pressed-base p-3 rounded-2xl text-[var(--accent)]">
                         <Store className="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-extrabold text-white tracking-tighter">Emporium</h1>
-                        <p className="text-sm text-zinc-400 mt-1 font-medium">Market Place to Showcase your Services and Solutions</p>
+                        <h1 className="text-3xl font-black text-[var(--secondary)] tracking-tight">Emporium</h1>
+                        <p className="text-sm text-[var(--secondary)]/70 mt-1 font-medium">Market Place to Showcase your Services and Solutions</p>
                     </div>
                 </div>
 
                 <button
                     onClick={() => setShowBuilder(!showBuilder)}
-                    className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all shadow-lg"
+                    className="neu-btn flex items-center gap-2 px-6 py-3 text-xs shrink-0"
                 >
                     <Plus className="w-4 h-4" />
                     {showBuilder ? 'Close Workspace' : 'Deploy Campaign'}
@@ -91,22 +93,22 @@ export default function EmporiumClientBoard({
             </AnimatePresence>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-xl">
-                <div className="flex items-center gap-3 w-full md:w-auto px-4 py-2">
-                    <Search className="w-5 h-5 text-zinc-500" />
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center neu-flat-base p-4">
+                <div className="flex items-center gap-3 w-full md:w-auto px-4 py-2.5 neu-pressed-base rounded-xl flex-1 max-w-md">
+                    <Search className="w-5 h-5 text-[var(--secondary)]/50 shrink-0" />
                     <input
                         type="text"
                         placeholder="Search campaigns..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-transparent text-sm text-zinc-200 focus:outline-none w-full md:w-64 placeholder:text-zinc-600"
+                        className="bg-transparent text-sm text-[var(--secondary)] focus:outline-none w-full md:w-64 placeholder:text-[var(--secondary)]/50 font-medium"
                     />
                 </div>
 
                 <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto p-1 scrollbar-hide">
                     <button
                         onClick={() => setSelectedCategory('All')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === 'All' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === 'All' ? 'neu-pressed-base text-[var(--accent)]' : 'text-[var(--secondary)]/60 hover:text-[var(--secondary)]'}`}
                     >
                         All Categories
                     </button>
@@ -115,7 +117,7 @@ export default function EmporiumClientBoard({
                         <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? 'neu-pressed-base text-[var(--accent)]' : 'text-[var(--secondary)]/60 hover:text-[var(--secondary)]'}`}
                         >
                             {cat}
                         </button>
@@ -126,7 +128,7 @@ export default function EmporiumClientBoard({
             {/* Campaign Grid */}
             <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {filteredCampaigns.length === 0 ? (
-                    <div className="col-span-full py-20 text-center text-zinc-600 text-sm border border-dashed border-white/10 rounded-3xl bg-black/20">
+                    <div className="col-span-full py-16 text-center text-[var(--secondary)]/50 text-sm neu-pressed-base p-8">
                         No active campaigns found.
                     </div>
                 ) : (
@@ -134,55 +136,58 @@ export default function EmporiumClientBoard({
                         const isOwner = ad.userId === currentUserId;
 
                         return (
-                            <motion.div variants={itemVariants} key={ad.id} className="flex flex-col justify-between p-6 rounded-3xl bg-black/60 border border-white/5 hover:border-white/10 backdrop-blur-md transition-all duration-300 group shadow-xl">
+                            <motion.div variants={itemVariants} key={ad.id} className="flex flex-col justify-between p-6 neu-flat-base transition-all duration-300 group">
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center gap-2">
-                                        <span className="px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg bg-white/5 text-zinc-300">
+                                        <span className="px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg neu-pressed-base text-[var(--secondary)]/70">
                                             {ad.company_name || 'Sponsored'} • {ad.category}
                                         </span>
-                                        <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-md ${ad.status === 'pending_approval' ? 'bg-zinc-800 text-zinc-400' : ad.status === 'paused' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                        <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-md ${ad.status === 'pending_approval' ? 'bg-amber-500/10 text-amber-600' :
+                                                ad.status === 'paused' ? 'bg-blue-500/10 text-blue-600' :
+                                                    'bg-emerald-500/10 text-emerald-600'
+                                            }`}>
                                             {ad.status.replace('_', ' ')}
                                         </span>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-2xl font-black text-white tracking-tight">{ad.title}</h3>
-                                        {ad.tagline && <p className="text-sm font-bold text-orange-400 mt-1">{ad.tagline}</p>}
+                                        <h3 className="text-xl font-bold text-[var(--secondary)] tracking-tight">{ad.title}</h3>
+                                        {ad.tagline && <p className="text-xs font-bold text-[var(--accent)] mt-1">{ad.tagline}</p>}
                                     </div>
 
-                                    <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                                    <p className="text-xs text-[var(--secondary)]/70 leading-relaxed line-clamp-3 neu-pressed-base p-4 rounded-xl font-medium">
                                         {ad.description}
                                     </p>
 
                                     {/* POP-UP TRIGGER BUTTON */}
                                     <button
                                         onClick={() => setSelectedAd(ad)}
-                                        className="inline-flex items-center justify-center w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-sm rounded-xl transition-all border border-white/10 gap-2 cursor-pointer"
+                                        className="neu-btn flex items-center justify-center w-full py-3 font-bold text-xs gap-2 cursor-pointer"
                                     >
                                         {ad.ctaText || ad.cta_text || 'Explore Deal'} <ExternalLink className="w-4 h-4" />
                                     </button>
                                 </div>
 
                                 {isOwner && (
-                                    <div className="mt-6 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-                                        <Link href={`/emporium/${ad.id}`} className="text-sm text-zinc-400 hover:text-white font-semibold transition-colors">
+                                    <div className="mt-6 pt-4 border-t border-[var(--secondary)]/10 flex flex-wrap items-center justify-between gap-4">
+                                        <Link href={`/emporium/${ad.id}`} className="text-xs text-[var(--secondary)]/60 hover:text-[var(--accent)] font-semibold transition-colors">
                                             Manage Configuration
                                         </Link>
 
                                         <div className="flex items-center gap-2">
                                             {ad.status === 'pending_approval' ? (
-                                                <Link href={`/emporium/checkout/${ad.id}`} className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-xs rounded-lg transition-all">
+                                                <Link href={`/emporium/checkout/${ad.id}`} className="neu-btn px-4 py-2 text-[var(--accent)] font-bold text-xs">
                                                     Complete Payment
                                                 </Link>
                                             ) : (
-                                                <button onClick={() => updateCampaignStatus(ad.id, ad.status === 'active' ? 'paused' : 'active')} className="p-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/5" title={ad.status === 'active' ? 'Pause' : 'Activate'}>
+                                                <button onClick={() => updateCampaignStatus(ad.id, ad.status === 'active' ? 'paused' : 'active')} className="neu-btn p-2 hover:text-[var(--accent)] transition-all" title={ad.status === 'active' ? 'Pause' : 'Activate'}>
                                                     {ad.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                                 </button>
                                             )}
 
                                             <button
                                                 onClick={() => { if (confirm('Delete campaign from active view?')) softDeleteCampaign(ad.id); }}
-                                                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/10"
+                                                className="neu-btn p-2 text-rose-600 transition-all"
                                                 title="Delete Campaign"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -199,67 +204,65 @@ export default function EmporiumClientBoard({
             {/* POP-UP DETAIL MODAL */}
             <AnimatePresence>
                 {selectedAd && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-zinc-950 border border-white/10 p-8 rounded-3xl max-w-xl w-full space-y-6 relative shadow-2xl text-zinc-100"
+                            className="bg-[var(--primary)] border border-[var(--secondary)]/10 p-8 rounded-3xl max-w-xl w-full space-y-6 relative neu-flat-base text-[var(--secondary)]"
                         >
                             <button
                                 onClick={() => setSelectedAd(null)}
-                                className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                className="absolute top-6 right-6 p-2 rounded-full neu-btn text-[var(--secondary)]/60 hover:text-[var(--accent)] transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
 
                             <div className="space-y-2">
-                                <span className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                                <span className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg neu-pressed-base text-[var(--accent)]">
                                     {selectedAd.category}
                                 </span>
-                                <h2 className="text-3xl font-black text-white tracking-tight">{selectedAd.title}</h2>
-                                {selectedAd.tagline && <p className="text-sm font-bold text-orange-400">{selectedAd.tagline}</p>}
+                                <h2 className="text-2xl font-black text-[var(--secondary)] tracking-tight">{selectedAd.title}</h2>
+                                {selectedAd.tagline && <p className="text-xs font-bold text-[var(--accent)]">{selectedAd.tagline}</p>}
                             </div>
 
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3 text-sm">
-                                <div className="flex items-center gap-3 text-zinc-300">
-                                    <Building2 className="w-4 h-4 text-orange-500 shrink-0" />
-                                    <span>Company: <strong className="text-white">{selectedAd.company_name || 'Verified Partner'}</strong></span>
+                            <div className="p-4 neu-pressed-base rounded-2xl space-y-3 text-xs font-medium">
+                                <div className="flex items-center gap-3 text-[var(--secondary)]/80">
+                                    <Building2 className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                                    <span>Company: <strong className="text-[var(--secondary)]">{selectedAd.company_name || 'Verified Partner'}</strong></span>
                                 </div>
-                                <div className="flex items-center gap-3 text-zinc-300">
-                                    <Layers className="w-4 h-4 text-orange-500 shrink-0" />
-                                    <span>Product Type: <strong className="text-white">{selectedAd.product_type || 'Solution'}</strong></span>
+                                <div className="flex items-center gap-3 text-[var(--secondary)]/80">
+                                    <Layers className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                                    <span>Product Type: <strong className="text-[var(--secondary)]">{selectedAd.product_type || 'Solution'}</strong></span>
                                 </div>
                                 {selectedAd.contact_email && (
-                                    <div className="flex items-center gap-3 text-zinc-300">
-                                        <Mail className="w-4 h-4 text-orange-500 shrink-0" />
-                                        <span>Direct Contact: <a href={`mailto:${selectedAd.contact_email}`} className="text-orange-400 underline">{selectedAd.contact_email}</a></span>
+                                    <div className="flex items-center gap-3 text-[var(--secondary)]/80">
+                                        <Mail className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                                        <span>Direct Contact: <a href={`mailto:${selectedAd.contact_email}`} className="text-[var(--accent)] underline">{selectedAd.contact_email}</a></span>
                                     </div>
                                 )}
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Full Description</h4>
-                                <p className="text-sm text-zinc-300 leading-relaxed bg-black/40 p-4 rounded-xl border border-white/5">
+                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--secondary)]/60">Full Description</h4>
+                                <p className="text-xs text-[var(--secondary)]/80 leading-relaxed neu-pressed-base p-4 rounded-xl font-medium">
                                     {selectedAd.description}
                                 </p>
                             </div>
 
-                            <div className="pt-4 border-t border-white/5 flex gap-4">
+                            <div className="pt-4 border-t border-[var(--secondary)]/10 flex gap-4">
                                 <button
                                     onClick={() => setSelectedAd(null)}
-                                    className="w-1/2 py-3 bg-white/5 hover:bg-white/10 text-white font-bold text-xs rounded-xl transition-all"
+                                    className="w-1/2 py-3 neu-btn text-[var(--secondary)] font-bold text-xs"
                                 >
                                     Close Window
                                 </button>
-                                <a
-                                    href={selectedAd.ctaUrl || selectedAd.cta_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-1/2 flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-400 text-black font-extrabold text-xs rounded-xl transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+                                <Link
+                                    href={`/profile/${selectedAd.userId || selectedAd.user_id}`}
+                                    className="w-1/2 neu-btn flex items-center justify-center gap-2 py-3 font-extrabold text-xs text-[var(--accent)]"
                                 >
-                                    {selectedAd.ctaText || selectedAd.cta_text || 'Visit Deal Site'} <ExternalLink className="w-4 h-4" />
-                                </a>
+                                    View Creator Profile <User className="w-4 h-4" />
+                                </Link>
                             </div>
                         </motion.div>
                     </div>

@@ -11,7 +11,7 @@ import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
 import {
   Rocket, Compass, BookOpen, ShieldCheck, User, Sparkles,
   Folder, FileText, Radio, Presentation, Settings, MapPin,
-  DollarSign, Building2, Briefcase, Plus, Eye, Edit3, Handshake, MessageSquare, ChevronDown
+  DollarSign, Building2, Briefcase, Plus, Eye, Edit3, Handshake, MessageSquare, ChevronDown, Store
 } from "lucide-react";
 import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
 
@@ -41,7 +41,7 @@ export default async function StartupDashboardPage() {
   const { data: pitchDecks } = await supabase.from("pitch_decks").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
   const { data: posts } = await supabase.from("posts").select("id, content, created_at").eq("author_id", user.id).order("created_at", { ascending: false }).limit(10);
 
-  // Fetch ALL Active Deal Negotiations (Including private counter-offers and mandate applications)
+  // Fetch ALL Active Deal Negotiations
   const { data: activeDeals } = await supabase
     .from("deal_negotiations")
     .select(`
@@ -51,6 +51,14 @@ export default async function StartupDashboardPage() {
     `)
     .eq("startup_id", user.id)
     .order("updated_at", { ascending: false });
+
+  // Fetch User's Active Emporium Campaigns
+  const { data: userAds } = await supabase
+    .from("campaigns")
+    .select("id, title, status, category, created_at")
+    .eq("user_id", user.id)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false });
 
   // Group deals by the Founder's Pitch Deck
   const dealsByPitch: Record<string, any[]> = {};
@@ -79,7 +87,6 @@ export default async function StartupDashboardPage() {
     <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
-      {/* Expanded max-w to accommodate 3 columns */}
       <main className="pt-32 pb-24 px-6 mx-auto max-w-[1440px] w-full relative z-10 space-y-8">
 
         {/* Dynamic Header Banner */}
@@ -365,8 +372,9 @@ export default async function StartupDashboardPage() {
 
         </div>
 
-        {/* Bottom Section: Profile Data and Activity Feed */}
-        <div className="grid md:grid-cols-2 gap-6 pt-4">
+        {/* Bottom Section: Profile Data, Activity Feed, and Ads */}
+        <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 pt-4">
+
           {/* Detailed Profile Data Card */}
           <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden">
             <div className="absolute -right-10 -bottom-10 opacity-[0.03] pointer-events-none">
@@ -429,6 +437,61 @@ export default async function StartupDashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Active Ads & Campaigns Card */}
+          <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden lg:col-span-1 md:col-span-2">
+            <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
+              <Store size={120} />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--secondary)]/10 pb-4 relative z-10 gap-4">
+              <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
+                <Store size={18} className="text-[var(--accent)]" /> My Market Ads
+              </h3>
+
+              <Link href="/emporium" className="neu-btn flex items-center justify-center gap-2 px-4 py-2 text-xs shrink-0">
+                <Plus size={14} /> Create Ad
+              </Link>
+            </div>
+
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
+              {!userAds || userAds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center opacity-70">
+                  <Store size={32} className="mb-3 text-[var(--secondary)]/50" />
+                  <p className="text-sm font-medium text-[var(--secondary)]">You don't have any active ads.</p>
+                  <p className="text-xs mt-1">Deploy a campaign to showcase your services.</p>
+                </div>
+              ) : (
+                userAds.map((ad) => (
+                  <div key={ad.id} className="neu-pressed-base border-transparent shadow-inner rounded-xl p-4 flex flex-col gap-2 transition-all hover:bg-[var(--secondary)]/5">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${ad.status === 'active' ? 'bg-emerald-600/20 text-emerald-600' :
+                          ad.status === 'pending_approval' ? 'bg-amber-600/20 text-amber-600' :
+                            'bg-blue-600/20 text-blue-600'
+                        }`}>
+                        {ad.status.replace('_', ' ')}
+                      </span>
+                      <span className="text-[10px] text-[var(--secondary)]/50 font-mono">
+                        {new Date(ad.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--secondary)]">{ad.title}</h4>
+                      <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{ad.category}</p>
+                    </div>
+
+                    <div className="flex justify-end border-t border-[var(--secondary)]/5 pt-2 mt-2">
+                      <Link href={`/emporium/${ad.id}`} className="text-[10px] font-bold text-[var(--accent)] hover:underline flex items-center gap-1">
+                        Manage Ad <Edit3 size={10} />
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
 
       </main>

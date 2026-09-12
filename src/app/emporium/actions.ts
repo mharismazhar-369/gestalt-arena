@@ -172,3 +172,15 @@ export async function softDeleteCampaign(campaignId: string) {
 
     revalidatePath('/emporium');
 }
+export async function trackCampaignEvent(campaignId: string, eventType: 'impression' | 'click' | 'conversion') {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { error } = await supabaseAdmin.from('campaign_events').insert({
+        campaign_id: campaignId,
+        event_type: eventType,
+    });
+
+    if (error) {
+        console.error("Failed to log telemetry event:", error.message);
+    }
+}

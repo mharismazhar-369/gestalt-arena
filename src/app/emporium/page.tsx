@@ -1,8 +1,13 @@
+// Location: SRC/app/emporium/page.tsx
+
 import React from 'react';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
 import { getCampaignsFromDB, getEmporiumConfig } from './queries';
 import EmporiumClientBoard from '@/components/emporium/EmporiumClientBoard';
+import Navbar from '@/components/landing/Navbar';
+import Footer from '@/components/landing/Footer';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +35,12 @@ export default async function EmporiumServerPage() {
         }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    // SECURITY FIX: Redirect unauthenticated/non-registered users to login immediately
+    if (error || !user) {
+        redirect('/login?next=/emporium');
+    }
 
     const [campaigns, config] = await Promise.all([
         getCampaignsFromDB(),
@@ -38,14 +48,18 @@ export default async function EmporiumServerPage() {
     ]);
 
     return (
-        <main className="min-h-screen bg-zinc-950 text-zinc-100 p-6 md:p-12">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
+            <Navbar />
+
+            <main className="pt-32 pb-24 px-6 mx-auto max-w-[1440px] w-full relative z-10">
                 <EmporiumClientBoard
                     initialCampaigns={campaigns}
                     config={config}
-                    currentUserId={user?.id || ''}
+                    currentUserId={user.id}
                 />
-            </div>
-        </main>
+            </main>
+
+            <Footer />
+        </div>
     );
 }

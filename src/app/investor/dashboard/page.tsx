@@ -8,7 +8,11 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
-import { Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings, MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText, Eye, Folder, Radio, MessageSquare, Handshake, ChevronDown } from "lucide-react";
+import {
+  Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings,
+  MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText,
+  Eye, Folder, Radio, MessageSquare, Handshake, ChevronDown, Store, Edit3
+} from "lucide-react";
 import InvestorProfileBuilder from "@/components/investor/InvestorProfileBuilder";
 
 export default async function InvestorDashboardPage() {
@@ -49,6 +53,14 @@ export default async function InvestorDashboardPage() {
         `)
     .eq("investor_id", user.id)
     .order("updated_at", { ascending: false });
+
+  // 3. Fetch User's Active Emporium Campaigns (Ads)
+  const { data: userAds } = await supabase
+    .from("campaigns")
+    .select("id, title, status, category, created_at")
+    .eq("user_id", user.id)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false });
 
   // Group deals by their parent mandate
   const dealsByMandate: Record<string, any[]> = {};
@@ -165,6 +177,7 @@ export default async function InvestorDashboardPage() {
 
           {/* CENTER COLUMN: Unified Capital Mandates & Deal Pipelines */}
           <div className="lg:col-span-6 flex flex-col">
+
             <div className="neu-flat-base p-8 relative overflow-hidden flex-1">
               <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
                 <Target size={120} />
@@ -316,6 +329,7 @@ export default async function InvestorDashboardPage() {
                 )}
               </div>
             </div>
+
           </div>
 
           {/* RIGHT SIDEBAR: Live Database Quick Stats */}
@@ -350,7 +364,131 @@ export default async function InvestorDashboardPage() {
           </div>
 
         </div>
+
+        {/* Bottom Section: Profile Data, Activity Feed, and Ads */}
+        <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 pt-4">
+
+          {/* Detailed Profile Data Card */}
+          <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 opacity-[0.03] pointer-events-none">
+              <Building2 size={300} />
+            </div>
+            <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 relative z-10">
+              <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
+                <User size={18} className="text-[var(--accent)]" /> Investor Profile Record
+              </h3>
+            </div>
+            <div className="grid md:grid-cols-1 gap-6 relative z-10">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[var(--secondary)]/60 font-bold uppercase tracking-wider block text-[10px]">User Account Email</span>
+                  <p className="font-mono text-[var(--secondary)] text-sm neu-pressed-base border-transparent shadow-inner p-2 px-3 inline-block rounded-lg">{user.email}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[var(--secondary)]/60 font-bold uppercase tracking-wider block text-[10px]">System Role</span>
+                  <span className="inline-flex items-center gap-1.5 neu-pressed-base border-transparent shadow-inner px-3 py-1 font-bold text-[var(--secondary)] capitalize text-xs mt-1 rounded-full">
+                    <ShieldCheck size={12} className="text-[var(--accent)]" /> {profile?.role || "investor"}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[var(--secondary)]/60 font-bold uppercase tracking-wider block text-[10px]">Investment Thesis</span>
+                  <p className="text-[var(--secondary)]/90 text-sm leading-relaxed line-clamp-3 neu-pressed-base border-transparent shadow-inner rounded-xl p-4 font-medium">
+                    {profile?.investment_thesis || profile?.bio || "No investment thesis provided yet."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Arena Feed Activity Card */}
+          <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
+              <Radio size={120} />
+            </div>
+            <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 relative z-10">
+              <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
+                <Radio size={18} className="text-[var(--accent)]" /> My Recent Arena Posts
+              </h3>
+            </div>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
+              {!posts || posts.length === 0 ? (
+                <p className="text-sm text-[var(--secondary)]/70 font-medium">You haven't broadcasted to the Arena Feed yet.</p>
+              ) : (
+                posts.map((post) => (
+                  <div key={post.id} className="neu-pressed-base border-transparent shadow-inner rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[var(--secondary)]/80">
+                        Broadcast
+                      </span>
+                      <span className="text-[10px] text-[var(--secondary)]/50 font-mono">
+                        {new Date(post.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[var(--secondary)] line-clamp-3 leading-relaxed font-medium">{post.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Active Ads & Campaigns Card */}
+          <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden lg:col-span-1 md:col-span-2">
+            <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
+              <Store size={120} />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--secondary)]/10 pb-4 relative z-10 gap-4">
+              <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
+                <Store size={18} className="text-[var(--accent)]" /> My Market Ads
+              </h3>
+
+              <Link href="/emporium" className="neu-btn flex items-center justify-center gap-2 px-4 py-2 text-xs shrink-0">
+                <Plus size={14} /> Create Ad
+              </Link>
+            </div>
+
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
+              {!userAds || userAds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center opacity-70">
+                  <Store size={32} className="mb-3 text-[var(--secondary)]/50" />
+                  <p className="text-sm font-medium text-[var(--secondary)]">You don't have any active ads.</p>
+                  <p className="text-xs mt-1">Deploy a campaign to showcase your services.</p>
+                </div>
+              ) : (
+                userAds.map((ad) => (
+                  <div key={ad.id} className="neu-pressed-base border-transparent shadow-inner rounded-xl p-4 flex flex-col gap-2 transition-all hover:bg-[var(--secondary)]/5">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${ad.status === 'active' ? 'bg-emerald-600/20 text-emerald-600' :
+                        ad.status === 'pending_approval' ? 'bg-amber-600/20 text-amber-600' :
+                          'bg-blue-600/20 text-blue-600'
+                        }`}>
+                        {ad.status.replace('_', ' ')}
+                      </span>
+                      <span className="text-[10px] text-[var(--secondary)]/50 font-mono">
+                        {new Date(ad.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--secondary)]">{ad.title}</h4>
+                      <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{ad.category}</p>
+                    </div>
+
+                    <div className="flex justify-end border-t border-[var(--secondary)]/5 pt-2 mt-2">
+                      <Link href={`/emporium/${ad.id}`} className="text-[10px] font-bold text-[var(--accent)] hover:underline flex items-center gap-1">
+                        Manage Ad <Edit3 size={10} />
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
       </main>
+
       <Footer />
     </div>
   );

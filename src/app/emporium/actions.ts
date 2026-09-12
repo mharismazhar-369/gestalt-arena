@@ -6,62 +6,27 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
-/**
- * Lazy initializer for the administrative Supabase client.
- * Prevents build-time compiler crashes when environment variables are missing during static evaluation.
- */
 const getSupabaseAdmin = () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !key) {
-        throw new Error("Cannot execute transaction: Missing Supabase environment variables.");
-    }
-
-    return createClient(url, key);
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 };
 
-/**
- * Validates the session and returns the secure user ID from browser cookies.
- */
 async function getSecureSession() {
     const cookieStore = await cookies();
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Cannot verify session: Missing Supabase environment variables.");
-    }
-
     const supabaseAuth = createServerClient(
-        supabaseUrl,
-        supabaseAnonKey,
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                getAll() {
-                    return cookieStore.getAll();
-                },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) => {
-                            cookieStore.set({ name, value, ...options });
-                        });
-                    } catch (error) {
-                        // Safe to ignore during server action evaluation
-                    }
-                },
+                getAll() { return cookieStore.getAll(); },
+                setAll() { },
             },
         }
     );
-
     const { data: { user }, error } = await supabaseAuth.auth.getUser();
-
-    if (error || !user) {
-        console.error("Auth Verification Failed:", error);
-        throw new Error("Unauthorized Access: Session Invalid.");
-    }
-
+    if (error || !user) throw new Error("Unauthorized Access.");
     return user.id;
 }
 
@@ -72,29 +37,54 @@ async function getSecureSession() {
 export async function createCampaign(formData: any) {
     const supabaseAdmin = getSupabaseAdmin();
     const userId = await getSecureSession();
+
+    // 1. Server-bound Role & Profile Verification
+    const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('role, tier')
+        .eq('id', userId)
+        .single();
+
+    if (profileError || !profile) {
+        throw new Error("Validation Failed: Unable to verify user role and tier.");
+    }
+
+    // 2. Map broad profile.role to a valid foreign key ID in public.platform_roles
+    let resolvedCreatorRole = 'startup_seed'; // Default fallback
+    if (profile.role === 'investor') {
+        resolvedCreatorRole = 'investor_vc';
+    } else if (profile.role === 'admin') {
+        resolvedCreatorRole = 'all';
+    } else if (profile.role === 'startup') {
+        resolvedCreatorRole = 'startup_seed';
+    }
+
     const campaignId = `ad-${Date.now()}`;
 
+    // 3. Map payload with strict server-side ownership bindings
     const newCampaign = {
-        ...formData,
         id: campaignId,
         user_id: userId,
+        creator_role: resolvedCreatorRole, // Uses a valid ID from platform_roles
+        title: formData.title,
+        tagline: formData.tagline,
+        description: formData.description,
+        category: formData.category,
         target_role: formData.targetRole,
+        tier: formData.tier,
         cta_text: formData.ctaText,
         cta_url: formData.ctaUrl,
-        duration_days: formData.durationDays,
+        company_name: formData.companyName,
+        contact_email: formData.contactEmail,
+        product_type: formData.productType,
+        duration_days: 30,
         status: 'pending_approval',
     };
-
-    delete newCampaign.targetRole;
-    delete newCampaign.ctaText;
-    delete newCampaign.ctaUrl;
-    delete newCampaign.durationDays;
 
     const { error } = await supabaseAdmin.from('campaigns').insert([newCampaign]);
 
     if (error) {
-        console.error("❌ SUPABASE INSERTION ERROR:", error);
-        throw new Error(`Database Insertion Failed: ${error.message} (${error.code})`);
+        throw new Error(`Database Insertion Failed: ${error.message}`);
     }
 
     revalidatePath('/emporium');
@@ -112,69 +102,73 @@ export async function updateCampaignStatus(campaignId: string, newStatus: string
         .eq('user_id', userId);
 
     if (error) throw new Error("Unauthorized: Failed to update campaign status.");
-
     revalidatePath('/emporium');
 }
 
 // ==========================================
-// 2. FINANCIAL TRANSACTIONS (Zero Trust)
+// 2. FINANCIAL TRANSACTIONS (Zero Trust RPC)
 // ==========================================
 
 export async function processCheckout(formData: FormData) {
-    const supabaseAdmin = getSupabaseAdmin();
-    const userId = await getSecureSession();
     const campaignId = formData.get('campaignId') as string;
-    const amount = Number(formData.get('amount'));
+    const userId = await getSecureSession();
+    const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Verify exact balance
-    const { data: wallet, error: walletError } = await supabaseAdmin
-        .from('user_wallets')
-        .select('balance')
-        .eq('user_id', userId)
-        .single();
+    // Trigger the atomic Postgres function
+    const { error: rpcError } = await supabaseAdmin.rpc('process_campaign_payment', {
+        p_user_id: userId,
+        p_campaign_id: campaignId
+    });
 
-    if (walletError || !wallet || wallet.balance < amount) {
-        throw new Error("Insufficient Gestalt Credits or wallet not found.");
+    if (rpcError) {
+        console.error("Transaction Failed:", rpcError.message);
+        throw new Error(rpcError.message || "Financial transaction failed.");
     }
 
-    // 2. Deduct credits STRICTLY (Forces an explicit error if zero rows update)
-    const { error: deductError } = await supabaseAdmin
-        .from('user_wallets')
-        .update({ balance: wallet.balance - amount })
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-    if (deductError) {
-        console.error("❌ DEDUCTION ERROR:", deductError);
-        throw new Error("Transaction failed during credit deduction.");
-    }
-
-    // 3. Write to immutable transaction ledger
-    const { error: ledgerError } = await supabaseAdmin.from('transaction_ledger').insert([{
-        user_id: userId,
-        campaign_id: campaignId,
-        amount_deducted: amount,
-        transaction_type: 'campaign_deployment'
-    }]);
-
-    if (ledgerError) console.error("❌ LEDGER ERROR:", ledgerError);
-
-    // 4. Activate the campaign STRICTLY
-    const { error: campaignError } = await supabaseAdmin
-        .from('campaigns')
-        .update({ status: 'active', published_at: new Date().toISOString() })
-        .eq('id', campaignId)
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-    if (campaignError) {
-        console.error("❌ ACTIVATION ERROR:", campaignError);
-        throw new Error("Database failed to update campaign status.");
-    }
-
-    // 5. Invalidate Next.js cache for the entire Emporium layout hierarchy
+    // Invalidate cache and redirect on successful database transaction
     revalidatePath('/emporium', 'layout');
     redirect(`/emporium/${campaignId}?success=true`);
+}
+// Add this to the bottom of app/emporium/actions.ts
+
+export async function updateCampaignConfig(campaignId: string, formData: FormData) {
+    const supabaseAdmin = getSupabaseAdmin();
+    const userId = await getSecureSession();
+
+    const updates = {
+        title: formData.get('title') as string,
+        cta_url: formData.get('ctaUrl') as string,
+        description: formData.get('description') as string,
+    };
+
+    const { error } = await supabaseAdmin
+        .from('campaigns')
+        .update(updates)
+        .eq('id', campaignId)
+        .eq('user_id', userId); // Strictly enforces ownership
+
+    if (error) {
+        throw new Error("Failed to update campaign configuration.");
+    }
+
+    revalidatePath(`/emporium/${campaignId}`);
+    revalidatePath('/emporium');
+}
+// Add this to the bottom of app/emporium/actions.ts
+
+export async function softDeleteCampaign(campaignId: string) {
+    const supabaseAdmin = getSupabaseAdmin();
+    const userId = await getSecureSession();
+
+    const { error } = await supabaseAdmin
+        .from('campaigns')
+        .update({ status: 'archived' })
+        .eq('id', campaignId)
+        .eq('user_id', userId);
+
+    if (error) {
+        throw new Error("Unauthorized: Failed to delete campaign.");
+    }
+
+    revalidatePath('/emporium');
 }

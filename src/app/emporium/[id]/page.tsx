@@ -1,54 +1,59 @@
-'use client';
-
 import React from 'react';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, BarChart3, Settings } from 'lucide-react';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import CampaignManagementBoard from '@/components/emporium/CampaignManagementBoard';
 
-export default function CampaignDetailsPage() {
-    const params = useParams();
-    const campaignId = params.id as string;
+export const dynamic = 'force-dynamic';
+
+export default async function CampaignDetailsPage({
+    params
+}: {
+    params: Promise<{ id: string }>
+}) {
+    const { id } = await params;
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() { return cookieStore.getAll(); },
+                setAll() { },
+            },
+        }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch the real campaign data from the database
+    const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user?.id)
+        .single();
+
+    if (!campaign) {
+        return notFound();
+    }
 
     return (
         <main className="min-h-screen bg-black text-zinc-100 p-6 md:p-12">
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6">
                 <Link
                     href="/emporium"
-                    className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-amber-400 transition-colors"
+                    className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-orange-500 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Emporium Dashboard
                 </Link>
 
-                <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-800">
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <h1 className="text-2xl font-bold text-white mb-2">Campaign Management</h1>
-                            <p className="text-sm text-zinc-400">ID: {campaignId}</p>
-                        </div>
-                        <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-medium">
-                            Active
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-6 bg-zinc-900/50 rounded-xl border border-zinc-800/80">
-                            <div className="flex items-center gap-2 mb-4 text-amber-400">
-                                <BarChart3 className="w-5 h-5" />
-                                <h2 className="font-bold">Performance Analytics</h2>
-                            </div>
-                            <p className="text-xs text-zinc-400">Detailed time-series metrics will render here.</p>
-                        </div>
-
-                        <div className="p-6 bg-zinc-900/50 rounded-xl border border-zinc-800/80">
-                            <div className="flex items-center gap-2 mb-4 text-zinc-300">
-                                <Settings className="w-5 h-5" />
-                                <h2 className="font-bold">Configuration</h2>
-                            </div>
-                            <p className="text-xs text-zinc-400">Edit form for campaign details goes here.</p>
-                        </div>
-                    </div>
-                </div>
+                {/* Mounts the interactive Framer Motion component we built */}
+                <CampaignManagementBoard campaign={campaign} />
             </div>
         </main>
     );

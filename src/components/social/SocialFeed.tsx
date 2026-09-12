@@ -7,13 +7,36 @@ import { MessageSquare } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+import Link from "next/link";
+import React from "react";
+
+// Utility helper to make hashtags inside post content clickable
+function formatPostText(content: string) {
+  if (!content) return content;
+  const parts = content.split(/(#[A-Za-z0-9_]+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('#')) {
+      const tag = part.substring(1);
+      return (
+        <Link
+          key={index}
+          href={`/feed?tag=${tag}`}
+          className="text-[var(--accent)] font-bold hover:underline inline-block"
+          onClick={(e) => e.stopPropagation()} // Prevents triggering card click events
+        >
+          {part}
+        </Link>
+      );
+    }
+    return part;
+  });
+}
 
 export default function SocialFeed() {
   const { session, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Added dislikes fetch array. Ensure the dislikes table is created!
   const fetchPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from("posts")
@@ -39,7 +62,7 @@ export default function SocialFeed() {
 
       const channel = supabase
         .channel('public:posts')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
           fetchPosts();
         })
         .subscribe();
@@ -89,7 +112,7 @@ export default function SocialFeed() {
             authorRole: post.author?.role === "investor" ? "Investor" : "Startup Founder",
             tier: post.author?.tier || "freemium",
             timestamp: new Date(post.created_at).toLocaleDateString(),
-            content: post.content,
+            content: formatPostText(post.content), // Passes formatted clickable hashtags
             likesCount: post.likes?.length || 0,
             dislikesCount: post.dislikes?.length || 0,
             repostsCount: 0,

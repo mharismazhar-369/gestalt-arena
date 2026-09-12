@@ -30,7 +30,7 @@ const DialChart = ({
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
       transition={{ delay, duration: 0.6 }}
-      className="flex flex-col items-center justify-center p-6 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform"
+      className="flex flex-col items-center justify-center p-6 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform"
     >
       <div className="relative flex items-center justify-center w-32 h-32">
         <svg className="w-full h-full transform -rotate-90">
@@ -84,7 +84,6 @@ export default function StatsSection() {
     // 1. Push: Register a unique visit for this session
     async function recordVisit() {
       if (!sessionStorage.getItem('has_visited')) {
-        // Note: Requires creating a 'site_visits' table in Supabase
         const { error } = await supabase.from('site_visits').insert([{ user_agent: navigator.userAgent }]);
         if (!error) {
           sessionStorage.setItem('has_visited', 'true');
@@ -93,25 +92,19 @@ export default function StatsSection() {
     }
     recordVisit();
 
-    // 2. Pull: Fetch all live stats
+    // 2. Pull: Fetch all live stats across tables securely
     async function fetchPlatformStats() {
-      // Capital & Fees
-      const { data: dealsData } = await supabase
-        .from('deal_negotiations')
-        .select('ticket_size')
-        .eq('status', 'Accepted');
+      // 1. Fetch total capital using our robust database RPC function
+      const { data: capitalTotal } = await supabase.rpc('get_total_platform_capital');
+      const totalCapital = Number(capitalTotal) || 0;
 
-      if (dealsData) {
-        const totalCapital = dealsData.reduce((sum, deal) => sum + (Number(deal.ticket_size) || 0), 0);
-        setLockedCapital(totalCapital);
-        setFacilitatorFees(totalCapital * 0.02);
-      }
+      setLockedCapital(totalCapital);
+      setFacilitatorFees(totalCapital * 0.02);
 
-      // User Counts
+      // 2. User Counts
       const [investors, startups, visits] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'investor'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'startup'),
-        // Note: Requires the 'site_visits' table
         supabase.from('site_visits').select('id', { count: 'exact', head: true })
       ]);
 
@@ -119,7 +112,7 @@ export default function StatsSection() {
       if (startups.count !== null) setStartupCount(startups.count);
       if (visits.count !== null) setVisitorCount(visits.count);
 
-      // Countries Count: Fetch unique countries from active profiles[cite: 5]
+      // 3. Countries Count
       const { data: countryData } = await supabase
         .from('profiles')
         .select('country')
@@ -156,7 +149,7 @@ export default function StatsSection() {
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mt-16 mx-auto max-w-4xl rounded-3xl border border-white/80 bg-white/70 p-8 md:p-12 backdrop-blur-xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-around gap-8 transition-all"
+        className="mt-16 mx-auto max-w-4xl rounded-3xl border border-white/80 bg-white/75 p-8 md:p-12 backdrop-blur-xl shadow-[0_15px_30px_-10px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-around gap-8 transition-all"
       >
         <div className="text-center">
           <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Total Capital Raised</p>

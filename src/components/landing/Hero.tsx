@@ -74,7 +74,8 @@ export default function Hero() {
             variants={itemVariants}
             className="mt-8 mx-auto max-w-2xl text-base md:text-lg text-slate-600 font-medium leading-relaxed"
           >
-            A visionary platform uniting Innovators and Investors. We bridge the gap, helping backers find the best Business Models showcased by Pioneers needing capital from Digital Startups to Real-World experts.
+            Discover. Evaluate. Connect. Negotiate.
+            A technology marketplace where founders showcase opportunities and investors discover, evaluate and connect with emerging ventures.
           </motion.p>
 
           <motion.div

@@ -38,7 +38,7 @@ const features = [
   {
     icon: Cpu,
     title: "Real-Life Fundable Industries",
-    description: "Secure funding for high-impact sectors including Artificial Intelligence, Renewable Energy, Biotech, Advanced Robotics, FinTech, and Aerospace.",
+    description: "Secure funding for high-impact sectors including AI, Agriculture, Engineering, Pharmaceuticals, Green Energy, Biotechonology, Robotics, FinTech, and many more.",
     accent: "text-sky-500 bg-sky-500/10 border-sky-500/20",
   },
 ];

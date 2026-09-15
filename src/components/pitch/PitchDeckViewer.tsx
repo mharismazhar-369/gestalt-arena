@@ -38,7 +38,7 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
     // 1. Fetch Pitch Deck & Founder Profile
     const { data: pitchDeck, error } = await supabase
         .from("pitch_decks")
-        .select(`*, profiles:user_id (company_name, nickname)`)
+        .select(`*, profiles!pitch_decks_user_id_fkey(company_name, nickname)`)
         .eq("id", pitchId)
         .single();
 

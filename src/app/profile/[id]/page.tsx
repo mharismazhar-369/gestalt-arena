@@ -10,12 +10,12 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
-import { sendConnectionRequest } from "@/actions/connections";
+import { sendConnectionRequest, respondToConnection } from "@/actions/connections";
 import {
   UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2,
   Users, MessageSquare, Edit3, Globe, Link as LinkIcon,
   Briefcase, Activity, Target, User, EyeOff, Clock,
-  Presentation, Eye, Zap, Lock, FileText, Award
+  Presentation, Eye, Zap, Lock, FileText, Award, X
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -35,6 +35,7 @@ export default function PublicProfilePage() {
 
   const [connectionCount, setConnectionCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted'>('none');
+  const [isRequester, setIsRequester] = useState(false);
 
   const [pitchDecks, setPitchDecks] = useState<any[]>([]);
   const [bidDecks, setBidDecks] = useState<any[]>([]);
@@ -100,10 +101,17 @@ export default function PublicProfilePage() {
       if (session?.user && !isOwnProfile) {
         const { data: connData } = await supabase
           .from("connections")
-          .select("status")
+          .select("status, requester_id, receiver_id")
           .or(`and(requester_id.eq.${session.user.id},receiver_id.eq.${profileId}),and(requester_id.eq.${profileId},receiver_id.eq.${session.user.id})`)
-          .single();
-        if (connData) setConnectionStatus(connData.status as 'pending' | 'accepted');
+          .maybeSingle();
+
+        if (connData) {
+          setConnectionStatus(connData.status as 'pending' | 'accepted');
+          setIsRequester(connData.requester_id === session.user.id);
+        } else {
+          setConnectionStatus('none');
+          setIsRequester(false);
+        }
       }
 
       setLoading(false);
@@ -215,11 +223,46 @@ export default function PublicProfilePage() {
                           <UserPlus size={16} /> Connect
                         </button>
                       )}
-                      {connectionStatus === 'pending' && (
+
+                      {/* IF PENDING AND YOU SENT IT */}
+                      {connectionStatus === 'pending' && isRequester && (
                         <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-[var(--secondary)]/50 shadow-inner cursor-not-allowed">
                           <Clock size={16} /> Pending
                         </button>
                       )}
+
+                      {/* IF PENDING AND YOU RECEIVED IT (SHOW ACCEPT / DECLINE) */}
+                      {connectionStatus === 'pending' && !isRequester && (
+                        <div className="flex flex-col gap-2 w-full">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await respondToConnection(profileId, 'accepted');
+                                setConnectionStatus('accepted');
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-emerald-600 w-full"
+                          >
+                            <UserCheck size={14} /> Accept
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await respondToConnection(profileId, 'rejected');
+                                setConnectionStatus('none');
+                              } catch (err: any) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-rose-600 w-full"
+                          >
+                            <X size={14} /> Decline
+                          </button>
+                        </div>
+                      )}
+
                       {connectionStatus === 'accepted' && (
                         <>
                           <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-emerald-600 shadow-inner cursor-default">

@@ -77,3 +77,47 @@ export async function updateConnectionStatus(formData: FormData): Promise<void> 
     revalidatePath('/network')
     // No return statement here. Next.js forms expect void.
 }
+
+// NEW: Function specifically for the NotificationDropdown inline actions
+export async function respondToConnection(actorId: string, status: 'accepted' | 'rejected') {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        throw new Error('Authentication required')
+    }
+
+    // 1. Update the connection status
+    const { error: connectionError } = await supabase
+        .from('connections')
+        .update({
+            status: status,
+            accepted_at: status === 'accepted' ? new Date().toISOString() : null
+        })
+        .eq('requester_id', actorId)
+        .eq('receiver_id', user.id)
+
+    if (connectionError) {
+        throw new Error(`Status update failed: ${connectionError.message}`)
+    }
+
+    // 2. Notify the requester that their request was accepted
+    if (status === 'accepted') {
+        await supabase.from('notifications').insert({
+            user_id: actorId,     // The person who originally sent the request
+            actor_id: user.id,    // You, accepting the request
+            type: 'connection_accepted',
+            message: 'accepted your connection request.'
+        })
+    }
+
+    // 3. Delete the original pending notification so it clears from the dropdown
+    await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('actor_id', actorId)
+        .eq('type', 'connection_request')
+
+    return { success: true }
+}

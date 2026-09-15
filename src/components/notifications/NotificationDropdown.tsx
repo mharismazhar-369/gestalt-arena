@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat, Handshake, Users, UserCheck } from "lucide-react";
+import { Bell, Heart, MessageCircle, Gavel, Star, UserPlus, Bookmark, Check, Repeat, Handshake, Users, UserCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { respondToConnection } from "@/actions/connections";
 
 export default function NotificationDropdown() {
   const { session } = useAuth();
@@ -24,9 +25,10 @@ export default function NotificationDropdown() {
     if (!session?.user) return;
 
     const fetchNotifications = async () => {
+      // NOTE: Added actor_id to the select string to process connection requests
       const { data } = await supabase
         .from("notifications")
-        .select(`id, type, is_read, message, created_at, reference_id, actor:profiles!actor_id(nickname, company_name)`)
+        .select(`id, type, is_read, message, created_at, reference_id, actor_id, actor:profiles!actor_id(nickname, company_name)`)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(20);
@@ -68,10 +70,25 @@ export default function NotificationDropdown() {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
   };
 
+  // NEW: Handler for connection requests
+  const handleConnectionAction = async (e: React.MouseEvent, notifId: string, actorId: string, status: 'accepted' | 'rejected') => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevents the dropdown from closing immediately or clicking through
+
+    // Optimistically remove it from UI
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
+
+    try {
+      await respondToConnection(actorId, status);
+    } catch (error) {
+      console.error("Failed to process connection:", error);
+      // Optional: Re-fetch notifications here if it fails to revert state
+    }
+  };
+
   const getNotificationLink = (type: string, refId: string) => {
     switch (type) {
-      case "connection_request": return `/network`;
-      case "connection_accepted": return `/network`;
+      case "connection_accepted": return `/profile/${refId}`; // Route to their profile instead of /network
       case "negotiate":
       case "deal_initiated": return refId ? `/negotiations/${refId}` : "#";
       case "rating":
@@ -155,15 +172,48 @@ export default function NotificationDropdown() {
               ) : (
                 notifications.map((notif) => {
                   const actorName = notif.actor?.nickname || notif.actor?.company_name || "A user";
-                  const routeUrl = getNotificationLink(notif.type, notif.reference_id);
 
+                  // Render a non-navigating block for connection requests
+                  if (notif.type === "connection_request") {
+                    return (
+                      <div key={notif.id} className="p-4 border-b border-[var(--secondary)]/5 text-sm transition flex flex-col gap-3 bg-[var(--secondary)]/[0.03]">
+                        <div className="flex gap-3">
+                          <div className="mt-0.5 shrink-0">{getIcon(notif.type)}</div>
+                          <div className="flex-1">
+                            <p className="text-[var(--secondary)]/80 text-xs leading-relaxed font-medium">
+                              <span className="font-bold text-[var(--secondary)]">{actorName}</span> wants to connect with you.
+                            </p>
+                            <p className="text-[10px] text-[var(--secondary)]/50 mt-1 font-bold tracking-wide">
+                              {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-7 mt-1">
+                          <button
+                            onClick={(e) => handleConnectionAction(e, notif.id, notif.actor_id, 'accepted')}
+                            className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+                          >
+                            <Check size={12} /> Accept
+                          </button>
+                          <button
+                            onClick={(e) => handleConnectionAction(e, notif.id, notif.actor_id, 'rejected')}
+                            className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-md bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-colors"
+                          >
+                            <X size={12} /> Reject
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Default routing link for all other notification types
+                  const routeUrl = getNotificationLink(notif.type, notif.reference_id);
                   return (
                     <Link
                       href={routeUrl}
                       key={notif.id}
                       onClick={() => !notif.is_read && markSingleAsRead(notif.id)}
-                      className={`p-4 border-b border-[var(--secondary)]/5 text-sm transition flex gap-3 hover:bg-[var(--secondary)]/5 ${!notif.is_read ? "bg-[var(--secondary)]/[0.03]" : "opacity-70"
-                        }`}
+                      className={`p-4 border-b border-[var(--secondary)]/5 text-sm transition flex gap-3 hover:bg-[var(--secondary)]/5 ${!notif.is_read ? "bg-[var(--secondary)]/[0.03]" : "opacity-70"}`}
                     >
                       <div className="mt-0.5 shrink-0">
                         {getIcon(notif.type)}

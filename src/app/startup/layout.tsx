@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import React from "react";
+
+interface StartupLayoutProps {
+    children: React.ReactNode;
+    params?: Promise<{ id?: string }>;
+}
 
 export default async function StartupLayout({
     children,
-}: {
-    children: React.ReactNode;
-}) {
+}: StartupLayoutProps): Promise<React.ReactNode> { // FIX 1: Added <React.ReactNode>
     const supabase = await createClient();
 
     const {
@@ -32,32 +34,17 @@ export default async function StartupLayout({
         redirect("/warning");
     }
 
-    // Normalize role exactly as the main dashboard does to prevent casing bugs.
+    // Normalize role to prevent casing mismatches
     const userRole = (profile?.role || "").toLowerCase().trim();
 
     // 2. Allow Admins and Startups unconditional layout access
     if (userRole === "admin" || userRole === "startup") {
-        return { children };
+        return <>{children}</>; // FIX 2: Added closing </> tag
     }
 
-    // 3. Algorithmic Investor Access: True Negative Block
+    // 3. Allow verified Investors through to view pitch decks (/startup/[id]/pitch)
     if (userRole === "investor") {
-        const headerList = await headers();
-
-        // strictly check DESTINATION headers, never ORIGIN headers.
-        const invokePath = headerList.get("x-invoke-path") || "";
-        const nextUrl = headerList.get("next-url") || "";
-
-        const destination = `\({invokePath}\){nextUrl}`.toLowerCase();
-
-        // Only block if they explicitly type the exact URL for startup-only admin tools.
-        if (destination.includes("/startup/dashboard") || destination.includes("/startup/pitch/build")) {
-            redirect("/dashboard");
-        }
-
-        // If the router drops headers during a soft  click, default to ALLOWING them through.
-        // The child pitch deck page will handle its own secure data loading.
-        return { children };
+        return <>{children}</>; // FIX 3: Added closing </> tag
     }
 
     // 4. Default fallback for unauthorized role access

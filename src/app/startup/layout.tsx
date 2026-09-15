@@ -32,7 +32,7 @@ export default async function StartupLayout({
         redirect("/warning");
     }
 
-    // Normalize role exactly as the main dashboard does.
+    // Normalize role exactly as the main dashboard does to prevent casing bugs.
     const userRole = (profile?.role || "").toLowerCase().trim();
 
     // 2. Allow Admins and Startups unconditional layout access
@@ -40,24 +40,23 @@ export default async function StartupLayout({
         return { children };
     }
 
-    // 3. Algorithmic Investor Access: Negative Block Strategy
-    if (profile?.role === "investor") {
+    // 3. Algorithmic Investor Access: True Negative Block
+    if (userRole === "investor") {
         const headerList = await headers();
 
-        // Pool all possible Next.js routing headers to catch both hard reloads and RSC transitions
-        const customPath = headerList.get("x-current-path") || "";
-        const nextUrl = headerList.get("next-url") || "";
+        // strictly check DESTINATION headers, never ORIGIN headers.
         const invokePath = headerList.get("x-invoke-path") || "";
-        const referer = headerList.get("referer") || "";
+        const nextUrl = headerList.get("next-url") || "";
 
-        const routeSignature = `\({customPath}\){nextUrl} \({invokePath}\){referer}`.toLowerCase();
+        const destination = `\({invokePath}\){nextUrl}`.toLowerCase();
 
-        // If headers explicitly reveal they are trying to access startup admin tools, block them
-        if (routeSignature.includes("/dashboard") || routeSignature.includes("/build")) {
+        // Only block if they explicitly type the exact URL for startup-only admin tools.
+        if (destination.includes("/startup/dashboard") || destination.includes("/startup/pitch/build")) {
             redirect("/dashboard");
         }
 
-        // Safely allow them through using explicit React Fragment to prevent parsing errors
+        // If the router drops headers during a soft  click, default to ALLOWING them through.
+        // The child pitch deck page will handle its own secure data loading.
         return { children };
     }
 

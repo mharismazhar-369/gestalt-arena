@@ -209,11 +209,10 @@ export default function GlobalPreferencesPage() {
         .update({
           role: role,
           ...profileUpdates,
+          dob: profileUpdates.dob || null, // <-- THIS IS THE ONLY NEW LINE
           updated_at: new Date().toISOString()
         })
         .eq("id", session.user.id);
-
-      if (profileError) throw profileError;
 
       // Update the initial state reference upon successful save
       setInitialUsername(profile.username);
@@ -267,7 +266,7 @@ export default function GlobalPreferencesPage() {
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)] flex items-center gap-3">
             <Target className="text-[var(--accent)]" size={32} />
-            Global Settings & AI Capabilities
+            Global Settings
           </h1>
           <p className="text-[var(--secondary)]/70 text-sm max-w-2xl leading-relaxed font-medium">
             Configure your identity and operational metrics. The AI routing engine matches founders and investors based on exact runway risks, deployment velocity, and sector alignment.

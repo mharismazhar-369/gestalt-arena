@@ -25,28 +25,37 @@ export default async function StartupLayout({
         .single();
 
     // 1. Strict Server-Side Ban Enforcement
-    if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
+    if (
+        profile?.presence_status === "banned" ||
+        profile?.presence_status === "suspended"
+    ) {
         redirect("/warning");
     }
 
+    // Normalize role exactly as the main dashboard does.
+    const userRole = (profile?.role || "").toLowerCase().trim();
+
     // 2. Allow Admins and Startups unconditional layout access
-    if (profile?.role === "admin" || profile?.role === "startup") {
+    if (userRole === "admin" || userRole === "startup") {
         return <>{children}</>;
     }
 
-            // 3. Algorithmic Investor Access: Read path from Middleware headers
-            if (profile?.role === "investor") {
+    // 3. Allow Investors to view startup pitch-deck pages
+    if (userRole === "investor") {
         const headerList = await headers();
-            const currentPath = headerList.get("x-current-path") || "";
+        const currentPath = (headerList.get("x-current-path") || "").trim();
 
-            // Verify the Investor is strictly accessing a pitch deck view
-            const isPitchRoute = /\/startup\/[^/]+\/pitch/.test(currentPath);
+        // Investor is allowed to access ONLY the pitch-deck route
+        // inside the startup route tree.
+        const isPitchRoute = /^\/startup\/[^/]+\/pitch(?:\/.*)?$/.test(
+            currentPath
+        );
 
-            if (isPitchRoute) {
-            return <>{children}</>; 
+        if (isPitchRoute) {
+            return <>{children}</>;
         }
     }
 
-            // Default fallback: Redirect unauthorized role attempts to dashboard
-            redirect("/dashboard");
+    // 4. Default fallback for unauthorized role access
+    redirect("/dashboard");
 }

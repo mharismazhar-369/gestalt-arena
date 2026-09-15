@@ -284,7 +284,7 @@ export default function GlobalPreferencesPage() {
           {/* SECTION 0: PLATFORM THEME */}
           <div className="neu-flat-base p-8 space-y-6 relative overflow-hidden mb-8">
             <h2 className="text-xl font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-4">
-              <Target size={18} className="text-[var(--accent)]" /> Platform Aesthetic
+              <Target size={18} className="text-[var(--accent)]" /> Platform Themes
             </h2>
 
             <div className="grid md:grid-cols-3 gap-4">

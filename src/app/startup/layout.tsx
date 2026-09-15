@@ -37,23 +37,28 @@ export default async function StartupLayout({
 
     // 2. Allow Admins and Startups unconditional layout access
     if (userRole === "admin" || userRole === "startup") {
-        return <>{children}</>;
+        return { children };
     }
 
-    // 3. Allow Investors to view startup pitch-deck pages
-    if (userRole === "investor") {
+    // 3. Algorithmic Investor Access: Negative Block Strategy
+    if (profile?.role === "investor") {
         const headerList = await headers();
-        const currentPath = (headerList.get("x-current-path") || "").trim();
 
-        // Investor is allowed to access ONLY the pitch-deck route
-        // inside the startup route tree.
-        const isPitchRoute = /^\/startup\/[^/]+\/pitch(?:\/.*)?$/.test(
-            currentPath
-        );
+        // Pool all possible Next.js routing headers to catch both hard reloads and RSC transitions
+        const customPath = headerList.get("x-current-path") || "";
+        const nextUrl = headerList.get("next-url") || "";
+        const invokePath = headerList.get("x-invoke-path") || "";
+        const referer = headerList.get("referer") || "";
 
-        if (isPitchRoute) {
-            return <>{children}</>;
+        const routeSignature = `\({customPath}\){nextUrl} \({invokePath}\){referer}`.toLowerCase();
+
+        // If headers explicitly reveal they are trying to access startup admin tools, block them
+        if (routeSignature.includes("/dashboard") || routeSignature.includes("/build")) {
+            redirect("/dashboard");
         }
+
+        // Safely allow them through using explicit React Fragment to prevent parsing errors
+        return { children };
     }
 
     // 4. Default fallback for unauthorized role access

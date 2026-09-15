@@ -519,6 +519,7 @@ export type Database = {
           additional_terms: string | null
           closed_at: string
           deal_id: string | null
+          deleted_at: string | null
           final_equity: number
           final_ticket_size: number
           final_valuation: number
@@ -536,6 +537,7 @@ export type Database = {
           additional_terms?: string | null
           closed_at?: string
           deal_id?: string | null
+          deleted_at?: string | null
           final_equity: number
           final_ticket_size: number
           final_valuation: number
@@ -553,6 +555,7 @@ export type Database = {
           additional_terms?: string | null
           closed_at?: string
           deal_id?: string | null
+          deleted_at?: string | null
           final_equity?: number
           final_ticket_size?: number
           final_valuation?: number
@@ -2343,6 +2346,7 @@ export type Database = {
           cookie_consent_choice: string | null
           country: string | null
           created_at: string
+          deleted_at: string | null
           dob: string | null
           elevator_pitch: string | null
           email: string | null
@@ -2391,6 +2395,7 @@ export type Database = {
           cookie_consent_choice?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
           dob?: string | null
           elevator_pitch?: string | null
           email?: string | null
@@ -2439,6 +2444,7 @@ export type Database = {
           cookie_consent_choice?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
           dob?: string | null
           elevator_pitch?: string | null
           email?: string | null

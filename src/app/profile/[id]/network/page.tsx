@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { updateConnectionStatus } from '@/actions/connections';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
@@ -63,6 +64,16 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
         }
     }
 
+    // INLINE SERVER ACTION: Handle Cancellations & Removals securely
+    async function deleteConnectionRow(formData: FormData) {
+        'use server';
+        const supabaseServer = await createClient();
+        const connectionId = formData.get('connectionId') as string;
+
+        await supabaseServer.from('connections').delete().eq('id', connectionId);
+        revalidatePath(`/profile/${targetUserId}/network`);
+    }
+
     // Helper to render connection cards
     const renderUserCard = (connection: any, isTargetReceiver: boolean, actionControls?: React.ReactNode) => {
         const otherId = isTargetReceiver ? connection.receiver_id : connection.requester_id;
@@ -102,7 +113,6 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
 
             <main className="pt-32 pb-24 px-6 mx-auto max-w-[1024px] w-full flex-grow relative z-10 space-y-8">
 
-                {/* Header & Controls */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-[var(--secondary)]/10 pb-6">
                     <div className="flex items-center gap-3">
                         {isOwnProfile ? <Users size={28} className="text-[var(--accent)]" /> : <Globe size={28} className="text-[var(--accent)]" />}
@@ -128,7 +138,6 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* Private Column: Requests (Only visible to profile owner) */}
                     {isOwnProfile && (
                         <div className="lg:col-span-1 space-y-8">
                             {/* Inbound Pending */}
@@ -167,11 +176,10 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
                                 </h2>
                                 <div className="space-y-3">
                                     {outboundPending.length > 0 ? outboundPending.map(req => renderUserCard(req, true, (
-                                        <form action={updateConnectionStatus} className="w-full">
+                                        <form action={deleteConnectionRow} className="w-full">
                                             <input type="hidden" name="connectionId" value={req.id} />
-                                            <input type="hidden" name="status" value="cancelled" />
-                                            <button type="submit" className="flex justify-center items-center gap-2 py-2 px-4 text-xs font-bold neu-btn text-[var(--secondary)]/60 hover:text-rose-500 w-full">
-                                                Cancel Request
+                                            <button type="submit" className="flex justify-center items-center gap-2 py-2 px-4 text-[10px] font-bold neu-btn text-[var(--secondary)]/60 hover:text-rose-500 w-full">
+                                                <X size={12} /> Cancel Request
                                             </button>
                                         </form>
                                     ))) : (
@@ -182,7 +190,6 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
                         </div>
                     )}
 
-                    {/* Public Column: Active Connections */}
                     <div className={`${isOwnProfile ? 'lg:col-span-2' : 'lg:col-span-3'} neu-flat-base p-8 space-y-6`}>
                         <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--secondary)]/70 border-b border-[var(--secondary)]/10 pb-3 flex items-center gap-2">
                             <ShieldCheck size={16} /> Active Grid
@@ -193,9 +200,8 @@ export default async function NetworkPage({ params }: { params: Promise<{ id: st
                                 const isTargetReceiver = conn.requester_id === targetUserId;
 
                                 const actionControls = isOwnProfile ? (
-                                    <form action={updateConnectionStatus}>
+                                    <form action={deleteConnectionRow}>
                                         <input type="hidden" name="connectionId" value={conn.id} />
-                                        <input type="hidden" name="status" value="removed" />
                                         <button type="submit" title="Sever Connection" className="p-2 neu-btn text-[var(--secondary)]/40 hover:text-rose-500 rounded-lg">
                                             <UserMinus size={14} />
                                         </button>

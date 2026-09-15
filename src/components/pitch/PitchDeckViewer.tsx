@@ -53,12 +53,20 @@ export default async function PitchDeckViewer({ pitchId }: { pitchId: string }) 
     const isOwner = user?.id === pitchDeck.user_id;
     const isDealClosed = pitchDeck.status === "Accepted";
 
-    // 2. Track View
+    // 2. Track View (Safely wrapped with upsert to prevent duplicate view crashes)
     if (user && !isOwner) {
-        await supabase.from("pitch_deck_views").insert({
-            pitch_deck_id: pitchId,
-            viewer_id: user.id,
-        });
+        try {
+            await supabase.from("pitch_deck_views").upsert(
+                {
+                    pitch_deck_id: pitchId,
+                    viewer_id: user.id,
+                },
+                { onConflict: "pitch_deck_id,viewer_id", ignoreDuplicates: true }
+            );
+        } catch (err) {
+            // Non-blocking view tracking fallback
+            console.error("View tracking error:", err);
+        }
     }
 
     // 3. Aggregate Views & Ratings

@@ -170,84 +170,99 @@ export default function EmbeddedInvestorActions({
 
         setLoading(true);
 
-        // ---------------------------------------------------------
-        // CHECK FOR EXISTING NEGOTIATION
-        //
-        // Active negotiation:
-        //     Route investor back into the existing room.
-        //
-        // Withdrawn negotiation:
-        //     Both parties have withdrawn, therefore it no longer
-        //     blocks a fresh negotiation.
-        // ---------------------------------------------------------
-        const { data: existingDeal, error: existingDealError } =
-            await supabase
+        try {
+            // ---------------------------------------------------------
+            // CHECK FOR EXISTING NEGOTIATION
+            //
+            // Active negotiation:
+            //     Route investor back into the existing room.
+            //
+            // Withdrawn negotiation:
+            //     Both parties have withdrawn, therefore it no longer
+            //     blocks a fresh negotiation.
+            // ---------------------------------------------------------
+            const { data: existingDeal, error: existingDealError } =
+                await supabase
+                    .from("deal_negotiations")
+                    .select("id, status")
+                    .eq("pitch_deck_id", pitchId)
+                    .eq("investor_id", currentUserId)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+            if (existingDealError) {
+                console.error("Supabase Error (Fetch Deal):", existingDealError);
+                alert(`Error checking existing deal: ${existingDealError.message}`);
+                setLoading(false);
+                return;
+            }
+
+            // ---------------------------------------------------------
+            // ACTIVE NEGOTIATION
+            // ---------------------------------------------------------
+            if (
+                existingDeal &&
+                existingDeal.status !== "Withdrawn"
+            ) {
+                router.push(`/negotiations/${existingDeal.id}`);
+                setLoading(false);
+                return;
+            }
+
+            // ---------------------------------------------------------
+            // CREATE NEW NEGOTIATION
+            //
+            // IMPORTANT:
+            // "In Negotiations" is now the initial state.
+            //
+            // This does NOT affect:
+            // - Interested / Shortlisted
+            // - Rating
+            // - Bidding
+            // - Normal pitch creation
+            // ---------------------------------------------------------
+            const { data: newDeal, error } = await supabase
                 .from("deal_negotiations")
-                .select("id, status")
-                .eq("pitch_deck_id", pitchId)
-                .eq("investor_id", currentUserId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-        if (existingDealError) {
-            setLoading(false);
-            return;
-        }
-
-        // ---------------------------------------------------------
-        // ACTIVE NEGOTIATION
-        // ---------------------------------------------------------
-        if (
-            existingDeal &&
-            existingDeal.status !== "Withdrawn"
-        ) {
-            router.push(`/negotiations/${existingDeal.id}`);
-            return;
-        }
-
-        // ---------------------------------------------------------
-        // CREATE NEW NEGOTIATION
-        //
-        // IMPORTANT:
-        // "In Negotiations" is now the initial state.
-        //
-        // This does NOT affect:
-        // - Interested / Shortlisted
-        // - Rating
-        // - Bidding
-        // - Normal pitch creation
-        // ---------------------------------------------------------
-        const { data: newDeal, error } = await supabase
-            .from("deal_negotiations")
-            .insert({
-                startup_id: startupId,
-                investor_id: currentUserId,
-                pitch_deck_id: pitchId,
-
-                // Updated negotiation lifecycle status
-                status: "In Negotiations",
-            })
-            .select()
-            .single();
-
-        if (!error && newDeal) {
-
-            await supabase
-                .from("notifications")
                 .insert({
-                    user_id: startupId,
-                    actor_id: currentUserId,
-                    type: "negotiate",
-                    message:
-                        "opened a private negotiation room regarding your pitch.",
-                    reference_id: newDeal.id
-                });
+                    startup_id: startupId,
+                    investor_id: currentUserId,
+                    pitch_deck_id: pitchId,
 
-            router.push(`/negotiations/${newDeal.id}`);
+                    // Updated negotiation lifecycle status
+                    status: "In Negotiations",
+                })
+                .select()
+                .single();
 
-        } else {
+            if (error) {
+                console.error("Supabase Error (Create Deal):", error);
+                alert(`Failed to open negotiation room: ${error.message}`);
+                setLoading(false);
+                return;
+            }
 
+            if (newDeal) {
+
+                const { error: notifError } = await supabase
+                    .from("notifications")
+                    .insert({
+                        user_id: startupId,
+                        actor_id: currentUserId,
+                        type: "negotiate",
+                        message:
+                            "opened a private negotiation room regarding your pitch.",
+                        reference_id: newDeal.id
+                    });
+
+                if (notifError) console.warn("Notification failed:", notifError);
+
+                router.push(`/negotiations/${newDeal.id}`);
+                setLoading(false);
+            }
+        } catch (err) {
+            console.error("Unexpected error in handleNegotiate:", err);
+            alert("An unexpected error occurred.");
             setLoading(false);
         }
     };

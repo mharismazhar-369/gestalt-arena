@@ -1,13 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import React from "react";
 
 export default async function StartupLayout({
     children,
-    params,
 }: {
     children: React.ReactNode;
-    params?: Promise<{ id?: string }>;
 }) {
     const supabase = await createClient();
 
@@ -25,36 +24,29 @@ export default async function StartupLayout({
         .eq("id", user.id)
         .single();
 
-    // 1. Strict Server-Side Ban/Suspension Enforcement
+    // 1. Strict Server-Side Ban Enforcement
     if (profile?.presence_status === "banned" || profile?.presence_status === "suspended") {
         redirect("/warning");
     }
 
-    // 2. Allow Admins and Startups unconditionally
+    // 2. Allow Admins and Startups unconditional layout access
     if (profile?.role === "admin" || profile?.role === "startup") {
         return <>{children}</>;
     }
 
-    // 3. For Investors: Allow them through ONLY if they are viewing a valid pitch deck
-    if (profile?.role === "investor") {
-        // Resolve params safely if available in this layout segment
-        const resolvedParams = params ? await params : {};
-        const pitchId = resolvedParams.id;
+            // 3. Algorithmic Investor Access: Read path from Middleware headers
+            if (profile?.role === "investor") {
+        const headerList = await headers();
+            const currentPath = headerList.get("x-current-path") || "";
 
-        if (pitchId) {
-            // Check if the pitch deck actually exists in the database
-            const { data: deck } = await supabase
-                .from("pitch_decks")
-                .select("id")
-                .eq("id", pitchId)
-                .maybeSingle();
+            // Verify the Investor is strictly accessing a pitch deck view
+            const isPitchRoute = /\/startup\/[^/]+\/pitch/.test(currentPath);
 
-            if (deck) {
-                return <>{children}</>; // Valid pitch deck view for investor - let them through!
-            }
+            if (isPitchRoute) {
+            return <>{children}</>; 
         }
     }
 
-    // Default fallback: redirect unauthorized access back to dashboard
-    redirect("/dashboard");
+            // Default fallback: Redirect unauthorized role attempts to dashboard
+            redirect("/dashboard");
 }

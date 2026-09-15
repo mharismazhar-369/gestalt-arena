@@ -15,6 +15,21 @@ export async function sendConnectionRequest(receiverId: string) {
         throw new Error('You cannot send a connection request to yourself')
     }
 
+    // NEW: 1. Prevent Double-Clicks / Duplicate Connections
+    // Check if any connection (pending, accepted, etc.) already exists between these two users
+    const { data: existingConnection } = await supabase
+        .from('connections')
+        .select('id')
+        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`)
+        .maybeSingle()
+
+    // If a connection already exists, silently return success to avoid crashing, 
+    // but do not insert duplicates into the database or notifications.
+    if (existingConnection) {
+        return { success: true, message: 'Connection already exists' }
+    }
+
+    // 2. Safe to insert the new connection
     const { error: connError } = await supabase.from('connections').insert({
         requester_id: user.id,
         receiver_id: receiverId,
@@ -25,6 +40,7 @@ export async function sendConnectionRequest(receiverId: string) {
         throw new Error(`Connection request failed: ${connError.message}`)
     }
 
+    // 3. Safe to insert the single notification
     const { error: notifError } = await supabase.from('notifications').insert({
         user_id: receiverId,
         actor_id: user.id,
@@ -103,12 +119,23 @@ export async function respondToConnection(actorId: string, status: 'accepted' | 
 
     // 2. Notify the requester that their request was accepted
     if (status === 'accepted') {
-        await supabase.from('notifications').insert({
-            user_id: actorId,     // The person who originally sent the request
-            actor_id: user.id,    // You, accepting the request
-            type: 'connection_accepted',
-            message: 'accepted your connection request.'
-        })
+        // Prevent duplicate acceptance notifications if they click multiple times rapidly
+        const { data: existingNotif } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', actorId)
+            .eq('actor_id', user.id)
+            .eq('type', 'connection_accepted')
+            .maybeSingle();
+
+        if (!existingNotif) {
+            await supabase.from('notifications').insert({
+                user_id: actorId,     // The person who originally sent the request
+                actor_id: user.id,    // You, accepting the request
+                type: 'connection_accepted',
+                message: 'accepted your connection request.'
+            })
+        }
     }
 
     // 3. Delete the original pending notification so it clears from the dropdown

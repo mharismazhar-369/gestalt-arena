@@ -58,7 +58,7 @@ export default function FeatureCards() {
           Arena Features
         </h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-[var(--secondary)]/70 font-medium leading-relaxed">
-          Built to safely connect Entrepreneurs, Founders and Investors while keeping the platform simple, secure and transparent.
+          Built to connect Entrepreneurs, Founders and Investors while keeping the platform simple and transparent.
         </p>
       </motion.div>
 

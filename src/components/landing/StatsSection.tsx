@@ -208,7 +208,7 @@ export default function StatsSection() {
       <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center">
         <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Platform at a Glance</h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
-          Built for discovering and connecting opportunities & showcasing yourself. Browse freely, connect securely, and negotiate on your own terms.
+          Built for discovering and connecting opportunities & showcasing yourself. Browse freely, connect securely, and negotiate on your own terms. Growing Community
         </p>
       </motion.div>
 
@@ -245,10 +245,10 @@ export default function StatsSection() {
 
       {/* Dial Charts Grid */}
       <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
-        <DialChart title="Registered Investors" count={investorCount} target={1000} colorHex="#3b82f6" delay={0.1} />
-        <DialChart title="Startup Founders" count={startupCount} target={1000} colorHex="#8b5cf6" delay={0.2} />
-        <DialChart title="Global Reach (Countries)" count={countryCount} target={195} colorHex="#f59e0b" delay={0.3} />
-        <DialChart title="Total Visitors" count={visitorCount} target={10000} colorHex="#10b981" delay={0.4} />
+        <DialChart title="Registered Investors & Growing" count={investorCount} target={1000} colorHex="#3b82f6" delay={0.1} />
+        <DialChart title="Startup Founders & Growing" count={startupCount} target={1000} colorHex="#8b5cf6" delay={0.2} />
+        <DialChart title="Global Reach" count={countryCount} target={195} colorHex="#f59e0b" delay={0.3} />
+        <DialChart title="Visitors" count={visitorCount} target={10000} colorHex="#10b981" delay={0.4} />
       </div>
     </section>
   );

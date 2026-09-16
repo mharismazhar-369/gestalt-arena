@@ -2,7 +2,12 @@
 
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
-import { BriefcaseBusiness, ChevronRight, Zap, Sparkles } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  ChevronRight,
+  Zap,
+  Sparkles,
+} from "lucide-react";
 import Background from "./Background";
 
 const containerVariants: Variants = {
@@ -21,7 +26,10 @@ const itemVariants: Variants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
+    transition: {
+      duration: 0.5,
+      ease: "easeOut",
+    },
   },
 };
 
@@ -38,7 +46,7 @@ export default function Hero() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="relative z-10 p-6 sm:p-10 md:p-16 w-full max-w-5xl rounded-3xl bg-white/60 backdrop-blur-3xl border border-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] mx-auto"
+        className="relative z-10 p-6 sm:p-10 md:p-14 w-full max-w-5xl rounded-3xl bg-white/60 backdrop-blur-3xl border border-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] mx-auto"
       >
         <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
           <div className="absolute -inset-[100%] animate-[spin_20s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,rgba(192,132,252,0.1)_0%,rgba(52,211,153,0.1)_50%,rgba(192,132,252,0.1)_100%)] opacity-50" />
@@ -46,53 +54,142 @@ export default function Hero() {
         </div>
 
         <div className="relative z-20">
-          <motion.div variants={itemVariants} className="flex justify-center mb-6 md:mb-8">
+          {/* Welcome Badge */}
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center mb-5 md:mb-6"
+          >
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100/80 bg-white/90 px-4 py-2 md:px-6 md:py-2.5 shadow-sm transition-transform hover:scale-105 cursor-default max-w-full overflow-hidden">
-              <Sparkles size={16} className="text-amber-500 animate-pulse shrink-0" />
+              <Sparkles
+                size={16}
+                className="text-amber-500 animate-pulse shrink-0"
+              />
               <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-indigo-900 truncate">
                 Welcome to Gestalt Arena
               </span>
             </div>
           </motion.div>
 
+          {/* Main Heading */}
           <motion.h1
             variants={itemVariants}
-            className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-tight text-slate-900 tracking-tighter"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] text-slate-900 tracking-tighter"
           >
-            Where
-            <span className="relative whitespace-nowrap mx-2 md:mx-3">
-              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600 drop-shadow-sm">Capital</span>
-            </span>
-            Meets
-            <br className="hidden sm:block" />
-            <span className="relative whitespace-nowrap mt-2 sm:mt-0 inline-block">
-              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 drop-shadow-sm">Execution</span>
+            Where{" "}
+            <span className="relative whitespace-nowrap">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600 drop-shadow-sm">
+                Capital
+              </span>
+            </span>{" "}
+            Meets{" "}
+            <span className="relative whitespace-nowrap">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 drop-shadow-sm">
+                Execution
+              </span>
             </span>
           </motion.h1>
 
-          <motion.p
-            variants={itemVariants}
-            className="mt-6 md:mt-8 mx-auto max-w-2xl text-sm sm:text-base md:text-lg text-slate-600 font-medium leading-relaxed"
-          >
-            Discover. Evaluate. Connect. Negotiate.
-            A technology marketplace where founders showcase opportunities and investors discover, evaluate and connect with emerging ventures.
-          </motion.p>
-
+          {/* Core Action Statement */}
           <motion.div
             variants={itemVariants}
-            className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6"
+            className="mt-4 md:mt-5"
           >
-            <Link href="/register?role=investor" className="group relative inline-flex h-12 md:h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full bg-slate-900 px-6 md:px-8 font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-[0_10px_20px_rgba(15,23,42,0.15)] hover:shadow-[0_15px_30px_rgba(15,23,42,0.25)] border border-slate-800">
-              <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
+            <h2 className="text-base sm:text-lg md:text-xl font-bold text-slate-800 tracking-wide">
+              Discover. Evaluate. Connect. Negotiate.
+            </h2>
+          </motion.div>
+
+          {/* Main Positioning */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-5 md:mt-7 mx-auto max-w-3xl text-sm sm:text-base md:text-lg text-slate-600 font-medium leading-relaxed"
+          >
+            <p>
+              <span className="font-semibold text-slate-800">
+                The world doesn&apos;t need another place to scroll.
+              </span>{" "}
+              It needs a place where possibilities can find each other.
+            </p>
+
+            <p className="mt-3">
+              Gestalt Arena is a global arena for people with ideas, skills,
+              businesses, inventions, solutions, ambitions, and those looking
+              for them.
+            </p>
+
+            <p className="mt-3">
+              A doctor with an idea. An engineer solving a problem. An inventor
+              looking for a path forward. A business seeking expertise. A
+              researcher seeking collaboration. An entrepreneur building
+              something real. An investor looking for the next opportunity.
+            </p>
+
+            <p className="mt-3 font-semibold text-slate-700">
+              Bring what you have. Express what you need. Discover what you
+              didn&apos;t know you were looking for.
+            </p>
+
+            <p className="mt-3">
+              No endless feeds. No forced networking. No bidding wars. No
+              crowdfunding.
+            </p>
+
+            <p className="mt-3 font-semibold text-slate-800">
+              Just people, capabilities, opportunities and capital, brought
+              closer together by intelligent discovery and matching.
+            </p>
+          </motion.div>
+
+          {/* Brand Closing Statement */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-6 md:mt-8"
+          >
+            <p className="text-sm sm:text-base md:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
+              Where the world&apos;s possibilities meet.
+            </p>
+          </motion.div>
+
+          {/* CTA Buttons */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-7 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
+          >
+            <Link
+              href="/register?role=investor"
+              className="group relative inline-flex h-12 md:h-14 w-full sm:w-auto min-w-[220px] items-center justify-center overflow-hidden rounded-full bg-slate-900 px-6 md:px-8 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(15,23,42,0.22)] active:translate-y-0 active:scale-[0.98]"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-slate-800 via-slate-900 to-indigo-950 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
               <span className="relative flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
-                <BriefcaseBusiness size={18} /> Enter as Investor <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
+                <BriefcaseBusiness
+                  size={18}
+                  className="transition-transform duration-300 group-hover:scale-110"
+                />
+                Enter as Investor
+                <ChevronRight
+                  size={16}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
               </span>
             </Link>
 
-            <Link href="/register?role=startup" className="group relative inline-flex h-12 md:h-14 w-full sm:w-auto items-center justify-center overflow-hidden rounded-full bg-white px-6 md:px-8 font-bold text-indigo-600 transition-all hover:scale-105 active:scale-95 border border-indigo-200 shadow-[0_10px_20px_rgba(99,102,241,0.08)] hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] hover:border-indigo-300">
-              <span className="absolute inset-0 bg-indigo-50/50 transition-colors group-hover:bg-indigo-100/50" />
+            <Link
+              href="/register?role=startup"
+              className="group relative inline-flex h-12 md:h-14 w-full sm:w-auto min-w-[220px] items-center justify-center overflow-hidden rounded-full bg-white px-6 md:px-8 font-bold text-slate-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(15,23,42,0.15)] active:translate-y-0 active:scale-[0.98] border border-slate-200 hover:border-indigo-300"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-indigo-50 via-white to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
               <span className="relative flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
-                <Zap size={18} className="text-indigo-500" /> Enter As Startup
+                <Zap
+                  size={18}
+                  className="text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
+                />
+                Enter as Startup
+                <ChevronRight
+                  size={16}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
               </span>
             </Link>
           </motion.div>

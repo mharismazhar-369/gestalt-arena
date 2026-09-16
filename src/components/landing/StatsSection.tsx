@@ -67,44 +67,138 @@ export default function StatsSection() {
 
   useEffect(() => {
     async function recordVisit() {
-      if (!sessionStorage.getItem('has_visited')) {
-        const { error } = await supabase.from('site_visits').insert([{ user_agent: navigator.userAgent }]);
-        if (!error) sessionStorage.setItem('has_visited', 'true');
+      if (sessionStorage.getItem("has_visited")) return;
+
+      try {
+        let country = null;
+
+        try {
+          const geoResponse = await fetch("https://ipapi.co/json/");
+          if (geoResponse.ok) {
+            const geoData = await geoResponse.json();
+            country = geoData.country_name || null;
+          }
+        } catch {
+          // Country detection is optional.
+          // The visit itself should still be recorded.
+        }
+
+        const { error } = await supabase
+          .from("site_visits")
+          .insert([
+            {
+              user_agent: navigator.userAgent,
+              country,
+            },
+          ]);
+
+        if (!error) {
+          sessionStorage.setItem("has_visited", "true");
+        }
+      } catch (error) {
+        console.error("Failed to record visit:", error);
       }
     }
-    recordVisit();
 
     async function fetchPlatformStats() {
-      // Fetch extended financial metrics via RPC
-      const { data: statsData } = await supabase.rpc('get_platform_extended_stats');
-      if (statsData && statsData.length > 0) {
-        const row = statsData[0];
-        const raised = Number(row.total_capital_raised) || 0;
-        setLockedCapital(raised);
-        setFacilitatorFees(raised * 0.02);
-        setFundraisingRequests(Number(row.total_fundraising_requests) || 0);
-        setDeploymentMandates(Number(row.total_deployment_mandates) || 0);
-      }
+      try {
+        // ---------------------------------------------------------
+        // EXISTING FINANCIAL STATS
+        // ---------------------------------------------------------
+        const { data: statsData, error: statsError } = await supabase.rpc(
+          "get_platform_extended_stats"
+        );
 
-      // User Counts & Visits
-      const [investors, startups, visits] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'investor'),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'startup'),
-        supabase.from('site_visits').select('id', { count: 'exact', head: true })
-      ]);
+        if (statsError) {
+          console.error("Platform stats error:", statsError);
+        }
 
-      if (investors.count !== null) setInvestorCount(investors.count);
-      if (startups.count !== null) setStartupCount(startups.count);
-      if (visits.count !== null) setVisitorCount(visits.count);
+        if (statsData && statsData.length > 0) {
+          const row = statsData[0];
 
-      // Unique Countries Count
-      const { data: countryData } = await supabase.from('profiles').select('country').not('country', 'is', null);
-      if (countryData) {
-        const uniqueCountries = new Set(countryData.map(p => p.country));
-        setCountryCount(uniqueCountries.size);
+          const raised = Number(row.total_capital_raised) || 0;
+
+          setLockedCapital(raised);
+          setFacilitatorFees(raised * 0.02);
+          setFundraisingRequests(
+            Number(row.total_fundraising_requests) || 0
+          );
+          setDeploymentMandates(
+            Number(row.total_deployment_mandates) || 0
+          );
+        }
+
+        // ---------------------------------------------------------
+        // REGISTERED INVESTORS
+        // ---------------------------------------------------------
+        const { data: investorData, error: investorError } =
+          await supabase.rpc("get_registered_investor_count");
+
+        if (investorError) {
+          console.error("Investor count error:", investorError);
+        } else {
+          setInvestorCount(Number(investorData) || 0);
+        }
+
+        // ---------------------------------------------------------
+        // STARTUP FOUNDERS
+        // ---------------------------------------------------------
+        const { data: startupData, error: startupError } =
+          await supabase.rpc("get_registered_startup_count");
+
+        if (startupError) {
+          console.error("Startup count error:", startupError);
+        } else {
+          setStartupCount(Number(startupData) || 0);
+        }
+
+        // ---------------------------------------------------------
+        // TOTAL VISITORS
+        // ---------------------------------------------------------
+        const { count: visitsCount, error: visitsError } =
+          await supabase
+            .from("site_visits")
+            .select("id", {
+              count: "exact",
+              head: true,
+            });
+
+        if (visitsError) {
+          console.error("Visitor count error:", visitsError);
+        } else {
+          setVisitorCount(visitsCount || 0);
+        }
+
+        // ---------------------------------------------------------
+        // GLOBAL REACH
+        // Countries represented in site_visits
+        // ---------------------------------------------------------
+        const { data: countryData, error: countryError } =
+          await supabase
+            .from("site_visits")
+            .select("country")
+            .not("country", "is", null);
+
+        if (countryError) {
+          console.error("Country count error:", countryError);
+        } else if (countryData) {
+          const uniqueCountries = new Set(
+            countryData
+              .map((row) => row.country)
+              .filter(
+                (country): country is string =>
+                  typeof country === "string" && country.trim().length > 0
+              )
+          );
+
+          setCountryCount(uniqueCountries.size);
+        }
+      } catch (error) {
+        console.error("Failed to fetch platform statistics:", error);
       }
     }
 
+    recordVisit();
     fetchPlatformStats();
   }, []);
 

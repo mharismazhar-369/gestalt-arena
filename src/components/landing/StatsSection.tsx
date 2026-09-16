@@ -206,7 +206,7 @@ export default function StatsSection() {
     <section id="stats" className="relative z-10 mx-auto max-w-7xl px-6 py-28">
       <Background />
       <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center">
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Platform at a Glance</h2>
+        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Growing Platform at a Glance</h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 font-medium leading-relaxed">
           Built for discovering and connecting opportunities & showcasing yourself. Browse freely, connect securely, and negotiate on your own terms. Growing Community
         </p>

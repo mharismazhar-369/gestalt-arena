@@ -118,14 +118,12 @@ export default function Hero() {
             </p>
 
             <p className="mt-3">
-              A doctor with an idea. An engineer solving a problem. An inventor
-              looking for a path forward. A business seeking expertise. A
-              researcher seeking collaboration. An entrepreneur building
-              something real. An investor looking for the next opportunity.
+              A doctor, An engineer, An inventor looking for a path forward.
+              A business, A researcher, An entrepreneur, An investor looking for their next opportunity.
             </p>
 
             <p className="mt-3 font-semibold text-slate-700">
-              Bring what you have. Express what you need. Discover what you
+              Showcase what you have. Express what you need. Discover what you
               didn&apos;t know you were looking for.
             </p>
 
@@ -166,7 +164,7 @@ export default function Hero() {
                   size={18}
                   className="transition-transform duration-300 group-hover:scale-110"
                 />
-                Enter as Investor
+                Step in as an Investor
                 <ChevronRight
                   size={16}
                   className="transition-transform duration-300 group-hover:translate-x-1"
@@ -185,7 +183,7 @@ export default function Hero() {
                   size={18}
                   className="text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
                 />
-                Enter as Startup
+                Step in as a Startup
                 <ChevronRight
                   size={16}
                   className="transition-transform duration-300 group-hover:translate-x-1"

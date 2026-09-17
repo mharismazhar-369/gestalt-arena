@@ -108,33 +108,25 @@ export default function Hero() {
               <span className="font-semibold text-slate-800">
                 The world doesn&apos;t need another place to scroll.
               </span>{" "}
-              It needs a place where possibilities can find each other.
+              It needs a place where possibilities can find each other. Gestalt Arena
+              is a global arena for people with ideas, skills, businesses, inventions,
+              solutions, ambitions, and those looking for them. A doctor with an idea,
+              an engineer solving a problem, an inventor looking for a path forward, a
+              business seeking expertise, a researcher seeking collaboration, an
+              entrepreneur building something real, or an investor looking for their
+              next opportunity.
             </p>
 
             <p className="mt-3">
-              Gestalt Arena is a global arena for people with ideas, skills,
-              businesses, inventions, solutions, ambitions, and those looking
-              for them.
-            </p>
-
-            <p className="mt-3">
-              A doctor, An engineer, An inventor looking for a path forward.
-              A business, A researcher, An entrepreneur, An investor looking for their next opportunity.
-            </p>
-
-            <p className="mt-3 font-semibold text-slate-700">
-              Showcase what you have. Express what you need. Discover what you
-              didn&apos;t know you were looking for.
-            </p>
-
-            <p className="mt-3">
-              No endless feeds. No forced networking. No bidding wars. No
-              crowdfunding.
-            </p>
-
-            <p className="mt-3 font-semibold text-slate-800">
-              Just people, capabilities, opportunities and capital, brought
-              closer together by intelligent discovery and matching.
+              <span className="font-semibold text-slate-700">
+                Showcase what you have. Express what you need. Discover what you
+                didn&apos;t know you were looking for.
+              </span>{" "}
+              No endless feeds. No forced networking. No bidding wars. No crowdfunding.
+              <span className="font-semibold text-slate-800">
+                {" "}Just people, capabilities, opportunities and capital, brought closer
+                together by intelligent discovery and matching.
+              </span>
             </p>
           </motion.div>
 

@@ -177,7 +177,8 @@ export default function Navbar() {
           )}
         </nav>
 
-        <div className="hidden items-center gap-4 md:flex">
+        {/* FIXED: Changed md:flex to lg:flex to perfectly hand off from the mobile menu breakpoint */}
+        <div className="hidden items-center gap-4 lg:flex">
           {isMounted && (
             !loading && session ? (
               <div className="flex items-center gap-4">

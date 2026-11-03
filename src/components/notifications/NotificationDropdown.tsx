@@ -86,9 +86,11 @@ export default function NotificationDropdown() {
     }
   };
 
-  const getNotificationLink = (type: string, refId: string) => {
+  // FIXED: Accepts actorId to properly route non-document notifications (like follows and connections)
+  const getNotificationLink = (type: string, refId: string, actorId: string) => {
     switch (type) {
-      case "connection_accepted": return `/profile/${refId}`; // Route to their profile instead of /network
+      case "connection_accepted":
+      case "follow": return actorId ? `/profile/${actorId}` : "#"; // Routes to the specific user
       case "negotiate":
       case "deal_initiated": return refId ? `/negotiations/${refId}` : "#";
       case "rating":
@@ -206,8 +208,8 @@ export default function NotificationDropdown() {
                     );
                   }
 
-                  // Default routing link for all other notification types
-                  const routeUrl = getNotificationLink(notif.type, notif.reference_id);
+                  // FIXED: Passing actor_id as the third parameter to ensure profiles route correctly
+                  const routeUrl = getNotificationLink(notif.type, notif.reference_id, notif.actor_id);
                   return (
                     <Link
                       href={routeUrl}

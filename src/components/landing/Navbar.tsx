@@ -8,6 +8,7 @@ import BetaBadge from "@/components/shared/BetaBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import LogoutButton from "@/components/auth/LogoutButton";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
+import EncryptedChatPopup from "@/components/chat/EncryptedChatPopup";
 import { supabase } from "@/lib/supabase/client";
 import { Menu, X, Compass, Rocket, BookOpen, Tag, User, MessageSquare, ChevronDown, Store, Building, ShieldAlert } from "lucide-react";
 
@@ -17,7 +18,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
 
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false); // Controls the Matrix Button
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const { session, loading, status } = useAuth();
   const pathname = usePathname();
@@ -34,7 +35,7 @@ export default function Navbar() {
 
         if (data) {
           setUserRole(data.role);
-          setIsAdmin(data.is_admin || false); // Correctly sets state from DB
+          setIsAdmin(data.is_admin || false);
         }
       };
       fetchRole();
@@ -97,13 +98,13 @@ export default function Navbar() {
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-6"
+      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-6 pointer-events-none"
     >
       <div
         className={
           isGlassTheme
-            ? "mx-auto flex max-w-7xl items-center justify-between px-6 py-4 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] relative z-20"
-            : "neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4 relative z-20"
+            ? "mx-auto flex max-w-7xl items-center justify-between px-6 py-4 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] relative z-20 pointer-events-auto"
+            : "neu-flat-base mx-auto flex max-w-7xl items-center justify-between px-6 py-4 relative z-20 pointer-events-auto"
         }
       >
         <div className="flex items-center gap-4">
@@ -177,13 +178,10 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* FIXED: Changed md:flex to lg:flex to perfectly hand off from the mobile menu breakpoint */}
         <div className="hidden items-center gap-4 lg:flex">
           {isMounted && (
             !loading && session ? (
               <div className="flex items-center gap-4">
-
-                {/* MATRIX BUTTON - Now explicitly listens to isAdmin */}
                 {isAdmin && (
                   <Link
                     href="/admin/dashboard"
@@ -240,7 +238,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 overflow-y-auto max-h-[80vh] ${isGlassTheme ? "bg-white/95 backdrop-blur-xl border border-white/80" : "neu-flat-base border-t border-[var(--secondary)]/10"}`}
+            className={`absolute top-full left-4 right-4 mt-2 p-6 flex flex-col gap-4 rounded-3xl shadow-xl z-10 overflow-y-auto max-h-[80vh] pointer-events-auto ${isGlassTheme ? "bg-white/95 backdrop-blur-xl border border-white/80" : "neu-flat-base border-t border-[var(--secondary)]/10"}`}
           >
             {menuGroups.map((group) => (
               <div key={group.label} className="flex flex-col gap-2">
@@ -269,7 +267,6 @@ export default function Navbar() {
               {isMounted && (
                 !loading && session ? (
                   <>
-                    {/* MATRIX BUTTON MOBILE - Now explicitly listens to isAdmin */}
                     {isAdmin && (
                       <Link href="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 text-sm font-bold p-2 transition-colors rounded-lg ${isGlassTheme ? "text-rose-600 hover:bg-rose-50" : "text-rose-500 hover:bg-rose-500/10"}`}>
                         <ShieldAlert size={16} /><span>Enter Matrix</span>
@@ -297,6 +294,11 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* GLOBAL INBOX MOUNT: Rendered once, purely for authenticated users. Will float globally at bottom right. */}
+      {isMounted && !loading && session?.user && (
+        <EncryptedChatPopup currentUserId={session.user.id} />
+      )}
     </motion.header>
   );
 }

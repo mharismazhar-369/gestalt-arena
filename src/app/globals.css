@@ -48,6 +48,27 @@
     --shadow-dark: #e6e6e6;
   }
 
+  /* Theme: Cyberpunk Edge */
+  [data-theme="cyberpunk"] {
+    --primary: #05050a;
+    --secondary: #f0abfc;
+    --accent: #06b6d4;
+  }
+
+  /* Theme: Synthwave Neo */
+  [data-theme="synthwave"] {
+    --primary: #0f0728;
+    --secondary: #e879f9;
+    --accent: #a855f7;
+  }
+
+  /* Theme: Arctic Aurora */
+  [data-theme="aurora"] {
+    --primary: #022b2f;
+    --secondary: #99f6e4;
+    --accent: #2dd4bf;
+  }
+
   html,
   body {
     width: 100%;

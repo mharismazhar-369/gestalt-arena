@@ -73,12 +73,14 @@ export default function SocialFeed() {
     }
   }, [authLoading, session, fetchPosts]);
 
-  const handlePostCreated = async (newContent: string) => {
+  // FIXED: Now accepts mediaUrl and saves it to the database
+  const handlePostCreated = async (newContent: string, mediaUrl?: string) => {
     if (!session?.user) return;
 
     const { error } = await supabase.from("posts").insert({
       author_id: session.user.id,
       content: newContent,
+      media_url: mediaUrl, // Pushes the Supabase Storage URL to the row
     }).select();
 
     if (!error) {
@@ -112,7 +114,8 @@ export default function SocialFeed() {
             authorRole: post.author?.role === "investor" ? "Investor" : "Startup Founder",
             tier: post.author?.tier || "freemium",
             timestamp: new Date(post.created_at).toLocaleDateString(),
-            content: formatPostText(post.content), // Passes formatted clickable hashtags
+            content: formatPostText(post.content),
+            mediaUrl: post.media_url, // Extracts the image URL for the card
             likesCount: post.likes?.length || 0,
             dislikesCount: post.dislikes?.length || 0,
             repostsCount: 0,

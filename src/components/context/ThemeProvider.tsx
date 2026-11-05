@@ -2,7 +2,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "secure" | "innovator" | "integrator" | "holistic" | "humanistic";
+export type Theme =
+    | "secure"
+    | "innovator"
+    | "integrator"
+    | "holistic"
+    | "humanistic"
+    | "cyberpunk"
+    | "synthwave"
+    | "aurora";
 
 interface ThemeContextType {
     theme: Theme;

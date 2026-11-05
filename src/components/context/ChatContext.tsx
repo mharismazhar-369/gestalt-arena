@@ -33,6 +33,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     recipientId={activeChat.id}
                     recipientName={activeChat.name}
                     recipientInitials={activeChat.initials}
+                    onClose={() => setActiveChat(null)}
                 />
             )}
         </ChatContext.Provider>

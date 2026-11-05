@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { toggleLike, toggleDislike, toggleBookmark, createNotification } from "@/lib/api";
 import CommentBox from "./CommentBox";
+import React from "react";
 
 const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
   console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
@@ -19,7 +20,8 @@ export interface Post {
   authorAvatar?: string;
   tier: "freemium" | "gold" | "platinum";
   timestamp: string;
-  content: string;
+  content: React.ReactNode | string; // Updated to support formatted text array
+  mediaUrl?: string; // FIXED: Added mediaUrl to interface
   likesCount: number;
   dislikesCount: number;
   repostsCount: number;
@@ -63,7 +65,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     try {
       const shareData = {
         title: "Check out this post on Gestalt ARENA",
-        text: post.content,
+        text: typeof post.content === 'string' ? post.content : "View post on Arena",
         url: `${window.location.origin}/post/${post.id}`,
       };
       if (navigator.share) {
@@ -87,11 +89,14 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     }
 
     try {
-      const reshareContent = `🔄 **Reshared from ${post.authorName}:**\n\n${post.content}`;
+      // Basic text extraction if it's formatted
+      const rawContent = dbPost.content || "reshared a post";
+      const reshareContent = `🔄 **Reshared from ${post.authorName}:**\n\n${rawContent}`;
 
       const { error } = await supabase.from("posts").insert({
         author_id: currentUserId,
         content: reshareContent,
+        media_url: post.mediaUrl || null // Carry over media if present
       });
 
       if (error) throw error;
@@ -115,7 +120,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     }
   };
 
-  // RENAMED to avoid clashing with imported toggleLike
   const handleToggleLike = async () => {
     if (!currentUserId || !dbPost) return;
 
@@ -147,7 +151,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (onUpdate) onUpdate();
   };
 
-  // RENAMED to avoid clashing with imported toggleDislike
   const handleToggleDislike = async () => {
     if (!currentUserId || !dbPost) return;
 
@@ -169,7 +172,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     if (onUpdate) onUpdate();
   };
 
-  // RENAMED to avoid clashing with imported toggleBookmark
   const handleToggleBookmark = async () => {
     if (!currentUserId || !dbPost) return;
     if (bookmarked) {
@@ -184,7 +186,6 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   const handleDeletePost = async () => {
     if (!currentUserId || !dbPost) return;
 
-    // Client-side ownership check
     if (dbPost.author_id !== currentUserId) {
       setErrorMsg("You can only delete your own posts.");
       setTimeout(() => setErrorMsg(""), 3000);
@@ -286,6 +287,18 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       </div>
 
       <p className="text-sm text-[var(--secondary)]/90 leading-relaxed whitespace-pre-line font-medium">{post.content}</p>
+
+      {/* FIXED: Media Rendering Block */}
+      {post.mediaUrl && (
+        <div className="mt-3 rounded-2xl overflow-hidden border border-[var(--secondary)]/10 shadow-sm">
+          <img
+            src={post.mediaUrl}
+            alt="Attached to post"
+            className="w-full h-auto max-h-[450px] object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
 
       {post.tags && post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">

@@ -11,7 +11,7 @@ import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
 import {
   Rocket, Compass, BookOpen, ShieldCheck, User, Sparkles,
   Folder, FileText, Radio, Presentation, Settings, MapPin,
-  DollarSign, Building2, Briefcase, Plus, Eye, Edit3, Handshake, MessageSquare, ChevronDown, Store
+  DollarSign, Building2, Briefcase, Plus, Eye, Edit3, Handshake, MessageSquare, ChevronDown, Store, Target, CheckCircle2
 } from "lucide-react";
 import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
 
@@ -40,6 +40,11 @@ export default async function StartupDashboardPage() {
   const { data: startupProfile } = await supabase.from("startup_profiles").select("*").eq("profile_id", user.id).single();
   const { data: pitchDecks } = await supabase.from("pitch_decks").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
   const { data: posts } = await supabase.from("posts").select("id, content, created_at").eq("author_id", user.id).order("created_at", { ascending: false }).limit(10);
+
+  // Fetch AI Matchmaking Investor Results via PostgreSQL RPC Function
+  const { data: matchedInvestors } = await supabase.rpc('match_investors_for_startup', {
+    p_startup_id: user.id
+  });
 
   // Fetch ALL Active Deal Negotiations
   const { data: activeDeals } = await supabase
@@ -185,7 +190,51 @@ export default async function StartupDashboardPage() {
           </div>
 
           {/* CENTER COLUMN: Unified Pitch Portfolio & Deal Pipelines */}
-          <div className="lg:col-span-6 flex flex-col">
+          <div className="lg:col-span-6 flex flex-col gap-8">
+
+            {/* AI Matchmaking Results Panel */}
+            <div className="neu-flat-base p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
+                <Target size={120} />
+              </div>
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 relative z-10 mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-[var(--secondary)] flex items-center gap-2">
+                    <Target size={20} className="text-[var(--accent)]" /> AI-Curated Investor Matches
+                  </h2>
+                  <p className="text-xs text-[var(--secondary)]/70 mt-1 font-medium">Top investors matched to your company metrics and sector preferences.</p>
+                </div>
+              </div>
+
+              <div className="relative z-10 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {!matchedInvestors || matchedInvestors.length === 0 ? (
+                  <div className="neu-pressed-base flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-xs text-[var(--secondary)]/60 font-medium">No matching investor profiles found yet. Complete your settings parameters to calibrate matches.</p>
+                  </div>
+                ) : (
+                  matchedInvestors.map((inv: any) => (
+                    <div key={inv.investor_id} className="neu-pressed-base p-4 rounded-2xl flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-[var(--secondary)]">{inv.company_name || inv.nickname || "Verified Investor"}</h3>
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent)]/10 text-[var(--accent)]">
+                            {inv.match_score}% Match
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--secondary)]/60 font-medium flex items-center gap-1">
+                          <CheckCircle2 size={12} className="text-emerald-500" /> Lead Investment: {inv.match_reasons?.willing_to_lead ? "Yes" : "Flexible"} • Risk: {inv.match_reasons?.risk_tolerance || "Balanced"}
+                        </p>
+                      </div>
+                      <Link href={`/browse/investors`} className="neu-btn px-3 py-2 text-xs shrink-0">
+                        View Profile
+                      </Link>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Pitch Decks & Deal Pipelines */}
             <div className="neu-flat-base p-8 relative overflow-hidden flex-1">
               <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
                 <Presentation size={120} />
@@ -466,8 +515,8 @@ export default async function StartupDashboardPage() {
                   <div key={ad.id} className="neu-pressed-base border-transparent shadow-inner rounded-xl p-4 flex flex-col gap-2 transition-all hover:bg-[var(--secondary)]/5">
                     <div className="flex justify-between items-start mb-1">
                       <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${ad.status === 'active' ? 'bg-emerald-600/20 text-emerald-600' :
-                          ad.status === 'pending_approval' ? 'bg-amber-600/20 text-amber-600' :
-                            'bg-blue-600/20 text-blue-600'
+                        ad.status === 'pending_approval' ? 'bg-amber-600/20 text-amber-600' :
+                          'bg-blue-600/20 text-blue-600'
                         }`}>
                         {ad.status.replace('_', ' ')}
                       </span>

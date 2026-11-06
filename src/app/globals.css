@@ -50,23 +50,29 @@
 
   /* Theme: Cyberpunk Edge */
   [data-theme="cyberpunk"] {
-    --primary: #05050a;
+    --primary: #09090f;
     --secondary: #f0abfc;
     --accent: #06b6d4;
+    --shadow-light: #12121c;
+    --shadow-dark: #020205;
   }
 
   /* Theme: Synthwave Neo */
   [data-theme="synthwave"] {
-    --primary: #0f0728;
+    --primary: #120826;
     --secondary: #e879f9;
     --accent: #a855f7;
+    --shadow-light: #1a0c36;
+    --shadow-dark: #080316;
   }
 
   /* Theme: Arctic Aurora */
   [data-theme="aurora"] {
-    --primary: #022b2f;
+    --primary: #032226;
     --secondary: #99f6e4;
     --accent: #2dd4bf;
+    --shadow-light: #043237;
+    --shadow-dark: #011214;
   }
 
   html,

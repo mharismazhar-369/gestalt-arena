@@ -48,7 +48,7 @@ export default function PublicProfilePage() {
     if (!profileId) return;
 
     async function fetchProfileData() {
-      // 1. Fetch Core Profile
+      // 1. Fetch Core Profile from public.profiles
       const { data: coreData } = await supabase
         .from("profiles")
         .select("*")
@@ -83,12 +83,12 @@ export default function PublicProfilePage() {
         setClosedDealsCount(dealCount || 0);
       }
 
-      // 3. Fetch Stats: Posts, Articles, and Recent Feed
-      const { count: postCount } = await supabase.from("posts").select("*", { count: "exact", head: true }).eq("author_id", profileId);
+      // 3. Fetch Live Backend Stats: Posts from public.posts using author_id
+      const { count: postCount } = await supabase
+        .from("posts")
+        .select("*", { count: "exact", head: true })
+        .eq("author_id", profileId);
       setTotalPostCount(postCount || 0);
-
-      const { count: articleCount } = await supabase.from("research_articles").select("*", { count: "exact", head: true }).eq("author_id", profileId);
-      setTotalArticleCount(articleCount || 0);
 
       const { data: postsData } = await supabase
         .from("posts")
@@ -98,7 +98,14 @@ export default function PublicProfilePage() {
         .limit(3);
       if (postsData) setRecentPosts(postsData);
 
-      // 4. Fetch Network Connections & Status
+      // 4. Fetch Live Backend Stats: Articles from public.articles using author_id
+      const { count: articleCount } = await supabase
+        .from("articles")
+        .select("*", { count: "exact", head: true })
+        .eq("author_id", profileId);
+      setTotalArticleCount(articleCount || 0);
+
+      // 5. Fetch Network Connections & Status
       const { count: connCount } = await supabase.from("connections").select("*", { count: "exact", head: true }).or(`requester_id.eq.${profileId},receiver_id.eq.${profileId}`).eq("status", "accepted");
       setConnectionCount(connCount || 0);
 
@@ -142,11 +149,11 @@ export default function PublicProfilePage() {
   const renderDynamicBadges = () => {
     return (
       <div className="flex gap-2">
-        {totalPostCount >= 1000 ? (
+        {totalPostCount >= 10 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-amber-500 shadow-inner"><ShieldCheck size={12} /> Gold Elite</span>
-        ) : totalPostCount >= 500 ? (
+        ) : totalPostCount >= 5 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-slate-400 shadow-inner"><ShieldCheck size={12} /> Silver Pro</span>
-        ) : totalPostCount >= 100 ? (
+        ) : totalPostCount >= 1 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-amber-700 shadow-inner"><ShieldCheck size={12} /> Bronze Active</span>
         ) : null}
 

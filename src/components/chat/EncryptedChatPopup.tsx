@@ -33,17 +33,47 @@ export default function EncryptedChatPopup({
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [isUploading, setIsUploading] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeConvIdRef = useRef<string | null>(null);
+  const isOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // 1. Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, view]);
 
-  // 2. Fetch Inbox 
+  // 2. Fetch Inbox & Check for existing unread messages on mount
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const checkExistingUnread = async () => {
+      const { data: convs } = await supabase
+        .from("conversations")
+        .select('id')
+        .or(`initiator_id.eq.${currentUserId},recipient_id.eq.${currentUserId}`);
+
+      if (convs && convs.length > 0) {
+        const convIds = convs.map(c => c.id);
+        const { count } = await supabase
+          .from("messages")
+          .select('id', { count: 'exact', head: true })
+          .in('conversation_id', convIds)
+          .neq('sender_id', currentUserId)
+          .is('read_at', null);
+
+        if (count && count > 0) setHasUnread(true);
+      }
+    };
+    checkExistingUnread();
+  }, [currentUserId]);
+
   const fetchInbox = async () => {
     if (!currentUserId) return;
     const { data: convData } = await supabase
@@ -135,7 +165,7 @@ export default function EncryptedChatPopup({
     }
   };
 
-  // 4. Realtime Listener (UPDATED WITH LIVE-READ LOGIC)
+  // 4. Realtime Listener
   useEffect(() => {
     if (!currentUserId) return;
     const channel = supabase
@@ -144,13 +174,19 @@ export default function EncryptedChatPopup({
         if (payload.eventType === 'INSERT') {
           const newMsg = { ...payload.new };
 
+          // Trigger Blinking Dot if message is from someone else AND (popup is closed OR viewing a different chat)
+          if (newMsg.sender_id !== currentUserId) {
+            if (!isOpenRef.current || activeConvIdRef.current !== newMsg.conversation_id) {
+              setHasUnread(true);
+            }
+          }
+
           if (activeConvIdRef.current && newMsg?.conversation_id === activeConvIdRef.current) {
 
             // LIVE READ: If chat is actively open, instantly mark new incoming messages as read
-            if (newMsg.sender_id !== currentUserId) {
+            if (newMsg.sender_id !== currentUserId && isOpenRef.current) {
               const now = new Date().toISOString();
               newMsg.read_at = now;
-              // Push the read receipt to the database to broadcast to the sender
               await supabase.from("messages").update({ read_at: now }).eq('id', newMsg.id);
             }
 
@@ -464,9 +500,23 @@ export default function EncryptedChatPopup({
         )}
       </AnimatePresence>
 
+      {/* FLOATING ACTION BUTTON WITH UNREAD BLINKING DOT */}
       {!isOpen && (
-        <button onClick={() => setIsOpen(true)} className="fixed bottom-6 right-6 flex items-center justify-center h-14 w-14 rounded-full neu-flat-base text-[var(--accent)] shadow-2xl transition-all hover:scale-105 z-[100] border border-[var(--secondary)]/10">
+        <button
+          onClick={() => {
+            setIsOpen(true);
+            setHasUnread(false);
+          }}
+          className="fixed bottom-6 right-6 flex items-center justify-center h-14 w-14 rounded-full neu-flat-base text-[var(--accent)] shadow-2xl transition-all hover:scale-105 z-[100] border border-[var(--secondary)]/10 relative"
+        >
           <MessageSquare size={24} />
+
+          {hasUnread && (
+            <span className="absolute top-0 right-0 flex h-3.5 w-3.5 -mt-0.5 -mr-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[var(--accent)] border-2 border-[var(--primary)]"></span>
+            </span>
+          )}
         </button>
       )}
     </div>

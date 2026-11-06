@@ -43,7 +43,7 @@ export default function EncryptedChatPopup({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, view]);
 
-  // 2. Fetch Inbox (All user conversations)
+  // 2. Fetch Inbox 
   const fetchInbox = async () => {
     if (!currentUserId) return;
     const { data: convData } = await supabase
@@ -135,15 +135,26 @@ export default function EncryptedChatPopup({
     }
   };
 
-  // 4. Realtime Listener
+  // 4. Realtime Listener (UPDATED WITH LIVE-READ LOGIC)
   useEffect(() => {
     if (!currentUserId) return;
     const channel = supabase
       .channel(`chat-hub-${currentUserId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload: any) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, async (payload: any) => {
         if (payload.eventType === 'INSERT') {
-          if (activeConvIdRef.current && payload.new?.conversation_id === activeConvIdRef.current) {
-            setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
+          const newMsg = { ...payload.new };
+
+          if (activeConvIdRef.current && newMsg?.conversation_id === activeConvIdRef.current) {
+
+            // LIVE READ: If chat is actively open, instantly mark new incoming messages as read
+            if (newMsg.sender_id !== currentUserId) {
+              const now = new Date().toISOString();
+              newMsg.read_at = now;
+              // Push the read receipt to the database to broadcast to the sender
+              await supabase.from("messages").update({ read_at: now }).eq('id', newMsg.id);
+            }
+
+            setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
           }
         } else if (payload.eventType === 'UPDATE') {
           if (activeConvIdRef.current && payload.new?.conversation_id === activeConvIdRef.current) {
@@ -239,22 +250,19 @@ export default function EncryptedChatPopup({
     return (Date.now() - new Date(msg.created_at).getTime()) < 10 * 60 * 1000;
   };
 
-  // 7. Nudge Feature (Now creates an in-chat message)
+  // 7. Nudge Feature
   const handleNudge = async () => {
     if (!activeConv) return;
 
-    // Hardware Vibration
     if (typeof window !== "undefined" && typeof navigator !== "undefined" && 'vibrate' in navigator) {
       try { navigator.vibrate([200, 100, 200]); } catch (e) { }
     }
 
-    // Sound playback
     try {
       const audio = new Audio('/nudge.mp3');
       audio.play().catch(() => { });
     } catch (e) { }
 
-    // CREATE IN-CHAT NUDGE MESSAGE
     const { data: nudgeMsg } = await supabase.from("messages").insert([{
       conversation_id: activeConv.id,
       sender_id: currentUserId,
@@ -265,7 +273,6 @@ export default function EncryptedChatPopup({
       setMessages(prev => prev.some(m => m.id === nudgeMsg.id) ? prev : [...prev, nudgeMsg]);
     }
 
-    // Top Bar Notification
     const otherUserId = activeConv.initiator?.id === currentUserId ? activeConv.recipient?.id : activeConv.initiator?.id;
     if (otherUserId) {
       await supabase.from("notifications").insert({
@@ -373,7 +380,6 @@ export default function EncryptedChatPopup({
                       return (
                         <div key={msg.id} className={`flex flex-col group ${isMe ? "items-end" : "items-start"}`}>
 
-                          {/* DYNAMIC MESSAGE BUBBLE RENDERING */}
                           <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm relative ${isNudge
                               ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-black italic shadow-inner"
                               : isMe
@@ -381,7 +387,6 @@ export default function EncryptedChatPopup({
                                 : "neu-flat-base border border-[var(--secondary)]/5 shadow-none text-[var(--secondary)] rounded-bl-none"
                             }`}>
 
-                            {/* Media Attachment Renderer */}
                             {msg.attachment_url && (
                               <div className="mb-2 mt-1 rounded-lg overflow-hidden border border-[var(--primary)]/20 bg-black/20">
                                 {msg.attachment_url.match(/\.(jpeg|jpg|gif|png|webp)/i) ? (
@@ -396,7 +401,6 @@ export default function EncryptedChatPopup({
 
                             <span className={isNudge ? "" : "font-medium"}>{msg.content}</span>
 
-                            {/* Floating Edit/Delete */}
                             {isMe && isModifiable && !isNudge && (
                               <div className="absolute -left-16 top-0 flex items-center gap-1 bg-[var(--primary)] border border-[var(--secondary)]/10 shadow-sm rounded-lg p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => startEdit(msg)} className="p-1.5 text-[var(--secondary)]/50 hover:text-[var(--accent)] transition"><Edit2 size={12} /></button>
@@ -405,7 +409,6 @@ export default function EncryptedChatPopup({
                             )}
                           </div>
 
-                          {/* TIMESTAMP & EXPLICIT READ RECEIPTS */}
                           <div className={`text-[9px] mt-1.5 px-1 flex items-center gap-1 font-bold ${isMe ? 'text-[var(--secondary)]/50' : 'text-[var(--secondary)]/50'}`}>
                             {msg.is_edited && <span className="italic mr-1">(edited)</span>}
                             {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -439,7 +442,6 @@ export default function EncryptedChatPopup({
                     <form onSubmit={handleSend} className="flex items-end gap-2">
                       <div className="flex-1 neu-pressed-base border border-[var(--secondary)]/5 p-1 flex items-center focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all">
 
-                        {/* File Upload Trigger */}
                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc" />
                         <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="p-2.5 text-[var(--secondary)]/50 hover:text-[var(--accent)] transition disabled:opacity-50">
                           {isUploading ? <Loader2 size={18} className="animate-spin text-[var(--accent)]" /> : <Paperclip size={18} />}

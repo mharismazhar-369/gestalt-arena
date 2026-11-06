@@ -221,7 +221,27 @@ export default function GlobalPreferencesPage() {
     fetchSettings();
   }, [session]);
 
-  // Username Checker
+  // High-Speed Username Checker using DB RPC
+  const checkHandle = async (inputHandle: string, currentUserId: string) => {
+    const cleanHandle = inputHandle.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+    const { data: isTaken, error } = await supabase.rpc('check_username_availability', {
+      p_username: cleanHandle,
+      p_user_id: currentUserId
+    });
+
+    if (error) {
+      console.error("Error checking handle:", error);
+      return;
+    }
+
+    if (isTaken) {
+      setUsernameStatus('taken');
+    } else {
+      setUsernameStatus('available');
+    }
+  };
+
   useEffect(() => {
     if (!profile.username || profile.username.length < 3) {
       setUsernameStatus('idle');
@@ -231,13 +251,14 @@ export default function GlobalPreferencesPage() {
       setUsernameStatus('available');
       return;
     }
-    const checkAvailability = async () => {
-      setUsernameStatus('checking');
-      const { data } = await supabase.from("profiles").select("id").eq("username", profile.username).maybeSingle();
-      if (data && data.id !== session?.user?.id) setUsernameStatus('taken');
-      else setUsernameStatus('available');
-    };
-    const timeoutId = setTimeout(checkAvailability, 500);
+
+    setUsernameStatus('checking');
+    const timeoutId = setTimeout(() => {
+      if (session?.user?.id) {
+        checkHandle(profile.username, session.user.id);
+      }
+    }, 300);
+
     return () => clearTimeout(timeoutId);
   }, [profile.username, initialUsername, session?.user?.id]);
 
@@ -288,7 +309,7 @@ export default function GlobalPreferencesPage() {
 
     } catch (err: any) {
       setMessage({ type: "error", text: err?.message || "Failed to save settings." });
-      setSaving(false); // Only toggle false if it fails, otherwise let it navigate while "Syncing..."
+      setSaving(false);
     }
   };
 

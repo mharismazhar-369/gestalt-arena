@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import ArticlePublishModal from "@/components/research/ArticlePublishModal";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import { BookOpen, Plus, Search, Calendar, User, ArrowUpRight, FileText } from "lucide-react";
@@ -29,52 +29,46 @@ export interface Article {
 }
 
 export default function ResearchPage() {
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const [loading, setLoading] = useState(true);
 
-  const categories = ["All", "Market Analysis", "Deep Tech", "VC Trends", "Web3 Infrastructure", "AI & Automation"];
-
-  const fetchArticles = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("articles")
-      .select(`
-        *,
-        author:profiles(nickname, company_name, role, tier)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (data && !error) {
-      setArticles(data);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchArticles();
-  }, []);
+    async function fetchInitialData() {
+      setLoading(true);
 
-  const handleArticlePublished = async (newArticleData: { title: string; category: string; summary: string; content: string }) => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+      // 1. Fetch Dynamic Categories from Database
+      const { data: catData } = await supabase
+        .from("platform_categories")
+        .select("label");
 
-    const { error } = await supabase.from("articles").insert({
-      author_id: userData.user.id,
-      title: newArticleData.title,
-      category: newArticleData.category,
-      summary: newArticleData.summary || newArticleData.content.slice(0, 150) + "...",
-      content: newArticleData.content,
-      read_time: `${Math.max(1, Math.ceil(newArticleData.content.length / 1000))} min read`
-    });
+      if (catData && catData.length > 0) {
+        setCategories(["All", ...catData.map(c => c.label)]);
+      } else {
+        // Fallback categories if table is empty
+        setCategories(["All", "Artificial Intelligence", "Fintech & Web3", "B2B SaaS & Cloud", "Deep Tech & Hardware", "Market Research & Macro"]);
+      }
 
-    if (!error) {
-      setIsPublishModalOpen(false);
-      fetchArticles();
+      // 2. Fetch Articles
+      const { data: artData, error } = await supabase
+        .from("articles")
+        .select(`
+          *,
+          author:profiles(nickname, company_name, role, tier)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (artData && !error) {
+        setArticles(artData);
+      }
+      setLoading(false);
     }
-  };
+
+    fetchInitialData();
+  }, []);
 
   const filteredArticles = articles.filter((art) => {
     const authorDisplayName = art.author?.nickname || art.author?.company_name || "";
@@ -120,15 +114,15 @@ export default function ResearchPage() {
           <div className="flex items-center gap-3">
             <BetaBadge variant="pill" className="hidden sm:inline-flex" />
             <button
-              onClick={() => setIsPublishModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 text-xs neu-btn shadow-lg"
+              onClick={() => router.push("/research/publish")}
+              className="flex items-center gap-2 px-6 py-3 text-xs neu-btn shadow-lg bg-[var(--accent)] text-[var(--primary)] font-bold hover:scale-105 transition"
             >
               <Plus size={16} /> Publish Article
             </button>
           </div>
         </div>
 
-        {/* Search & Category Filter Header */}
+        {/* Search & Dynamic Database Category Filter Header */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between neu-flat-base p-2 border-transparent">
           <div className="relative w-full md:w-96">
             <Search size={16} className="absolute left-4 top-3.5 text-[var(--secondary)]/50" />
@@ -166,11 +160,11 @@ export default function ResearchPage() {
             <div className="space-y-2 max-w-md">
               <h3 className="text-2xl font-bold text-[var(--secondary)]">No Research Published Yet</h3>
               <p className="text-[var(--secondary)]/70 text-sm leading-relaxed font-medium">
-                The library is currently empty. Be the first to share your LinkedIn articles, industry thesis, or market analysis with the Gestalt Arena network.
+                The library is currently empty. Be the first to share your industry thesis or market analysis with the Gestalt Arena network.
               </p>
             </div>
             <button
-              onClick={() => setIsPublishModalOpen(true)}
+              onClick={() => router.push("/research/publish")}
               className="flex items-center gap-2 px-6 py-3 text-sm neu-btn"
             >
               <Plus size={16} /> Publish First Article
@@ -243,7 +237,7 @@ export default function ResearchPage() {
                       {article.category}
                     </span>
                     <span className="text-[10px] font-bold text-[var(--secondary)]/60 bg-transparent border border-[var(--secondary)]/10 px-2 py-1 rounded-md">
-                      {article.read_time}
+                      {article.read_time || "5 min read"}
                     </span>
                   </div>
 
@@ -286,12 +280,6 @@ export default function ResearchPage() {
         )}
 
       </main>
-
-      <ArticlePublishModal
-        isOpen={isPublishModalOpen}
-        onClose={() => setIsPublishModalOpen(false)}
-        onArticlePublished={handleArticlePublished}
-      />
 
       <Footer />
     </div>

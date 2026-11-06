@@ -10,11 +10,6 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BookOpen, Calendar, ArrowLeft, Clock, FileText, ThumbsUp, ThumbsDown, Share2, Trash2, CheckCircle2 } from "lucide-react";
 
-
-type Props = {
-    params: { id: string }
-};
-
 export default function ArticleClient({ articleId }: { articleId: string }) {
     const router = useRouter();
     const { session } = useAuth();
@@ -33,7 +28,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
         if (!articleId) return;
 
         async function fetchData() {
-            // 1. Fetch Article
+            // 1. Fetch Article with author profile relation
             const { data: articleData, error: articleError } = await supabase
                 .from("articles")
                 .select(`*, author:profiles(id, nickname, company_name, role, tier)`)
@@ -59,8 +54,8 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
             // 3. Fetch Current User's Action (if logged in)
             if (session?.user?.id) {
                 const [{ data: userLike }, { data: userDislike }] = await Promise.all([
-                    supabase.from("article_likes").select("id").eq("article_id", articleId).eq("user_id", session.user.id).single(),
-                    supabase.from("article_dislikes").select("id").eq("article_id", articleId).eq("user_id", session.user.id).single()
+                    supabase.from("article_likes").select("id").eq("article_id", articleId).eq("user_id", session.user.id).maybeSingle(),
+                    supabase.from("article_dislikes").select("id").eq("article_id", articleId).eq("user_id", session.user.id).maybeSingle()
                 ]);
 
                 if (userLike) setUserAction('like');
@@ -105,7 +100,6 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
 
         const userId = session.user.id;
 
-        // Optimistic UI updates
         if (type === 'like') {
             if (userAction === 'like') {
                 setUserAction(null);
@@ -197,9 +191,11 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
                         {article.title}
                     </h1>
 
-                    <p className="text-lg text-[var(--secondary)]/80 font-medium italic border-l-4 border-[var(--accent)] pl-4 py-2">
-                        {article.summary}
-                    </p>
+                    {article.summary && (
+                        <p className="text-lg text-[var(--secondary)]/80 font-medium italic border-l-4 border-[var(--accent)] pl-4 py-2">
+                            {article.summary}
+                        </p>
+                    )}
 
                     <Link href={`/profile/${article.author_id}`} className="inline-flex items-center gap-3 neu-flat-base p-3 pr-6 rounded-2xl hover:border-[var(--accent)]/40 transition group cursor-pointer">
                         <div className="h-10 w-10 shrink-0 rounded-full bg-[var(--accent)] flex items-center justify-center font-bold text-[var(--primary)] text-sm uppercase shadow-inner">
@@ -219,7 +215,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
                     </div>
 
                     <div className="relative z-10 prose prose-invert max-w-none text-[var(--secondary)]/90 prose-headings:text-[var(--secondary)] prose-a:text-[var(--accent)] prose-strong:text-[var(--secondary)] prose-strong:font-black">
-                        {article.content.split('\n').map((paragraph: string, index: number) => (
+                        {article.content?.split('\n').map((paragraph: string, index: number) => (
                             paragraph.trim() ? (
                                 <p key={index} className="leading-relaxed font-medium mb-4 whitespace-pre-wrap">
                                     {paragraph}

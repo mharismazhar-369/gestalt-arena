@@ -8,7 +8,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
-import { BookOpen, Plus, Search, Calendar, User, ArrowUpRight, FileText } from "lucide-react";
+import { BookOpen, Plus, Search, Calendar, User, ArrowUpRight, FileText, Filter, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 export interface Article {
@@ -48,8 +48,7 @@ export default function ResearchPage() {
       if (catData && catData.length > 0) {
         setCategories(["All", ...catData.map(c => c.label)]);
       } else {
-        // Fallback categories if table is empty
-        setCategories(["All", "Artificial Intelligence", "Fintech & Web3", "B2B SaaS & Cloud", "Deep Tech & Hardware", "Market Research & Macro"]);
+        setCategories(["All", "Artificial Intelligence & ML", "Fintech & Web3", "B2B SaaS & Enterprise", "Deep Tech & Hardware", "Market Research & Macro"]);
       }
 
       // 2. Fetch Articles
@@ -90,7 +89,7 @@ export default function ResearchPage() {
     <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
-      <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10 space-y-12">
+      <main className="pt-32 pb-24 px-6 mx-auto max-w-7xl w-full relative z-10 space-y-10">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -122,34 +121,47 @@ export default function ResearchPage() {
           </div>
         </div>
 
-        {/* Search & Dynamic Database Category Filter Header */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between neu-flat-base p-2 border-transparent">
-          <div className="relative w-full md:w-96">
+        {/* Professional Search & Clean Compact Filter Bar */}
+        <div className="neu-flat-base p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-1/2">
             <Search size={16} className="absolute left-4 top-3.5 text-[var(--secondary)]/50" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search research papers, topics, or authors..."
-              className="w-full rounded-2xl border border-transparent bg-transparent py-3 pl-11 pr-4 text-xs text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:outline-none transition font-medium"
+              className="w-full rounded-xl border border-[var(--secondary)]/10 bg-[var(--primary)] py-3 pl-11 pr-4 text-xs text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:border-[var(--accent)] focus:outline-none transition font-medium shadow-inner"
             />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-3 text-[var(--secondary)]/40 hover:text-[var(--secondary)]">
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-2 w-full md:w-auto p-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${selectedCategory === cat
-                  ? "neu-pressed-base text-[var(--accent)] shadow-inner border-transparent"
-                  : "bg-transparent text-[var(--secondary)]/60 hover:text-[var(--secondary)] border border-transparent neu-btn shadow-none"
-                  }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/70">
+              <Filter size={14} className="text-[var(--accent)]" /> Category:
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full md:w-64 px-4 py-3 rounded-xl border border-[var(--secondary)]/15 bg-[var(--primary)] text-xs text-[var(--secondary)] focus:border-[var(--accent)] focus:outline-none transition shadow-inner font-bold cursor-pointer"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
         </div>
+
+        {/* Active Filter Indicator */}
+        {selectedCategory !== "All" && (
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/70">
+            <span>Filtering by: <strong className="text-[var(--accent)]">{selectedCategory}</strong></span>
+            <button onClick={() => setSelectedCategory("All")} className="text-rose-500 hover:underline text-[10px] ml-2">Clear Filter</button>
+          </div>
+        )}
 
         {/* Dynamic Empty State */}
         {articles.length === 0 && (

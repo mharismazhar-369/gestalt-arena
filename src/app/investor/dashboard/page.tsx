@@ -1,124 +1,40 @@
-"use client";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
-import { useAuth } from "@/components/auth/AuthProvider";
 import {
   Compass, Rocket, BookOpen, ShieldCheck, User, Sparkles, Settings,
   MapPin, DollarSign, Building2, Briefcase, Target, Plus, FileText,
-  Eye, Folder, Radio, MessageSquare, Handshake, ChevronDown, Store, Edit3, Loader2
+  Eye, Folder, Radio, MessageSquare, Handshake, ChevronDown, Store, Edit3
 } from "lucide-react";
 import InvestorProfileBuilder from "@/components/investor/InvestorProfileBuilder";
 
-export default function InvestorDashboardPage() {
-  const { session } = useAuth();
+export const metadata: Metadata = {
+  title: "Investor Dashboard",
+  description: "Manage strategic mandates, view pitch deck submissions, and monitor investment pipeline on Gestalt Arena.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [bidDecks, setBidDecks] = useState<any[]>([]);
-  const [activeDeals, setActiveDeals] = useState<any[]>([]);
-  const [userAds, setUserAds] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+export default async function InvestorDashboardPage() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  // Dealflow matching engine states
-  const [dealflow, setDealflow] = useState<any[]>([]);
-  const [loadingMatches, setLoadingMatches] = useState(true);
+  if (error || !user) redirect("/login");
 
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  if (profile?.role === "startup") redirect("/startup/dashboard");
 
-        if (authError || !authUser) {
-          window.location.href = "/login";
-          return;
-        }
-        setUser(authUser);
-
-        const { data: userProfile } = await supabase.from("profiles").select("*").eq("id", authUser.id).single();
-        if (userProfile?.role === "startup") {
-          window.location.href = "/startup/dashboard";
-          return;
-        }
-        setProfile(userProfile);
-
-        if (userProfile?.profile_completed) {
-          const [{ data: decks }, { data: deals }, { data: ads }, { data: userPosts }] = await Promise.all([
-            supabase.from("investor_bid_decks").select("*").eq("investor_id", authUser.id).order("created_at", { ascending: false }),
-            supabase.from("deal_negotiations").select(`
-              id, status, created_at, updated_at, bid_deck_id,
-              startup:profiles!deal_negotiations_startup_id_fkey(company_name, nickname),
-              pitch_decks(title)
-            `).eq("investor_id", authUser.id).order("updated_at", { ascending: false }),
-            supabase.from("campaigns").select("id, title, status, category, created_at").eq("user_id", authUser.id).neq("status", "archived").order("created_at", { ascending: false }),
-            supabase.from("posts").select("id, content, created_at").eq("author_id", authUser.id).order("created_at", { ascending: false }).limit(10)
-          ]);
-
-          setBidDecks(decks || []);
-          setActiveDeals(deals || []);
-          setUserAds(ads || []);
-          setPosts(userPosts || []);
-        }
-      } catch (err) {
-        console.error("Dashboard data load error:", err);
-      } finally {
-        setLoadingUser(false);
-      }
-    }
-
-    loadDashboardData();
-  }, []);
-
-  // Fetch Curated Dealflow via RPC match engine with safe error handling
-  useEffect(() => {
-    const fetchDealflow = async () => {
-      if (!session?.user?.id) {
-        setLoadingMatches(false);
-        return;
-      }
-
-      setLoadingMatches(true);
-
-      try {
-        const { data: topStartups, error } = await supabase.rpc('match_startups_for_investor', {
-          p_investor_id: session.user.id
-        });
-
-        if (error) {
-          console.warn("Match engine RPC notice:", error.message);
-          setDealflow([]);
-        } else if (topStartups) {
-          setDealflow(topStartups);
-        }
-      } catch (err) {
-        console.error("Match engine exception:", err);
-        setDealflow([]);
-      } finally {
-        setLoadingMatches(false);
-      }
-    };
-
-    fetchDealflow();
-  }, [session?.user?.id]);
-
-  if (loadingUser) {
-    return (
-      <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[var(--accent)]" size={32} />
-      </div>
-    );
-  }
-
-  if (profile && !profile.profile_completed) {
+  if (!profile?.profile_completed) {
     return (
       <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
         <Navbar />
@@ -130,9 +46,35 @@ export default function InvestorDashboardPage() {
     );
   }
 
+  // 1. Fetch Active Bid Decks (Mandates including targeted Private ones)
+  const { data: bidDecks } = await supabase
+    .from("investor_bid_decks")
+    .select("*")
+    .eq("investor_id", user.id)
+    .order("created_at", { ascending: false });
+
+  // 2. Fetch ALL Active Deal Negotiations (Include bid_deck_id for grouping)
+  const { data: activeDeals } = await supabase
+    .from("deal_negotiations")
+    .select(`
+            id, status, created_at, updated_at, bid_deck_id,
+            startup:profiles!deal_negotiations_startup_id_fkey(company_name, nickname),
+            pitch_decks(title)
+        `)
+    .eq("investor_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  // 3. Fetch User's Active Emporium Campaigns (Ads)
+  const { data: userAds } = await supabase
+    .from("campaigns")
+    .select("id, title, status, category, created_at")
+    .eq("user_id", user.id)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false });
+
   // Group deals by their parent mandate
   const dealsByMandate: Record<string, any[]> = {};
-  const directDeals: any[] = [];
+  const directDeals: any[] = []; // Deals without a mandate
 
   if (activeDeals) {
     activeDeals.forEach((deal) => {
@@ -145,7 +87,14 @@ export default function InvestorDashboardPage() {
     });
   }
 
-  const displayName = profile?.nickname || profile?.company_name || user?.email?.split("@")[0] || "Investor Partner";
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("id, content, created_at")
+    .eq("author_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const displayName = profile?.nickname || profile?.company_name || user.email?.split("@")[0] || "Investor Partner";
   const displayLocation = profile?.city ? `${profile.city}, ${profile.country || ""}` : "Global Network";
   const displayTier = profile?.tier || "freemium";
   const totalMandates = bidDecks?.length || 0;
@@ -155,6 +104,7 @@ export default function InvestorDashboardPage() {
     <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
+      {/* Expanded max-w to accommodate 3 columns */}
       <main className="pt-32 pb-24 px-6 mx-auto max-w-[1440px] w-full relative z-10 space-y-8">
 
         {/* Dynamic Header Banner */}
@@ -235,44 +185,9 @@ export default function InvestorDashboardPage() {
             </div>
           </div>
 
-          {/* CENTER COLUMN: Unified Capital Mandates, Deal Pipelines & Curated Dealflow */}
-          <div className="lg:col-span-6 flex flex-col gap-8">
+          {/* CENTER COLUMN: Unified Capital Mandates & Deal Pipelines */}
+          <div className="lg:col-span-6 flex flex-col">
 
-            {/* CURATED DEALFLOW SECTION */}
-            <div className="neu-flat-base p-8 relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 mb-6">
-                <h2 className="text-xl font-bold text-[var(--secondary)] flex items-center gap-2">
-                  <Sparkles size={20} className="text-[var(--accent)]" /> Curated Dealflow
-                </h2>
-                <span className="text-xs font-bold text-[var(--secondary)]/60">AI Match Engine</span>
-              </div>
-
-              {loadingMatches ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="animate-spin text-[var(--accent)]" size={28} />
-                </div>
-              ) : dealflow.length === 0 ? (
-                <div className="neu-pressed-base p-8 text-center">
-                  <p className="text-xs font-medium text-[var(--secondary)]/60">No matching startups found for your current profile parameters.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4 max-h-[360px] overflow-y-auto pr-1">
-                  {dealflow.map((startup, idx) => (
-                    <div key={idx} className="neu-flat-base p-4 rounded-xl flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-sm text-[var(--secondary)]">{startup?.company_name}</h3>
-                        <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{startup?.industry}</p>
-                      </div>
-                      <span className="text-xs font-black text-[var(--accent)] neu-pressed-base px-3 py-1.5 rounded-lg">
-                        {startup?.match_score}% Match
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* MANDATES & DEAL PIPELINES */}
             <div className="neu-flat-base p-8 relative overflow-hidden flex-1">
               <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
                 <Target size={120} />
@@ -477,7 +392,7 @@ export default function InvestorDashboardPage() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <span className="text-[var(--secondary)]/60 font-bold uppercase tracking-wider block text-[10px]">User Account Email</span>
-                  <p className="font-mono text-[var(--secondary)] text-sm neu-pressed-base border-transparent shadow-inner p-2 px-3 inline-block rounded-lg">{user?.email}</p>
+                  <p className="font-mono text-[var(--secondary)] text-sm neu-pressed-base border-transparent shadow-inner p-2 px-3 inline-block rounded-lg">{user.email}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--secondary)]/60 font-bold uppercase tracking-wider block text-[10px]">System Role</span>

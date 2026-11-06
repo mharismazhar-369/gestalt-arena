@@ -72,6 +72,15 @@ export default async function InvestorDashboardPage() {
     .neq("status", "archived")
     .order("created_at", { ascending: false });
 
+  // 4. Fetch Curated Dealflow via RPC match engine directly on the server
+  const { data: dealflow, error: matchError } = await supabase.rpc('match_startups_for_investor', {
+    p_investor_id: user.id
+  });
+
+  if (matchError) {
+    console.error("Match engine failed:", matchError);
+  }
+
   // Group deals by their parent mandate
   const dealsByMandate: Record<string, any[]> = {};
   const directDeals: any[] = []; // Deals without a mandate
@@ -185,9 +194,40 @@ export default async function InvestorDashboardPage() {
             </div>
           </div>
 
-          {/* CENTER COLUMN: Unified Capital Mandates & Deal Pipelines */}
-          <div className="lg:col-span-6 flex flex-col">
+          {/* CENTER COLUMN: Curated Dealflow & Unified Capital Mandates / Deal Pipelines */}
+          <div className="lg:col-span-6 flex flex-col gap-6">
 
+            {/* CURATED DEALFLOW SECTION */}
+            <div className="neu-flat-base p-8 relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4 mb-6">
+                <h2 className="text-xl font-bold text-[var(--secondary)] flex items-center gap-2">
+                  <Sparkles size={20} className="text-[var(--accent)]" /> Curated Dealflow
+                </h2>
+                <span className="text-xs font-bold text-[var(--secondary)]/60">AI Match Engine</span>
+              </div>
+
+              {!dealflow || dealflow.length === 0 ? (
+                <div className="neu-pressed-base p-8 text-center">
+                  <p className="text-xs font-medium text-[var(--secondary)]/60">No matching startups found for your current profile parameters.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 max-h-[360px] overflow-y-auto pr-1">
+                  {dealflow.map((startup: any, idx: number) => (
+                    <div key={idx} className="neu-flat-base p-4 rounded-xl flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm text-[var(--secondary)]">{startup.company_name}</h3>
+                        <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{startup.industry}</p>
+                      </div>
+                      <span className="text-xs font-black text-[var(--accent)] neu-pressed-base px-3 py-1.5 rounded-lg">
+                        {startup.match_score}% Match
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* MANDATES & DEAL PIPELINES */}
             <div className="neu-flat-base p-8 relative overflow-hidden flex-1">
               <div className="absolute top-0 right-0 p-6 text-[var(--secondary)] opacity-5 pointer-events-none">
                 <Target size={120} />

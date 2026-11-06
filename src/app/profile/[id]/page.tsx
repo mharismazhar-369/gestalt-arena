@@ -15,7 +15,7 @@ import {
   UserPlus, UserCheck, ShieldCheck, MapPin, DollarSign, Building2,
   Users, MessageSquare, Edit3, Globe, Link as LinkIcon,
   Briefcase, Activity, Target, User, EyeOff, Clock,
-  Presentation, Eye, Zap, Lock, FileText, Award, X
+  Presentation, Eye, Zap, Lock, FileText, Award, X, Radio, BookOpen
 } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -31,6 +31,7 @@ export default function PublicProfilePage() {
 
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [totalPostCount, setTotalPostCount] = useState(0);
+  const [totalArticleCount, setTotalArticleCount] = useState(0);
   const [closedDealsCount, setClosedDealsCount] = useState(0);
 
   const [connectionCount, setConnectionCount] = useState(0);
@@ -60,7 +61,7 @@ export default function PublicProfilePage() {
       }
       setProfile(coreData);
 
-      // 2. Fetch Role-Specific Operational Data
+      // 2. Fetch Role-Specific Operational Data & Assets
       if (coreData.role === "startup") {
         const { data: startupRes } = await supabase.from("startup_profiles").select("*").eq("profile_id", profileId).single();
         if (startupRes) setStartupData(startupRes);
@@ -82,9 +83,12 @@ export default function PublicProfilePage() {
         setClosedDealsCount(dealCount || 0);
       }
 
-      // 3. Fetch Recent Activity & Aggregate Metric for Badges
+      // 3. Fetch Stats: Posts, Articles, and Recent Feed
       const { count: postCount } = await supabase.from("posts").select("*", { count: "exact", head: true }).eq("author_id", profileId);
       setTotalPostCount(postCount || 0);
+
+      const { count: articleCount } = await supabase.from("research_articles").select("*", { count: "exact", head: true }).eq("author_id", profileId);
+      setTotalArticleCount(articleCount || 0);
 
       const { data: postsData } = await supabase
         .from("posts")
@@ -138,15 +142,15 @@ export default function PublicProfilePage() {
   const renderDynamicBadges = () => {
     return (
       <div className="flex gap-2">
-        {totalPostCount >= 10000 ? (
+        {totalPostCount >= 1000 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-amber-500 shadow-inner"><ShieldCheck size={12} /> Gold Elite</span>
-        ) : totalPostCount >= 5000 ? (
+        ) : totalPostCount >= 500 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-slate-400 shadow-inner"><ShieldCheck size={12} /> Silver Pro</span>
-        ) : totalPostCount >= 1000 ? (
+        ) : totalPostCount >= 100 ? (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-amber-700 shadow-inner"><ShieldCheck size={12} /> Bronze Active</span>
         ) : null}
 
-        {profile?.tier !== 'freemium' && closedDealsCount > 0 && (
+        {closedDealsCount > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full neu-pressed-base px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 shadow-inner"><Award size={12} /> Dealmaker</span>
         )}
       </div>
@@ -163,142 +167,178 @@ export default function PublicProfilePage() {
   );
 
   const isStartup = profile.role === "startup";
-  const displayName = profile.nickname || profile.company_name || "Arena Member";
+  const displayName = profile.nickname || profile.company_name || startupData?.company_name || "Arena Member";
 
   return (
     <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
       <Navbar />
 
-      <main className="pt-32 pb-24 px-6 mx-auto max-w-[1440px] w-full relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="pt-32 pb-24 px-6 mx-auto max-w-[1440px] w-full relative z-10 space-y-8">
 
-          {/* LEFT COLUMN: Header, Financials, Flow, Posts */}
-          <div className="lg:col-span-8 space-y-8">
+        {/* HEADER BANNER */}
+        <div className="neu-flat-base p-8 md:p-10 relative overflow-hidden space-y-6 group">
+          <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
+            {isStartup ? <Building2 size={240} /> : <Briefcase size={240} />}
+          </div>
 
-            {/* HEADER BANNER */}
-            <div className="neu-flat-base p-8 md:p-10 relative overflow-hidden space-y-6 group">
-              <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none transition-transform group-hover:scale-110 duration-700">
-                {isStartup ? <Building2 size={240} /> : <Briefcase size={240} />}
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
+            <div className="flex items-start gap-5">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-[var(--accent)] text-[var(--primary)] font-black text-3xl uppercase shadow-inner">
+                {displayName.slice(0, 2)}
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
-                <div className="flex items-start gap-5">
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-[var(--accent)] text-[var(--primary)] font-black text-3xl uppercase shadow-inner">
-                    {displayName.slice(0, 2)}
-                  </div>
-
-                  <div className="space-y-2 mt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)]">{displayName}</h1>
-                      {renderDynamicBadges()}
-                      <BetaBadge variant="pill" />
-                    </div>
-
-                    <p className="text-sm text-[var(--accent)] font-bold capitalize">
-                      {profile.company_name ? `${profile.company_name} • ` : ""}{isStartup ? "Startup Founder" : "Investor / Capital Partner"}
-                    </p>
-
-                    <div className="flex items-center gap-4 text-xs text-[var(--secondary)]/70 font-medium pt-1">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={14} className="text-[var(--accent)]" />
-                        {profile.city ? `${profile.city}, ${profile.country || ""}` : "Global Network"}
-                      </span>
-                      <span>•</span>
-                      <Link href={`/profile/${profileId}/network`} className="flex items-center gap-1 font-bold text-[var(--accent)] hover:underline transition-all">
-                        <Users size={14} /> {connectionCount} Connections
-                      </Link>
-                    </div>
-                  </div>
+              <div className="space-y-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)]">{displayName}</h1>
+                  {renderDynamicBadges()}
+                  <BetaBadge variant="pill" />
                 </div>
 
-                <div className="flex flex-col gap-3 min-w-[140px]">
-                  {isOwnProfile ? (
-                    <Link href="/dashboard/preferences" className="neu-btn flex items-center justify-center gap-2 py-3 text-xs">
-                      <Edit3 size={16} /> Edit Settings
-                    </Link>
-                  ) : (
-                    <>
-                      {connectionStatus === 'none' && (
-                        <button onClick={handleConnectionRequest} className="flex items-center justify-center gap-2 py-3 text-xs neu-btn text-[var(--accent)]">
-                          <UserPlus size={16} /> Connect
-                        </button>
-                      )}
+                <p className="text-sm text-[var(--accent)] font-bold capitalize">
+                  {profile.company_name ? `${profile.company_name} • ` : ""}{isStartup ? "Startup Founder" : "Investor / Capital Partner"}
+                </p>
 
-                      {/* IF PENDING AND YOU SENT IT */}
-                      {connectionStatus === 'pending' && isRequester && (
-                        <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-[var(--secondary)]/50 shadow-inner cursor-not-allowed">
-                          <Clock size={16} /> Pending
-                        </button>
-                      )}
-
-                      {/* IF PENDING AND YOU RECEIVED IT (SHOW ACCEPT / DECLINE) */}
-                      {connectionStatus === 'pending' && !isRequester && (
-                        <div className="flex flex-col gap-2 w-full">
-                          <button
-                            onClick={async () => {
-                              try {
-                                await respondToConnection(profileId, 'accepted');
-                                setConnectionStatus('accepted');
-                              } catch (err: any) {
-                                alert(err.message);
-                              }
-                            }}
-                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-emerald-600 w-full"
-                          >
-                            <UserCheck size={14} /> Accept
-                          </button>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await respondToConnection(profileId, 'rejected');
-                                setConnectionStatus('none');
-                              } catch (err: any) {
-                                alert(err.message);
-                              }
-                            }}
-                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-rose-600 w-full"
-                          >
-                            <X size={14} /> Decline
-                          </button>
-                        </div>
-                      )}
-
-                      {connectionStatus === 'accepted' && (
-                        <>
-                          <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-emerald-600 shadow-inner cursor-default">
-                            <UserCheck size={16} /> Connected
-                          </button>
-                          <button onClick={() => openChat(profileId, displayName, displayName.slice(0, 2))} className="flex items-center justify-center gap-2 py-3 text-xs neu-btn border-transparent text-[var(--accent)] hover:border-[var(--accent)] transition-all">
-                            <MessageSquare size={16} /> Message
-                          </button>
-                        </>
-                      )}
-                    </>
-                  )}
+                <div className="flex items-center gap-4 text-xs text-[var(--secondary)]/70 font-medium pt-1">
+                  <span className="flex items-center gap-1">
+                    <MapPin size={14} className="text-[var(--accent)]" />
+                    {profile.city ? `${profile.city}, ${profile.country || ""}` : "Global Network"}
+                  </span>
+                  <span>•</span>
+                  <Link href={`/profile/${profileId}/network`} className="flex items-center gap-1 font-bold text-[var(--accent)] hover:underline transition-all">
+                    <Users size={14} /> {connectionCount} Connections
+                  </Link>
                 </div>
-              </div>
-
-              <div className="border-t border-[var(--secondary)]/10 pt-6 space-y-6 relative z-10">
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]/70">
-                    {isStartup ? "Elevator Pitch & Overview" : "Investment Mandate & Thesis"}
-                  </h3>
-                  <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-3xl whitespace-pre-line font-medium">
-                    {profile.bio || profile.elevator_pitch || "No overview provided yet."}
-                  </p>
-                </div>
-                {isStartup && startupData?.technical_moat && (
-                  <div className="space-y-3 pt-4 border-t border-[var(--secondary)]/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[var(--secondary)]/70">
-                      <Zap size={14} className="text-[var(--accent)]" /> Technical Moat
-                    </h3>
-                    <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-3xl whitespace-pre-line font-medium">
-                      {startupData.technical_moat}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
+
+            <div className="flex flex-col gap-3 min-w-[140px]">
+              {isOwnProfile ? (
+                <Link href="/dashboard/preferences" className="neu-btn flex items-center justify-center gap-2 py-3 text-xs">
+                  <Edit3 size={16} /> Edit Settings
+                </Link>
+              ) : (
+                <>
+                  {connectionStatus === 'none' && (
+                    <button onClick={handleConnectionRequest} className="flex items-center justify-center gap-2 py-3 text-xs neu-btn text-[var(--accent)]">
+                      <UserPlus size={16} /> Connect
+                    </button>
+                  )}
+
+                  {connectionStatus === 'pending' && isRequester && (
+                    <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-[var(--secondary)]/50 shadow-inner cursor-not-allowed">
+                      <Clock size={16} /> Pending
+                    </button>
+                  )}
+
+                  {connectionStatus === 'pending' && !isRequester && (
+                    <div className="flex flex-col gap-2 w-full">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await respondToConnection(profileId, 'accepted');
+                            setConnectionStatus('accepted');
+                          } catch (err: any) {
+                            alert(err.message);
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-emerald-600 w-full"
+                      >
+                        <UserCheck size={14} /> Accept
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await respondToConnection(profileId, 'rejected');
+                            setConnectionStatus('none');
+                          } catch (err: any) {
+                            alert(err.message);
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-[10px] uppercase font-bold neu-btn text-rose-600 w-full"
+                      >
+                        <X size={14} /> Decline
+                      </button>
+                    </div>
+                  )}
+
+                  {connectionStatus === 'accepted' && (
+                    <>
+                      <button disabled className="flex items-center justify-center gap-2 py-3 text-xs neu-pressed-base text-emerald-600 shadow-inner cursor-default">
+                        <UserCheck size={16} /> Connected
+                      </button>
+                      <button
+                        onClick={() => openChat(profileId, displayName, displayName.slice(0, 2))}
+                        className="flex items-center justify-center gap-2 py-3 text-xs neu-btn border-transparent text-[var(--accent)] hover:border-[var(--accent)] transition-all cursor-pointer"
+                      >
+                        <MessageSquare size={16} /> Message
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--secondary)]/10 pt-6 space-y-6 relative z-10">
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--secondary)]/70">
+                {isStartup ? "Elevator Pitch & Overview" : "Investment Mandate & Thesis"}
+              </h3>
+              <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-3xl whitespace-pre-line font-medium">
+                {profile.bio || startupData?.description || "No overview provided yet."}
+              </p>
+            </div>
+            {isStartup && startupData?.technical_moat && (
+              <div className="space-y-3 pt-4 border-t border-[var(--secondary)]/5">
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[var(--secondary)]/70">
+                  <Zap size={14} className="text-[var(--accent)]" /> Technical Moat
+                </h3>
+                <p className="text-sm text-[var(--secondary)]/80 leading-relaxed max-w-3xl whitespace-pre-line font-medium">
+                  {startupData.technical_moat}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* USER STATS BAR */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="neu-flat-base p-5 flex items-center gap-4">
+            <div className="neu-pressed-base p-3 text-[var(--accent)] rounded-2xl"><Radio size={22} /></div>
+            <div>
+              <span className="text-2xl font-black text-[var(--secondary)]">{totalPostCount}</span>
+              <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block">Arena Posts</span>
+            </div>
+          </div>
+          <div className="neu-flat-base p-5 flex items-center gap-4">
+            <div className="neu-pressed-base p-3 text-[var(--accent)] rounded-2xl"><BookOpen size={22} /></div>
+            <div>
+              <span className="text-2xl font-black text-[var(--secondary)]">{totalArticleCount}</span>
+              <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block">Research Articles</span>
+            </div>
+          </div>
+          <div className="neu-flat-base p-5 flex items-center gap-4">
+            <div className="neu-pressed-base p-3 text-[var(--accent)] rounded-2xl">
+              {isStartup ? <Presentation size={22} /> : <Target size={22} />}
+            </div>
+            <div>
+              <span className="text-2xl font-black text-[var(--secondary)]">{isStartup ? pitchDecks.length : bidDecks.length}</span>
+              <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block">{isStartup ? "Pitch Decks" : "Bid Decks"}</span>
+            </div>
+          </div>
+          <div className="neu-flat-base p-5 flex items-center gap-4">
+            <div className="neu-pressed-base p-3 text-emerald-600 rounded-2xl"><Award size={22} /></div>
+            <div>
+              <span className="text-2xl font-black text-[var(--secondary)]">{closedDealsCount}</span>
+              <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block">Closed Deals</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* LEFT COLUMN: Financials, Links, Decks & Posts */}
+          <div className="lg:col-span-8 space-y-8">
 
             {/* SENSITIVE FINANCIAL DATA & OFFICIAL LINKS */}
             <div className="grid md:grid-cols-3 gap-6">
@@ -364,28 +404,84 @@ export default function PublicProfilePage() {
                 <div className="space-y-3 flex-grow">
                   <div className="flex flex-col gap-1 neu-pressed-base p-3 shadow-inner border-transparent">
                     <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1"><Globe size={12} /> Website</span>
-                    <a href={profile.website_url || "#"} target="_blank" className="text-sm text-[var(--accent)] hover:underline truncate font-bold">{profile.website_url || "Not provided"}</a>
+                    <a href={profile.website_url || "#"} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline truncate font-bold">{profile.website_url || "Not provided"}</a>
                   </div>
                   <div className="flex flex-col gap-1 neu-pressed-base p-3 shadow-inner border-transparent">
                     <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 flex items-center gap-1"><LinkIcon size={12} /> LinkedIn</span>
-                    <a href={profile.linkedin_url || "#"} target="_blank" className="text-sm text-[var(--accent)] hover:underline truncate font-bold">{profile.linkedin_url || "Not provided"}</a>
+                    <a href={profile.linkedin_url || "#"} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--accent)] hover:underline truncate font-bold">{profile.linkedin_url || "Not provided"}</a>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* DEAL FLOW / POSTS (Remaining components simplified for length, mirror exactly from original layout) */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-2">
+            {/* PITCH DECKS OR BIDS SECTION */}
+            <div className="neu-flat-base p-8 space-y-6">
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
                 <h3 className="text-lg font-bold text-[var(--secondary)] flex items-center gap-2">
                   {isStartup ? (
-                    <><Presentation size={18} className="text-[var(--accent)]" /> Active Pitch Decks</>
+                    <><Presentation size={18} className="text-[var(--accent)]" /> Public Pitch Decks ({pitchDecks.length})</>
                   ) : (
-                    <><Target size={18} className="text-[var(--accent)]" /> Capital Mandates (Bids)</>
+                    <><Target size={18} className="text-[var(--accent)]" /> Active Capital Mandates ({bidDecks.length})</>
                   )}
                 </h3>
               </div>
-              {/* Pitch mapping logic from original file remains here */}
+
+              {isStartup ? (
+                pitchDecks.length === 0 ? (
+                  <p className="text-xs text-[var(--secondary)]/60 italic py-4">No public pitch decks available.</p>
+                ) : (
+                  <div className="grid gap-4">
+                    {pitchDecks.map((deck) => (
+                      <div key={deck.id} className="neu-pressed-base p-4 rounded-2xl flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-sm text-[var(--secondary)]">{deck.title || "Untitled Deck"}</h4>
+                          <p className="text-xs text-[var(--secondary)]/60 font-mono mt-0.5">Stage: {deck.stage || "Pre-Seed"} • Goal: ${deck.funding_goal?.toLocaleString() || "Flexible"}</p>
+                        </div>
+                        <Link href={`/startup/${deck.id}/pitch`} className="neu-btn px-4 py-2 text-xs flex items-center gap-1.5">
+                          <Eye size={14} /> View Pitch
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                bidDecks.length === 0 ? (
+                  <p className="text-xs text-[var(--secondary)]/60 italic py-4">No active investment bids published.</p>
+                ) : (
+                  <div className="grid gap-4">
+                    {bidDecks.map((bid) => (
+                      <div key={bid.id} className="neu-pressed-base p-4 rounded-2xl flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-sm text-[var(--secondary)]">{bid.title || "Investment Mandate"}</h4>
+                          <p className="text-xs text-[var(--secondary)]/65 font-mono mt-0.5">Ticket Range: ${bid.min_ticket?.toLocaleString()} - ${bid.max_ticket?.toLocaleString()}</p>
+                        </div>
+                        <span className="text-xs font-bold text-[var(--accent)] uppercase px-3 py-1 neu-pressed-base">Active Mandate</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* RECENT ARENA POSTS */}
+            <div className="neu-flat-base p-8 space-y-6">
+              <h3 className="text-lg font-bold text-[var(--secondary)] border-b border-[var(--secondary)]/10 pb-4 flex items-center gap-2">
+                <Radio size={18} className="text-[var(--accent)]" /> Recent Arena Broadcasts
+              </h3>
+              {recentPosts.length === 0 ? (
+                <p className="text-xs text-[var(--secondary)]/60 italic py-4">No recent activity on the Arena feed.</p>
+              ) : (
+                <div className="space-y-4">
+                  {recentPosts.map((post) => (
+                    <div key={post.id} className="neu-pressed-base p-4 rounded-xl space-y-2">
+                      <span className="text-[10px] text-[var(--secondary)]/50 font-mono">
+                        {new Date(post.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                      <p className="text-sm text-[var(--secondary)]/90 leading-relaxed font-medium">{post.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
@@ -399,7 +495,7 @@ export default function PublicProfilePage() {
               <div className="space-y-4 relative z-10">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Company Entity</span>
-                  <span className="text-sm font-bold text-[var(--secondary)]">{profile.company_name || "Undisclosed"}</span>
+                  <span className="text-sm font-bold text-[var(--secondary)]">{profile.company_name || startupData?.company_name || "Undisclosed"}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -413,7 +509,7 @@ export default function PublicProfilePage() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-[var(--secondary)]/60 block mb-1">Primary Industry</span>
-                  <span className="text-sm font-bold text-[var(--secondary)]">{profile.industry || "General"}</span>
+                  <span className="text-sm font-bold text-[var(--secondary)]">{profile.industry || startupData?.industry || "General"}</span>
                 </div>
               </div>
             </div>

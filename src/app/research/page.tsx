@@ -8,7 +8,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
-import { BookOpen, Plus, Search, Calendar, User, ArrowUpRight, FileText, Filter, X } from "lucide-react";
+import { BookOpen, Plus, Search, Calendar, ArrowUpRight, FileText, Filter, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 export interface Article {
@@ -114,7 +114,7 @@ export default function ResearchPage() {
             <BetaBadge variant="pill" className="hidden sm:inline-flex" />
             <button
               onClick={() => router.push("/research/publish")}
-              className="flex items-center gap-2 px-6 py-3 text-xs neu-btn shadow-lg bg-[var(--accent)] text-[var(--primary)] font-bold hover:scale-105 transition"
+              className="flex items-center gap-2 px-6 py-3 text-xs neu-btn shadow-lg bg-[var(--accent)] text-[var(--primary)] font-bold hover:scale-105 transition cursor-pointer"
             >
               <Plus size={16} /> Publish Article
             </button>
@@ -140,13 +140,13 @@ export default function ResearchPage() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <div className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/70">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/75">
               <Filter size={14} className="text-[var(--accent)]" /> Category:
             </div>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full md:w-64 px-4 py-3 rounded-xl border border-[var(--secondary)]/15 bg-[var(--primary)] text-xs text-[var(--secondary)] focus:border-[var(--accent)] focus:outline-none transition shadow-inner font-bold cursor-pointer"
+              className="w-full md:w-72 px-4 py-3 rounded-xl border border-[var(--secondary)]/15 bg-[var(--primary)] text-xs text-[var(--secondary)] focus:border-[var(--accent)] focus:outline-none transition shadow-inner font-bold cursor-pointer"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -158,7 +158,7 @@ export default function ResearchPage() {
         {/* Active Filter Indicator */}
         {selectedCategory !== "All" && (
           <div className="flex items-center gap-2 text-xs font-bold text-[var(--secondary)]/70">
-            <span>Filtering by: <strong className="text-[var(--accent)]">{selectedCategory}</strong></span>
+            <span>Filtering by category: <strong className="text-[var(--accent)]">{selectedCategory}</strong></span>
             <button onClick={() => setSelectedCategory("All")} className="text-rose-500 hover:underline text-[10px] ml-2">Clear Filter</button>
           </div>
         )}

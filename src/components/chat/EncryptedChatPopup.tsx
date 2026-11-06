@@ -63,7 +63,6 @@ export default function EncryptedChatPopup({
     if (isOpen && view === 'inbox') fetchInbox();
   }, [isOpen, view]);
 
-  // Sync and open conversation if recipientId is provided or changes
   const openConversationWithRecipient = async (targetRecipientId: string) => {
     if (!currentUserId || !targetRecipientId) return;
 
@@ -99,7 +98,7 @@ export default function EncryptedChatPopup({
     }
   }, [recipientId]);
 
-  // 3. Open Specific Chat & Enforce Limits
+  // 3. Open Specific Chat & Mark as Read
   const openChat = async (conv: any) => {
     setActiveConv(conv);
     activeConvIdRef.current = conv.id;
@@ -109,7 +108,6 @@ export default function EncryptedChatPopup({
       ? (conv.recipient?.id || recipientId)
       : (conv.initiator?.id || recipientId);
 
-    // Fetch Messages
     const { data: msgData } = await supabase
       .from("messages")
       .select("*")
@@ -119,7 +117,6 @@ export default function EncryptedChatPopup({
     if (msgData) {
       setMessages(msgData);
 
-      // Instantly mark unread messages as read and update DB
       const unreadIds = msgData.filter(m => m.sender_id !== currentUserId && !m.read_at).map(m => m.id);
       if (unreadIds.length > 0) {
         const now = new Date().toISOString();
@@ -138,7 +135,7 @@ export default function EncryptedChatPopup({
     }
   };
 
-  // 4. Realtime Listener (Fixed DELETE payload bug)
+  // 4. Realtime Listener
   useEffect(() => {
     if (!currentUserId) return;
     const channel = supabase
@@ -153,7 +150,6 @@ export default function EncryptedChatPopup({
             setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
           }
         } else if (payload.eventType === 'DELETE') {
-          // DELETE events only have payload.old, payload.new is null.
           setMessages(prev => prev.filter(m => m.id !== payload.old?.id));
         }
       }).subscribe();
@@ -208,7 +204,7 @@ export default function EncryptedChatPopup({
 
     if (uploadError) {
       console.error("Upload failed:", uploadError);
-      alert("Failed to upload file.");
+      alert("Failed to upload file. Check storage policies.");
       setIsUploading(false);
       return;
     }
@@ -228,7 +224,6 @@ export default function EncryptedChatPopup({
     setIsUploading(false);
   };
 
-  // 7. Message Actions
   const handleDelete = async (msgId: string) => {
     await supabase.from("messages").delete().eq("id", msgId);
     setMessages(prev => prev.filter(m => m.id !== msgId));
@@ -244,17 +239,33 @@ export default function EncryptedChatPopup({
     return (Date.now() - new Date(msg.created_at).getTime()) < 10 * 60 * 1000;
   };
 
-  // 8. Nudge Feature
+  // 7. Nudge Feature (Now creates an in-chat message)
   const handleNudge = async () => {
     if (!activeConv) return;
+
+    // Hardware Vibration
     if (typeof window !== "undefined" && typeof navigator !== "undefined" && 'vibrate' in navigator) {
       try { navigator.vibrate([200, 100, 200]); } catch (e) { }
     }
+
+    // Sound playback
     try {
       const audio = new Audio('/nudge.mp3');
       audio.play().catch(() => { });
     } catch (e) { }
 
+    // CREATE IN-CHAT NUDGE MESSAGE
+    const { data: nudgeMsg } = await supabase.from("messages").insert([{
+      conversation_id: activeConv.id,
+      sender_id: currentUserId,
+      content: "👉 Nudged!"
+    }]).select().single();
+
+    if (nudgeMsg) {
+      setMessages(prev => prev.some(m => m.id === nudgeMsg.id) ? prev : [...prev, nudgeMsg]);
+    }
+
+    // Top Bar Notification
     const otherUserId = activeConv.initiator?.id === currentUserId ? activeConv.recipient?.id : activeConv.initiator?.id;
     if (otherUserId) {
       await supabase.from("notifications").insert({
@@ -286,31 +297,34 @@ export default function EncryptedChatPopup({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="w-full h-[100dvh] md:w-[400px] md:h-[650px] md:rounded-3xl border-0 md:border md:border-slate-200/50 bg-white/95 shadow-2xl backdrop-blur-3xl overflow-hidden flex flex-col relative"
+            className="w-full h-[100dvh] md:w-[400px] md:h-[650px] md:rounded-3xl neu-flat-base border-none overflow-hidden flex flex-col relative"
           >
             {/* INBOX VIEW */}
             {view === 'inbox' && (
               <>
-                <div className="bg-slate-900 px-6 py-5 flex items-center justify-between shadow-md z-10">
-                  <h3 className="font-black text-white text-lg tracking-wide">Arena Messages</h3>
-                  <button onClick={handleClose} className="text-slate-400 hover:text-white transition">
+                <div className="px-6 py-5 flex items-center justify-between border-b border-[var(--secondary)]/10 z-10 bg-[var(--primary)]">
+                  <h3 className="font-black text-[var(--secondary)] text-lg tracking-wide">Arena Messages</h3>
+                  <button onClick={handleClose} className="text-[var(--secondary)]/50 hover:text-[var(--accent)] transition">
                     <X size={20} />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto bg-slate-50/50 custom-scrollbar p-2 space-y-2">
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 bg-[var(--primary)]">
                   {conversations.length === 0 ? (
-                    <div className="text-center py-12 px-4 text-slate-400 text-xs">No conversations yet. Messages will appear here.</div>
+                    <div className="text-center py-12 px-4 text-[var(--secondary)]/50 text-xs font-bold">
+                      No conversations yet. Messages will appear here.
+                    </div>
                   ) : (
                     conversations.map(conv => {
                       const partner = (conv.initiator?.id === currentUserId ? conv.recipient : conv.initiator) || {};
                       return (
-                        <div key={conv.id} onClick={() => openChat(conv)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white transition cursor-pointer border border-transparent hover:border-slate-200 shadow-sm">
-                          <div className="h-12 w-12 rounded-full bg-slate-200 flex items-center justify-center shrink-0 border-2 border-white shadow-sm overflow-hidden">
-                            {partner.avatar_url ? <img src={partner.avatar_url} alt="avatar" className="object-cover w-full h-full" /> : <User size={20} className="text-slate-500" />}
+                        <div key={conv.id} onClick={() => openChat(conv)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-[var(--secondary)]/5 transition cursor-pointer border border-transparent hover:border-[var(--secondary)]/10">
+                          <div className="h-12 w-12 rounded-full neu-pressed-base flex items-center justify-center shrink-0 overflow-hidden border border-[var(--secondary)]/5">
+                            {partner.avatar_url ? <img src={partner.avatar_url} alt="avatar" className="object-cover w-full h-full" /> : <User size={20} className="text-[var(--secondary)]/50" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-bold text-slate-900 truncate">{partner.nickname || partner.company_name || "User"}</h4>
-                            <p className="text-xs text-slate-500 truncate mt-0.5">Click to view conversation...</p>
+                            <h4 className="text-sm font-bold text-[var(--secondary)] truncate">{partner.nickname || partner.company_name || "User"}</h4>
+                            <p className="text-xs text-[var(--secondary)]/50 truncate mt-0.5 font-medium">Click to view conversation...</p>
                           </div>
                         </div>
                       );
@@ -323,69 +337,89 @@ export default function EncryptedChatPopup({
             {/* ACTIVE CHAT VIEW */}
             {view === 'chat' && (activeConv || otherUser) && (
               <>
-                <div className="bg-slate-900 px-4 py-4 flex items-center justify-between shadow-md z-10">
+                <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--secondary)]/10 z-10 bg-[var(--primary)]">
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setView('inbox')} className="text-slate-400 hover:text-white transition">
+                    <button onClick={() => setView('inbox')} className="text-[var(--secondary)]/50 hover:text-[var(--accent)] transition">
                       <ChevronLeft size={24} />
                     </button>
                     <div>
-                      <h4 className="text-sm font-bold text-white leading-tight">{otherUser?.nickname || otherUser?.company_name || recipientName || "User"}</h4>
-                      <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                      <h4 className="text-sm font-bold text-[var(--secondary)] leading-tight">{otherUser?.nickname || otherUser?.company_name || recipientName || "User"}</h4>
+                      <span className="text-[10px] text-[var(--accent)] font-bold flex items-center gap-1 mt-0.5">
                         Secure Channel {connectionStatus !== 'accepted' && '(Unconnected)'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={handleNudge} title="Send Nudge" className="text-amber-400 bg-amber-400/10 p-2 rounded-full hover:bg-amber-400/20 transition">
+                    <button onClick={handleNudge} title="Send Nudge" className="text-[var(--accent)] bg-[var(--accent)]/10 p-2 rounded-full hover:bg-[var(--accent)]/20 transition">
                       <BellRing size={16} />
                     </button>
-                    <button onClick={handleClose} title="Close Chat" className="text-slate-400 hover:text-white transition p-1">
+                    <button onClick={handleClose} title="Close Chat" className="text-[var(--secondary)]/50 hover:text-[var(--secondary)] transition p-1">
                       <X size={20} />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/80 custom-scrollbar">
+                <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar bg-[var(--primary)]">
                   {messages.length === 0 ? (
-                    <div className="text-center py-12 px-4 text-slate-400 text-xs italic">Connection secured. Start the conversation.</div>
+                    <div className="text-center py-12 px-4 text-[var(--secondary)]/50 font-bold text-xs italic">
+                      Connection secured. Start the conversation.
+                    </div>
                   ) : (
                     messages.map((msg) => {
                       const isMe = msg.sender_id === currentUserId;
                       const isModifiable = canModify(msg);
+                      const isNudge = msg.content === "👉 Nudged!";
+
                       return (
                         <div key={msg.id} className={`flex flex-col group ${isMe ? "items-end" : "items-start"}`}>
-                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm relative ${isMe ? "bg-slate-900 text-white rounded-br-none" : "bg-white text-slate-800 border border-slate-200 rounded-bl-none"}`}>
 
-                            {/* FIXED: Media Attachment Renderer */}
+                          {/* DYNAMIC MESSAGE BUBBLE RENDERING */}
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm relative ${isNudge
+                              ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-black italic shadow-inner"
+                              : isMe
+                                ? "bg-[var(--secondary)] text-[var(--primary)] rounded-br-none"
+                                : "neu-flat-base border border-[var(--secondary)]/5 shadow-none text-[var(--secondary)] rounded-bl-none"
+                            }`}>
+
+                            {/* Media Attachment Renderer */}
                             {msg.attachment_url && (
-                              <div className="mb-2 mt-1 rounded-lg overflow-hidden border border-white/10 bg-black/10">
+                              <div className="mb-2 mt-1 rounded-lg overflow-hidden border border-[var(--primary)]/20 bg-black/20">
                                 {msg.attachment_url.match(/\.(jpeg|jpg|gif|png|webp)/i) ? (
                                   <img src={msg.attachment_url} alt="Attachment" className="max-w-full h-auto max-h-48 object-cover" loading="lazy" />
                                 ) : (
-                                  <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 text-xs font-bold hover:bg-black/20 transition">
+                                  <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 text-xs font-bold hover:bg-black/30 transition">
                                     <Paperclip size={14} /> View File
                                   </a>
                                 )}
                               </div>
                             )}
 
-                            {msg.content}
+                            <span className={isNudge ? "" : "font-medium"}>{msg.content}</span>
 
-                            {/* FIXED: Edit/Delete now visible on mobile via opacity toggles rather than hidden */}
-                            {isMe && isModifiable && (
-                              <div className="absolute -left-16 top-0 flex items-center gap-1 bg-white border border-slate-200 shadow-sm rounded-lg p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => startEdit(msg)} className="p-1.5 text-slate-400 hover:text-blue-500 transition"><Edit2 size={12} /></button>
-                                <button onClick={() => handleDelete(msg.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition"><Trash2 size={12} /></button>
+                            {/* Floating Edit/Delete */}
+                            {isMe && isModifiable && !isNudge && (
+                              <div className="absolute -left-16 top-0 flex items-center gap-1 bg-[var(--primary)] border border-[var(--secondary)]/10 shadow-sm rounded-lg p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => startEdit(msg)} className="p-1.5 text-[var(--secondary)]/50 hover:text-[var(--accent)] transition"><Edit2 size={12} /></button>
+                                <button onClick={() => handleDelete(msg.id)} className="p-1.5 text-[var(--secondary)]/50 hover:text-rose-500 transition"><Trash2 size={12} /></button>
                               </div>
                             )}
                           </div>
 
-                          <div className="text-[9px] text-slate-400 mt-1.5 px-1 flex items-center gap-1 font-semibold">
+                          {/* TIMESTAMP & EXPLICIT READ RECEIPTS */}
+                          <div className={`text-[9px] mt-1.5 px-1 flex items-center gap-1 font-bold ${isMe ? 'text-[var(--secondary)]/50' : 'text-[var(--secondary)]/50'}`}>
                             {msg.is_edited && <span className="italic mr-1">(edited)</span>}
                             {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
                             {isMe && (
-                              <span className={`ml-1 transition-colors ${msg.read_at ? "text-emerald-500" : "text-slate-400"}`}>
-                                {msg.read_at ? <CheckCheck size={12} /> : <Check size={12} />}
+                              <span className={`ml-1 flex items-center gap-0.5 transition-colors ${msg.read_at ? "text-[var(--accent)]" : "text-[var(--secondary)]/40"}`}>
+                                {msg.read_at ? (
+                                  <>
+                                    <CheckCheck size={14} />
+                                    <span className="text-[8px] font-black uppercase tracking-wider ml-0.5">Seen</span>
+                                  </>
+                                ) : (
+                                  <Check size={14} />
+                                )}
                               </span>
                             )}
                           </div>
@@ -396,27 +430,27 @@ export default function EncryptedChatPopup({
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="border-t border-slate-200 bg-white p-4">
+                <div className="border-t border-[var(--secondary)]/10 bg-[var(--primary)] p-4">
                   {isInputLocked ? (
-                    <div className="text-center p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold flex flex-col items-center gap-1">
+                    <div className="text-center p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold flex flex-col items-center gap-1">
                       <X size={16} /> Connection limit reached. Waiting for their reply.
                     </div>
                   ) : (
                     <form onSubmit={handleSend} className="flex items-end gap-2">
-                      <div className="flex-1 bg-slate-100 rounded-2xl border border-slate-200 p-1 flex items-center focus-within:border-slate-900 transition-all">
+                      <div className="flex-1 neu-pressed-base border border-[var(--secondary)]/5 p-1 flex items-center focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all">
 
                         {/* File Upload Trigger */}
                         <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc" />
-                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="p-2.5 text-slate-400 hover:text-slate-900 transition disabled:opacity-50">
-                          {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
+                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="p-2.5 text-[var(--secondary)]/50 hover:text-[var(--accent)] transition disabled:opacity-50">
+                          {isUploading ? <Loader2 size={18} className="animate-spin text-[var(--accent)]" /> : <Paperclip size={18} />}
                         </button>
 
-                        <input type="text" value={messageInput} onChange={(e) => setMessageInput(e.target.value)} placeholder={editingMsgId ? "Edit your message..." : "Message..."} className="flex-1 bg-transparent px-2 py-2 text-sm text-slate-900 placeholder-slate-500 focus:outline-none" />
+                        <input type="text" value={messageInput} onChange={(e) => setMessageInput(e.target.value)} placeholder={editingMsgId ? "Edit your message..." : "Message..."} className="flex-1 bg-transparent px-2 py-2 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:outline-none font-medium" />
 
-                        <button type="button" className="p-2.5 text-slate-400 hover:text-amber-500 transition"><Smile size={18} /></button>
+                        <button type="button" className="p-2.5 text-[var(--secondary)]/50 hover:text-[var(--accent)] transition"><Smile size={18} /></button>
                       </div>
 
-                      <button type="submit" disabled={!messageInput.trim() && !isUploading} className={`p-3.5 rounded-2xl flex items-center justify-center transition-all shadow-md ${messageInput.trim() ? 'bg-slate-900 text-white hover:scale-105' : 'bg-slate-200 text-slate-400'}`}>
+                      <button type="submit" disabled={!messageInput.trim() && !isUploading} className={`p-3.5 rounded-xl flex items-center justify-center transition-all ${messageInput.trim() ? 'bg-[var(--secondary)] text-[var(--primary)] shadow-lg hover:scale-105' : 'bg-[var(--secondary)]/10 text-[var(--secondary)]/30 shadow-none'}`}>
                         {editingMsgId ? <Check size={18} /> : <Send size={18} className="translate-x-0.5" />}
                       </button>
                     </form>
@@ -429,7 +463,7 @@ export default function EncryptedChatPopup({
       </AnimatePresence>
 
       {!isOpen && (
-        <button onClick={() => setIsOpen(true)} className="fixed bottom-6 right-6 flex items-center justify-center h-14 w-14 rounded-full bg-slate-900 text-white shadow-2xl transition-all hover:scale-105 hover:bg-slate-800">
+        <button onClick={() => setIsOpen(true)} className="fixed bottom-6 right-6 flex items-center justify-center h-14 w-14 rounded-full neu-flat-base text-[var(--accent)] shadow-2xl transition-all hover:scale-105 z-[100] border border-[var(--secondary)]/10">
           <MessageSquare size={24} />
         </button>
       )}

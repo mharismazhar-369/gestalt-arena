@@ -8,7 +8,7 @@ import Footer from "@/components/landing/Footer";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { BookOpen, Calendar, ArrowLeft, Clock, FileText, ThumbsUp, ThumbsDown, Share2, Trash2, CheckCircle2 } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, Clock, ThumbsUp, ThumbsDown, Share2, Trash2, CheckCircle2 } from "lucide-react";
 
 export default function ArticleClient({ articleId }: { articleId: string }) {
     const router = useRouter();
@@ -131,6 +131,66 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
         }
     };
 
+    // Simple robust parser to convert markdown symbols (**bold**, *italic*, - bullets, ## headings) into clean HTML elements
+    const renderFormattedContent = (rawContent: string) => {
+        if (!rawContent) return null;
+
+        return rawContent.split('\n').map((line, index) => {
+            const trimmed = line.trim();
+
+            if (!trimmed) return <div key={index} className="h-4" />;
+
+            // Headings
+            if (trimmed.startsWith("## ")) {
+                return <h2 key={index} className="text-xl md:text-2xl font-black text-[var(--secondary)] mt-6 mb-3">{trimmed.replace("## ", "")}</h2>;
+            }
+            if (trimmed.startsWith("# ")) {
+                return <h1 key={index} className="text-2xl md:text-3xl font-black text-[var(--secondary)] mt-8 mb-4">{trimmed.replace("# ", "")}</h1>;
+            }
+
+            // Bullet points
+            if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                const text = trimmed.substring(2);
+                return (
+                    <li key={index} className="list-disc list-inside ml-4 my-1 text-[var(--secondary)]/90 font-medium">
+                        {parseInlineFormatting(text)}
+                    </li>
+                );
+            }
+
+            // Quotes
+            if (trimmed.startsWith("> ")) {
+                return (
+                    <blockquote key={index} className="border-l-4 border-[var(--accent)] pl-4 py-2 my-4 italic text-[var(--secondary)]/80 bg-[var(--secondary)]/5 rounded-r-xl">
+                        {parseInlineFormatting(trimmed.replace("> ", ""))}
+                    </blockquote>
+                );
+            }
+
+            // Standard Paragraphs
+            return (
+                <p key={index} className="leading-relaxed font-medium mb-4 text-[var(--secondary)]/90">
+                    {parseInlineFormatting(trimmed)}
+                </p>
+            );
+        });
+    };
+
+    // Helper to parse inline **bold** and *italic*
+    const parseInlineFormatting = (text: string) => {
+        // Replace **bold** with strong tags
+        const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith("**") && part.endsWith("**")) {
+                return <strong key={i} className="font-black text-[var(--secondary)]">{part.slice(2, -2)}</strong>;
+            }
+            if (part.startsWith("*") && part.endsWith("*")) {
+                return <em key={i} className="italic">{part.slice(1, -1)}</em>;
+            }
+            return part;
+        });
+    };
+
     if (loading) return <RoleRoutingLoader message="Loading Research Paper..." />;
 
     if (!article) return (
@@ -192,7 +252,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
                     </h1>
 
                     {article.summary && (
-                        <p className="text-lg text-[var(--secondary)]/80 font-medium italic border-l-4 border-[var(--accent)] pl-4 py-2">
+                        <p className="text-lg text-[var(--secondary)]/85 font-medium italic border-l-4 border-[var(--accent)] pl-4 py-2">
                             {article.summary}
                         </p>
                     )}
@@ -208,20 +268,14 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
                     </Link>
                 </div>
 
-                {/* Full Content Body */}
-                <div className="neu-flat-base p-8 md:p-12 space-y-6 mt-8 relative overflow-hidden">
+                {/* Full Formatted Content Body */}
+                <div className="neu-flat-base p-8 md:p-12 space-y-4 mt-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 text-[var(--secondary)] opacity-5 pointer-events-none">
                         <BookOpen size={240} />
                     </div>
 
-                    <div className="relative z-10 prose prose-invert max-w-none text-[var(--secondary)]/90 prose-headings:text-[var(--secondary)] prose-a:text-[var(--accent)] prose-strong:text-[var(--secondary)] prose-strong:font-black">
-                        {article.content?.split('\n').map((paragraph: string, index: number) => (
-                            paragraph.trim() ? (
-                                <p key={index} className="leading-relaxed font-medium mb-4 whitespace-pre-wrap">
-                                    {paragraph}
-                                </p>
-                            ) : null
-                        ))}
+                    <div className="relative z-10 max-w-none text-[var(--secondary)]/90">
+                        {renderFormattedContent(article.content)}
                     </div>
                 </div>
 

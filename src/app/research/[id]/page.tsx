@@ -9,7 +9,8 @@ import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
     FileText, ArrowLeft, Image as ImageIcon, Save, Send, X,
-    Bold, Italic, List, Heading2, Quote, AlertCircle, Loader2
+    Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote,
+    Code, Link as LinkIcon, Eye, Edit3, AlertCircle, Loader2
 } from "lucide-react";
 
 export default function PublishArticlePage() {
@@ -19,6 +20,7 @@ export default function PublishArticlePage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
 
     // Form State
     const [title, setTitle] = useState("");
@@ -34,19 +36,17 @@ export default function PublishArticlePage() {
 
     useEffect(() => {
         async function fetchCategories() {
-            // Fetch dynamic categories from Supabase (platform_categories or platform_references)
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from("platform_categories")
                 .select("id, label");
 
             if (data && data.length > 0) {
                 setCategories(data);
             } else {
-                // Fallback default categories if table is empty
                 setCategories([
-                    { id: "ai_ml", label: "Artificial Intelligence" },
+                    { id: "ai_ml", label: "Artificial Intelligence & ML" },
                     { id: "fintech", label: "Fintech & Web3" },
-                    { id: "saas", label: "B2B SaaS & Cloud" },
+                    { id: "saas", label: "B2B SaaS & Enterprise" },
                     { id: "deep_tech", label: "Deep Tech & Hardware" },
                     { id: "market_research", label: "Market Research & Macro" }
                 ]);
@@ -61,7 +61,7 @@ export default function PublishArticlePage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 1 MB limit check ($1 \text{ MB} = 1048576 \text{ bytes}$)
+        // 1 MB Limit Check (1048576 bytes)
         if (file.size > 1048576) {
             setErrorMsg("Banner image must be smaller than 1 MB.");
             return;
@@ -72,22 +72,68 @@ export default function PublishArticlePage() {
         setBannerPreview(URL.createObjectURL(file));
     };
 
-    const handleFormat = (syntaxPrefix: string, syntaxSuffix: string = "") => {
+    // Advanced Formatting Handler with scroll-jump prevention & robust multi-line list support
+    const handleFormat = (type: 'bold' | 'italic' | 'h1' | 'h2' | 'bullet' | 'number' | 'quote' | 'code' | 'link') => {
         const textarea = document.getElementById("article-content-textarea") as HTMLTextAreaElement;
         if (!textarea) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const selectedText = content.substring(start, end);
-        const replacement = `${syntaxPrefix}${selectedText || "text"}${syntaxSuffix}`;
+        const selectedText = content.substring(start, end) || "text";
+
+        let replacement = "";
+        let cursorOffset = 0;
+
+        switch (type) {
+            case 'bold':
+                replacement = `**${selectedText}**`;
+                cursorOffset = 2;
+                break;
+            case 'italic':
+                replacement = `*${selectedText}*`;
+                cursorOffset = 1;
+                break;
+            case 'h1':
+                replacement = `\n# ${selectedText}\n`;
+                cursorOffset = 3;
+                break;
+            case 'h2':
+                replacement = `\n## ${selectedText}\n`;
+                cursorOffset = 4;
+                break;
+            case 'bullet':
+                // Handles multi-line selections cleanly as bullet points
+                replacement = `\n` + selectedText.split('\n').map(line => `- ${line.trim()}`).join('\n') + `\n`;
+                cursorOffset = 3;
+                break;
+            case 'number':
+                replacement = `\n` + selectedText.split('\n').map((line, i) => `${i + 1}. ${line.trim()}`).join('\n') + `\n`;
+                cursorOffset = 4;
+                break;
+            case 'quote':
+                replacement = `\n> ${selectedText}\n`;
+                cursorOffset = 3;
+                break;
+            case 'code':
+                replacement = `\`\`\`typescript\n${selectedText}\n\`\`\``;
+                cursorOffset = 14;
+                break;
+            case 'link':
+                const url = prompt("Enter target URL:", "https://");
+                if (!url) return;
+                replacement = `[${selectedText}](${url})`;
+                cursorOffset = 1;
+                break;
+        }
 
         const newContent = content.substring(0, start) + replacement + content.substring(end);
         setContent(newContent);
 
-        setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(start + syntaxPrefix.length, end + syntaxPrefix.length);
-        }, 0);
+        // Prevent window scroll jumping by maintaining focus without resetting scroll position
+        requestAnimationFrame(() => {
+            textarea.focus({ preventScroll: true });
+            textarea.setSelectionRange(start + cursorOffset, start + cursorOffset + selectedText.length);
+        });
     };
 
     const handleSave = async (status: 'draft' | 'published') => {
@@ -104,25 +150,15 @@ export default function PublishArticlePage() {
         setErrorMsg(null);
 
         try {
-            let imageUrl = null;
-
             // Upload Banner if provided
             if (bannerFile) {
                 const fileExt = bannerFile.name.split('.').pop();
                 const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-                const { error: uploadError } = await supabase.storage
+                await supabase.storage
                     .from("research_banners")
                     .upload(fileName, bannerFile);
-
-                if (!uploadError) {
-                    const { data: publicUrlData } = supabase.storage
-                        .from("research_banners")
-                        .getPublicUrl(fileName);
-                    imageUrl = publicUrlData.publicUrl;
-                }
             }
 
-            // Insert into public.articles table compatible with schema
             const { error: insertError } = await supabase
                 .from("articles")
                 .insert({
@@ -132,7 +168,6 @@ export default function PublishArticlePage() {
                     summary: summary.trim(),
                     content: content.trim(),
                     read_time: readTime,
-                    // image_url if schema supports it, or store in summary/metadata
                 });
 
             if (insertError) throw insertError;
@@ -159,7 +194,7 @@ export default function PublishArticlePage() {
                         <ArrowLeft size={14} /> Cancel & Return
                     </button>
                     <h1 className="text-xl font-black text-[var(--secondary)] flex items-center gap-2">
-                        <FileText className="text-[var(--accent)]" size={20} /> Research Publishing Suite
+                        <FileText className="text-[var(--accent)]" size={20} /> Advanced Research Publishing Suite
                     </h1>
                 </div>
 
@@ -188,7 +223,7 @@ export default function PublishArticlePage() {
 
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] uppercase font-bold text-[var(--secondary)]/70 tracking-wider block">Research Category (from DB) *</label>
+                                <label className="text-[10px] uppercase font-bold text-[var(--secondary)]/70 tracking-wider block">Research Category *</label>
                                 <select
                                     value={category}
                                     onChange={e => setCategory(e.target.value)}
@@ -225,7 +260,7 @@ export default function PublishArticlePage() {
                         </div>
                     </div>
 
-                    {/* Banner Container (Max 1 MB) */}
+                    {/* Banner Container (Strictly Max 1 MB) */}
                     <div className="neu-flat-base p-6 md:p-8 rounded-3xl space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-bold text-[var(--secondary)] uppercase tracking-wider flex items-center gap-2">
@@ -264,28 +299,51 @@ export default function PublishArticlePage() {
                         </div>
                     </div>
 
-                    {/* Content Editor with Formatting Toolbar */}
+                    {/* Advanced Content Editor with Formatting Toolbar & Preview Toggle */}
                     <div className="neu-flat-base p-6 md:p-8 rounded-3xl space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--secondary)]/10 pb-3">
-                            <h2 className="text-sm font-bold text-[var(--secondary)] uppercase tracking-wider">Research Body & Formatting</h2>
+                            <h2 className="text-sm font-bold text-[var(--secondary)] uppercase tracking-wider">Research Body & Advanced Formatting</h2>
 
-                            <div className="flex items-center gap-1 bg-[var(--primary)] p-1 rounded-xl neu-pressed-base border-transparent shadow-inner">
-                                <button type="button" onClick={() => handleFormat("**", "**")} title="Bold" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Bold size={14} /></button>
-                                <button type="button" onClick={() => handleFormat("*", "*")} title="Italic" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Italic size={14} /></button>
-                                <button type="button" onClick={() => handleFormat("\n## ", "")} title="Heading" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Heading2 size={14} /></button>
-                                <button type="button" onClick={() => handleFormat("\n- ", "")} title="Bullet List" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><List size={14} /></button>
-                                <button type="button" onClick={() => handleFormat("\n> ", "")} title="Quote" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Quote size={14} /></button>
+                            <div className="flex items-center gap-2">
+                                {/* Formatting Toolbar */}
+                                <div className="flex items-center gap-1 bg-[var(--primary)] p-1 rounded-xl neu-pressed-base border-transparent shadow-inner">
+                                    <button type="button" onClick={() => handleFormat('bold')} title="Bold" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Bold size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('italic')} title="Italic" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Italic size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('h1')} title="Heading 1" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Heading1 size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('h2')} title="Heading 2" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Heading2 size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('bullet')} title="Bullet List" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><List size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('number')} title="Numbered List" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><ListOrdered size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('quote')} title="Quote Callout" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Quote size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('code')} title="Code Block" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><Code size={14} /></button>
+                                    <button type="button" onClick={() => handleFormat('link')} title="Insert Link" className="p-2 hover:text-[var(--accent)] transition rounded-lg text-xs"><LinkIcon size={14} /></button>
+                                </div>
+
+                                {/* Editor / Preview Toggle */}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl neu-btn text-xs font-bold text-[var(--accent)]"
+                                >
+                                    {isPreviewMode ? <Edit3 size={14} /> : <Eye size={14} />}
+                                    {isPreviewMode ? "Edit" : "Preview"}
+                                </button>
                             </div>
                         </div>
 
-                        <textarea
-                            id="article-content-textarea"
-                            rows={12}
-                            value={content}
-                            onChange={e => setContent(e.target.value)}
-                            placeholder="Write your detailed research findings, market analysis, or technical documentation here..."
-                            className="w-full p-4 rounded-xl border border-[var(--secondary)]/15 bg-[var(--primary)] text-sm focus:border-[var(--accent)] focus:outline-none transition font-mono leading-relaxed shadow-inner"
-                        />
+                        {isPreviewMode ? (
+                            <div className="w-full p-6 rounded-xl neu-pressed-base border-transparent shadow-inner min-h-[300px] prose prose-invert max-w-none text-[var(--secondary)]/90 leading-relaxed whitespace-pre-wrap font-medium">
+                                {content || "*Nothing to preview yet.*"}
+                            </div>
+                        ) : (
+                            <textarea
+                                id="article-content-textarea"
+                                rows={14}
+                                value={content}
+                                onChange={e => setContent(e.target.value)}
+                                placeholder="Write your detailed research findings, market analysis, or technical documentation here..."
+                                className="w-full p-4 rounded-xl border border-[var(--secondary)]/15 bg-[var(--primary)] text-sm focus:border-[var(--accent)] focus:outline-none transition font-mono leading-relaxed shadow-inner"
+                            />
+                        )}
                     </div>
 
                     {/* Action Buttons */}

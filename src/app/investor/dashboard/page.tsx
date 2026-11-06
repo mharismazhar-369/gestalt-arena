@@ -3,7 +3,6 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -36,85 +35,76 @@ export default function InvestorDashboardPage() {
 
   useEffect(() => {
     async function loadDashboardData() {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      try {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-      if (authError || !authUser) {
-        window.location.href = "/login";
-        return;
+        if (authError || !authUser) {
+          window.location.href = "/login";
+          return;
+        }
+        setUser(authUser);
+
+        const { data: userProfile } = await supabase.from("profiles").select("*").eq("id", authUser.id).single();
+        if (userProfile?.role === "startup") {
+          window.location.href = "/startup/dashboard";
+          return;
+        }
+        setProfile(userProfile);
+
+        if (userProfile?.profile_completed) {
+          const [{ data: decks }, { data: deals }, { data: ads }, { data: userPosts }] = await Promise.all([
+            supabase.from("investor_bid_decks").select("*").eq("investor_id", authUser.id).order("created_at", { ascending: false }),
+            supabase.from("deal_negotiations").select(`
+              id, status, created_at, updated_at, bid_deck_id,
+              startup:profiles!deal_negotiations_startup_id_fkey(company_name, nickname),
+              pitch_decks(title)
+            `).eq("investor_id", authUser.id).order("updated_at", { ascending: false }),
+            supabase.from("campaigns").select("id, title, status, category, created_at").eq("user_id", authUser.id).neq("status", "archived").order("created_at", { ascending: false }),
+            supabase.from("posts").select("id, content, created_at").eq("author_id", authUser.id).order("created_at", { ascending: false }).limit(10)
+          ]);
+
+          setBidDecks(decks || []);
+          setActiveDeals(deals || []);
+          setUserAds(ads || []);
+          setPosts(userPosts || []);
+        }
+      } catch (err) {
+        console.error("Dashboard data load error:", err);
+      } finally {
+        setLoadingUser(false);
       }
-      setUser(authUser);
-
-      const { data: userProfile } = await supabase.from("profiles").select("*").eq("id", authUser.id).single();
-      if (userProfile?.role === "startup") {
-        window.location.href = "/startup/dashboard";
-        return;
-      }
-      setProfile(userProfile);
-
-      if (userProfile?.profile_completed) {
-        // 1. Fetch Active Bid Decks
-        const { data: decks } = await supabase
-          .from("investor_bid_decks")
-          .select("*")
-          .eq("investor_id", authUser.id)
-          .order("created_at", { ascending: false });
-        setBidDecks(decks || []);
-
-        // 2. Fetch Active Deal Negotiations
-        const { data: deals } = await supabase
-          .from("deal_negotiations")
-          .select(`
-            id, status, created_at, updated_at, bid_deck_id,
-            startup:profiles!deal_negotiations_startup_id_fkey(company_name, nickname),
-            pitch_decks(title)
-          `)
-          .eq("investor_id", authUser.id)
-          .order("updated_at", { ascending: false });
-        setActiveDeals(deals || []);
-
-        // 3. Fetch User's Active Emporium Campaigns
-        const { data: ads } = await supabase
-          .from("campaigns")
-          .select("id, title, status, category, created_at")
-          .eq("user_id", authUser.id)
-          .neq("status", "archived")
-          .order("created_at", { ascending: false });
-        setUserAds(ads || []);
-
-        // 4. Fetch Arena Posts
-        const { data: userPosts } = await supabase
-          .from("posts")
-          .select("id, content, created_at")
-          .eq("author_id", authUser.id)
-          .order("created_at", { ascending: false })
-          .limit(10);
-        setPosts(userPosts || []);
-      }
-
-      setLoadingUser(false);
     }
 
     loadDashboardData();
   }, []);
 
-  // Fetch Curated Dealflow via RPC match engine
+  // Fetch Curated Dealflow via RPC match engine with safe error handling
   useEffect(() => {
     const fetchDealflow = async () => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+        setLoadingMatches(false);
+        return;
+      }
 
       setLoadingMatches(true);
 
-      const { data: topStartups, error } = await supabase.rpc('match_startups_for_investor', {
-        p_investor_id: session.user.id
-      });
+      try {
+        const { data: topStartups, error } = await supabase.rpc('match_startups_for_investor', {
+          p_investor_id: session.user.id
+        });
 
-      if (error) {
-        console.error("Match engine failed:", error);
-      } else if (topStartups) {
-        setDealflow(topStartups);
+        if (error) {
+          console.warn("Match engine RPC notice:", error.message);
+          setDealflow([]);
+        } else if (topStartups) {
+          setDealflow(topStartups);
+        }
+      } catch (err) {
+        console.error("Match engine exception:", err);
+        setDealflow([]);
+      } finally {
+        setLoadingMatches(false);
       }
-
-      setLoadingMatches(false);
     };
 
     fetchDealflow();
@@ -270,11 +260,11 @@ export default function InvestorDashboardPage() {
                   {dealflow.map((startup, idx) => (
                     <div key={idx} className="neu-flat-base p-4 rounded-xl flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-sm text-[var(--secondary)]">{startup.company_name}</h3>
-                        <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{startup.industry}</p>
+                        <h3 className="font-bold text-sm text-[var(--secondary)]">{startup?.company_name}</h3>
+                        <p className="text-xs text-[var(--secondary)]/70 mt-0.5">{startup?.industry}</p>
                       </div>
                       <span className="text-xs font-black text-[var(--accent)] neu-pressed-base px-3 py-1.5 rounded-lg">
-                        {startup.match_score}% Match
+                        {startup?.match_score}% Match
                       </span>
                     </div>
                   ))}

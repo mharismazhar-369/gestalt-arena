@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +15,15 @@ import {
   DollarSign, Building2, Briefcase, Plus, Eye, Edit3, Handshake, MessageSquare, ChevronDown, Store, Target, CheckCircle2
 } from "lucide-react";
 import StartupProfileBuilder from "@/components/startup/StartupProfileBuilder";
+
+export const metadata: Metadata = {
+  title: "Startup Dashboard",
+  description: "Track pitch deck analytics, manage investor applications, and accelerate fundraising on Gestalt Arena.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function StartupDashboardPage() {
   const supabase = await createClient();

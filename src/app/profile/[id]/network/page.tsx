@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { updateConnectionStatus } from '@/actions/connections';
 import { redirect } from 'next/navigation';
@@ -6,6 +7,15 @@ import Link from 'next/link';
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Users, Clock, UserCheck, X, Send, ShieldCheck, UserMinus, Search, Globe } from "lucide-react";
+
+export const metadata: Metadata = {
+    title: "Tactical Network & Connections",
+    description: "Manage strategic connections, pending requests, and professional network on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export default async function NetworkPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: targetUserId } = await params;

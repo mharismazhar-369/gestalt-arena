@@ -1,6 +1,16 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+
+export const metadata: Metadata = {
+  title: "Forgot Password",
+  description: "Reset and recover your Gestalt Arena account password securely.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function ForgotPasswordPage() {
     return (

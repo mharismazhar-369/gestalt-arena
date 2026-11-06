@@ -1,6 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import React from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Admin Command Center",
+    description: "Internal administrative command center for Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export default async function AdminLayout({
     children,

@@ -1,6 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import React from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Startup Portal",
+    description: "Manage your startup pitch decks, investor connections, and fundraising pipeline on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 interface StartupLayoutProps {
     children: React.ReactNode;

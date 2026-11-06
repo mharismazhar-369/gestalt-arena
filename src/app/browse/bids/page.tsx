@@ -1,11 +1,41 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Target, FileText, DollarSign, Activity, CheckCircle, SlidersHorizontal, Trophy } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Unified Deal Board & Investment Mandates",
+  description: "Browse verified investor bid decks, investment mandates, and startup pitches on the Gestalt Arena Unified Board.",
+  alternates: {
+    canonical: "/browse/bids",
+  },
+  openGraph: {
+    title: "Unified Deal Board & Investment Mandates | Gestalt Arena",
+    description: "Browse verified investor bid decks, investment mandates, and startup pitches on the Gestalt Arena Unified Board.",
+    url: "https://www.gestalt-arena.com/browse/bids",
+    siteName: "Gestalt Arena",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Gestalt Arena Unified Deal Board",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Unified Deal Board & Investment Mandates | Gestalt Arena",
+    description: "Browse verified investor bid decks, investment mandates, and startup pitches on the Gestalt Arena Unified Board.",
+    images: ["/og-image.jpg"],
+  },
+};
 
 export default async function UnifiedBoardPage({
     searchParams

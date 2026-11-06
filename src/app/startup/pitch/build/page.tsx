@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -5,6 +6,15 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import PitchDeckBuilder from "@/components/startup/PitchDeckBuilder";
 import { ArrowLeft, Rocket } from "lucide-react";
+
+export const metadata: Metadata = {
+    title: "Pitch Deck Builder",
+    description: "Build, edit, and optimize your interactive startup pitch deck on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export default async function PitchBuilderPage({
     searchParams,

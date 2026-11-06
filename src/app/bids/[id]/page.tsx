@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +15,62 @@ import {
 import PitchDeckViewer from "@/components/pitch/PitchDeckViewer";
 import DeleteResourceButton from "@/components/shared/DeleteResourceButton";
 import { Suspense } from "react";
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    const { data: bid } = await supabase
+        .from("investor_bid_decks")
+        .select("title, target_industry, check_size, profiles:investor_id(company_name, nickname)")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (!bid) {
+        return {
+            title: "Investment Mandate Not Found",
+            description: "View investment mandates and bid decks on Gestalt Arena.",
+        };
+    }
+
+    const title = bid.title || "Investment Mandate";
+    const investor = (Array.isArray(bid.profiles) ? bid.profiles[0] : bid.profiles) as { company_name?: string; nickname?: string } | null;
+    const investorName = investor?.nickname || investor?.company_name || "Strategic Investor";
+    const description = `Investment mandate by ${investorName} in ${bid.target_industry || "General Industry"} with check size ${bid.check_size || "Undisclosed"}. Explore and submit your pitch deck on Gestalt Arena.`;
+
+    return {
+        title: `${title} | Mandate by ${investorName}`,
+        description,
+        alternates: {
+            canonical: `/bids/${id}`,
+        },
+        openGraph: {
+            title: `${title} | Gestalt Arena Mandate`,
+            description,
+            url: `https://www.gestalt-arena.com/bids/${id}`,
+            siteName: "Gestalt Arena",
+            type: "article",
+            images: [
+                {
+                    url: "/og-image.jpg",
+                    width: 1200,
+                    height: 630,
+                    alt: title,
+                },
+            ],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: `${title} | Gestalt Arena Mandate`,
+            description,
+            images: ["/og-image.jpg"],
+        },
+    };
+}
 
 export default async function BidDetailsPage({
     params

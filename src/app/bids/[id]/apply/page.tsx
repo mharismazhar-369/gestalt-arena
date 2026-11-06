@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +10,15 @@ import {
     Globe, Link as LinkIcon
 } from "lucide-react";
 import MandateApplicationForm from "@/components/bids/MandateApplicationForm";
+
+export const metadata: Metadata = {
+    title: "Apply to Mandate",
+    description: "Submit your startup pitch deck and apply directly to this investor mandate on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: true,
+    },
+};
 
 export default async function ApplyToMandatePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;

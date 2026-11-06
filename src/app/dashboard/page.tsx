@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/auth/LogoutButton";
@@ -8,6 +9,15 @@ import Footer from "@/components/landing/Footer";
 import BetaBadge from "@/components/shared/BetaBadge";
 import RoleSelector from "@/components/dashboard/RoleSelector";
 import { Sparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Member Dashboard",
+  description: "Access your Gestalt Arena portal, role routing, and live matchmaking feed.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();

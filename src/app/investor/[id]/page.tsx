@@ -1,10 +1,78 @@
 import React from "react";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Briefcase, Globe, Target, MapPin, BadgeCheck, CheckCircle2, ArrowLeft } from "lucide-react";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nickname, company_name, bio, avatar_url, industry, city, country")
+    .eq("id", id)
+    .eq("role", "investor")
+    .maybeSingle();
+
+  if (!profile) {
+    return {
+      title: "Investor Profile Not Found",
+      description: "Explore strategic investor profiles on Gestalt Arena.",
+    };
+  }
+
+  const name = profile.nickname || profile.company_name || "Strategic Investor";
+  const location = [profile.city, profile.country].filter(Boolean).join(", ");
+  const description =
+    profile.bio?.slice(0, 160) ||
+    `${name} is a verified investor on Gestalt Arena${profile.industry ? ` specializing in ${profile.industry}` : ""}${location ? ` based in ${location}` : ""}. Discover mandates and connect.`;
+
+  return {
+    title: `${name} | Investor Profile`,
+    description,
+    alternates: {
+      canonical: `/investor/${id}`,
+    },
+    openGraph: {
+      title: `${name} | Investor on Gestalt Arena`,
+      description,
+      url: `https://www.gestalt-arena.com/investor/${id}`,
+      siteName: "Gestalt Arena",
+      type: "profile",
+      images: profile.avatar_url
+        ? [
+            {
+              url: profile.avatar_url,
+              width: 400,
+              height: 400,
+              alt: `${name} avatar`,
+            },
+          ]
+        : [
+            {
+              url: "/og-image.jpg",
+              width: 1200,
+              height: 630,
+              alt: `${name} on Gestalt Arena`,
+            },
+          ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${name} | Investor on Gestalt Arena`,
+      description,
+      images: profile.avatar_url ? [profile.avatar_url] : ["/og-image.jpg"],
+    },
+  };
+}
 
 export default async function InvestorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   // 1. Unwrap the params Promise required by Next.js 15+

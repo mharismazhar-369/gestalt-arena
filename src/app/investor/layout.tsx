@@ -1,6 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import React from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Investor Portal",
+    description: "Access your investor deal flow, mandate management, and startup applications on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export const dynamic = "force-dynamic";
 export default async function InvestorLayout({

@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import BidDeckBuilder from "@/components/investor/BidDeckBuilder";
 import { Target } from "lucide-react";
+
+export const metadata: Metadata = {
+    title: "Create Investment Mandate",
+    description: "Publish a new investment mandate or capital deployment criteria on Gestalt Arena.",
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export default async function CreateBidDeckPage() {
     const supabase = await createClient();

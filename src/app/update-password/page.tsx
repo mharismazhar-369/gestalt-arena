@@ -1,6 +1,16 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import UpdatePasswordForm from "@/components/auth/UpdatePasswordForm";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+
+export const metadata: Metadata = {
+  title: "Update Password",
+  description: "Set a new password for your Gestalt Arena account.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function UpdatePasswordPage() {
     return (

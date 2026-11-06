@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +10,63 @@ import {
   Lightbulb, CheckCircle2, Globe, Briefcase, Swords, Activity,
   Edit3, Calendar, Sparkles, MapPin, DollarSign
 } from "lucide-react";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: pitch } = await supabase
+    .from("pitch_decks")
+    .select("company_name, tagline, industry, target_market, author:user_id(nickname, company_name)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!pitch) {
+    return {
+      title: "Startup Pitch Not Found",
+      description: "Explore vetted startup opportunities on Gestalt Arena.",
+    };
+  }
+
+  const author = (Array.isArray(pitch.author) ? pitch.author[0] : pitch.author) as { nickname?: string; company_name?: string } | null;
+  const name = pitch.company_name || author?.company_name || author?.nickname || "Innovative Startup";
+  const description =
+    pitch.tagline ||
+    `${name} is a high-growth startup in ${pitch.industry || "emerging technology"} seeking strategic investment on Gestalt Arena.`;
+
+  return {
+    title: `${name} | Startup Pitch Deck`,
+    description,
+    alternates: {
+      canonical: `/startup/${id}`,
+    },
+    openGraph: {
+      title: `${name} | Pitch Deck on Gestalt Arena`,
+      description,
+      url: `https://www.gestalt-arena.com/startup/${id}`,
+      siteName: "Gestalt Arena",
+      type: "article",
+      images: [
+        {
+          url: "/og-image.jpg",
+          width: 1200,
+          height: 630,
+          alt: `${name} Pitch Deck`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${name} | Pitch Deck on Gestalt Arena`,
+      description,
+      images: ["/og-image.jpg"],
+    },
+  };
+}
 
 export default async function PitchDeckView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

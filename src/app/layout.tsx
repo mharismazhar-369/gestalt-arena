@@ -10,7 +10,10 @@ import OnboardingWrapper from "@/components/onboarding/OnboardingWrapper";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.gestalt-arena.com"),
 
-  title: "Gestalt Arena | Where Capital Meets Execution",
+  title: {
+    default: "Gestalt Arena | Where Capital Meets Execution",
+    template: "%s | Gestalt Arena",
+  },
 
   description:
     "Gestalt Arena connects investors and startups, enabling opportunity discovery, meaningful connections, and structured negotiation.",

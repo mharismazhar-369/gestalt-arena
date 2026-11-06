@@ -6,10 +6,11 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { useTheme } from "@/components/context/ThemeProvider";
+import { useRouter } from "next/navigation";
 import {
   Save, AlertCircle, User, Globe, Target, DollarSign,
   Briefcase, Activity, MapPin, Link as LinkIcon, Loader2, Rocket,
-  Building, Hash, CheckCircle, XCircle,
+  Building, Hash, CheckCircle, XCircle, ArrowLeft,
   CreditCard, BarChart2, Trash2, PauseCircle, Settings
 } from "lucide-react";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
@@ -56,6 +57,8 @@ function Github({ size = 12, className }: { size?: number; className?: string })
 export default function GlobalPreferencesPage() {
   const { session } = useAuth();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning", text: string } | null>(null);
@@ -82,12 +85,12 @@ export default function GlobalPreferencesPage() {
     state: "",
     country: "",
     timezone: "UTC",
-    language: "en", // Added Language
+    language: "en",
     visibility: "public",
     linkedin_url: "",
     twitter_url: "",
     website_url: "",
-    github_url: "", // Extended Social
+    github_url: "",
     presence_status: "online",
   });
 
@@ -153,7 +156,7 @@ export default function GlobalPreferencesPage() {
           state: profileData.state || "",
           country: profileData.country || "",
           timezone: profileData.timezone || "UTC",
-          language: "en", // Default fallback
+          language: "en",
           visibility: profileData.visibility || "public",
           linkedin_url: profileData.linkedin_url || "",
           twitter_url: profileData.twitter_url || "",
@@ -276,12 +279,16 @@ export default function GlobalPreferencesPage() {
         if (startupError) throw startupError;
       }
 
-      setMessage({ type: "success", text: "Settings synchronized with AI routing engine." });
+      setMessage({ type: "success", text: "Settings synchronized! Redirecting to dashboard..." });
+
+      // Delay routing slightly so user can read the success message
+      setTimeout(() => {
+        router.push(role === 'investor' ? '/investor/dashboard' : '/startup/dashboard');
+      }, 1500);
+
     } catch (err: any) {
       setMessage({ type: "error", text: err?.message || "Failed to save settings." });
-    } finally {
-      setSaving(false);
-      setTimeout(() => setMessage(null), 4000);
+      setSaving(false); // Only toggle false if it fails, otherwise let it navigate while "Syncing..."
     }
   };
 
@@ -317,6 +324,16 @@ export default function GlobalPreferencesPage() {
       <Navbar />
 
       <main className="pt-32 pb-24 px-6 mx-auto max-w-5xl w-full relative z-10">
+
+        {/* Added Back Button */}
+        <button
+          onClick={() => router.back()}
+          type="button"
+          className="mb-8 flex items-center gap-2 text-sm font-bold text-[var(--secondary)]/60 hover:text-[var(--accent)] transition-colors w-fit"
+        >
+          <ArrowLeft size={16} /> Back to Previous
+        </button>
+
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl md:text-4xl font-black text-[var(--secondary)] flex items-center gap-3">
             <Settings className="text-[var(--accent)]" size={32} />

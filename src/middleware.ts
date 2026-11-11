@@ -39,13 +39,44 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    await supabase.auth.getUser()
+    // Important: Avoid writing any logic between createServerClient and
+    // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+    // issues with users being randomly logged out.
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    const url = request.nextUrl.clone()
+    const pathname = url.pathname
+
+    // Define routes that require authentication
+    const protectedRoutes = ['/dashboard', '/settings', '/negotiations', '/startup/pitch/build', '/investor/bids/create']
+    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+
+    // If user is not signed in and trying to access a protected route, redirect to login
+    if (!user && isProtectedRoute) {
+        url.pathname = '/login'
+        return NextResponse.redirect(url)
+    }
+
+    // If user is signed in and trying to visit login/signup, redirect to dashboard/feed
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+        url.pathname = '/feed'
+        return NextResponse.redirect(url)
+    }
 
     return supabaseResponse
 }
 
 export const config = {
     matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public files (svg, png, jpg, etc.)
+         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

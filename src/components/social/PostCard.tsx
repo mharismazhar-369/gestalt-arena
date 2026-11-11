@@ -45,8 +45,12 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
   const [bookmarked, setBookmarked] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showRepostModal, setShowRepostModal] = useState(false);
+  const [repostComment, setRepostComment] = useState("");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
+  const [isSubmittingRepost, setIsSubmittingRepost] = useState(false);
 
   const authorData = dbPost?.author ? (Array.isArray(dbPost.author) ? dbPost.author[0] : dbPost.author) : null;
   const authorHandle = authorData?.username ? `@${authorData.username}` : `@${post.authorName.toLowerCase().replace(/\s+/g, '_')}`;
@@ -64,35 +68,21 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
     }
   }, [dbPost, currentUserId]);
 
-  const sharePost = async () => {
-    try {
-      const shareData = {
-        title: "Check out this post on Gestalt ARENA",
-        text: typeof post.content === 'string' ? post.content : "View post on Arena",
-        url: `${window.location.origin}/feed/${post.id}`,
-      };
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(shareData.url);
-        setSuccessMsg("Link copied to clipboard!");
-        setTimeout(() => setSuccessMsg(""), 3000);
-      }
-    } catch (e) {
-      setErrorMsg("Failed to share post");
-      setTimeout(() => setErrorMsg(""), 3000);
-    }
+  const sharePost = () => {
+    setShowShareModal(true);
   };
 
-  const handleRepost = async () => {
+  const handleRepostSubmit = async (withComment: boolean) => {
     if (!currentUserId) {
       router.push("/login?next=/feed");
       return;
     }
 
+    setIsSubmittingRepost(true);
     try {
       const rawContent = dbPost?.content || "reshared a post";
-      const reshareContent = `🔄 **Reshared from ${post.authorName}:**\n\n${rawContent}`;
+      const userNote = withComment && repostComment.trim() ? `${repostComment.trim()}\n\n` : "";
+      const reshareContent = `${userNote}🔄 **Reshared from ${post.authorName}:**\n\n${rawContent}`;
 
       const { error } = await supabase.from("posts").insert({
         author_id: currentUserId,
@@ -114,10 +104,14 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
       setSuccessMsg("Post reshared to your feed!");
       setTimeout(() => setSuccessMsg(""), 3000);
+      setShowRepostModal(false);
+      setRepostComment("");
       if (onUpdate) onUpdate();
     } catch (e) {
       setErrorMsg("Failed to reshare post.");
       setTimeout(() => setErrorMsg(""), 3000);
+    } finally {
+      setIsSubmittingRepost(false);
     }
   };
 
@@ -343,7 +337,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
           <span>{post.commentsCount}</span>
         </button>
 
-        <button onClick={handleRepost} className="flex items-center gap-1.5 hover:text-[var(--accent)] transition ml-auto">
+        <button onClick={() => setShowRepostModal(true)} className="flex items-center gap-1.5 hover:text-[var(--accent)] transition ml-auto">
           <Repeat size={16} />
           <span>{post.repostsCount}</span>
         </button>
@@ -359,6 +353,156 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
               onCommentAdded={onUpdate}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* IN-APP SHARE MODAL */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[var(--primary)] border border-[var(--secondary)]/10 p-6 rounded-3xl max-w-md w-full space-y-6 relative neu-flat-base text-[var(--secondary)] shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
+                <h3 className="text-base font-black text-[var(--secondary)] flex items-center gap-2">
+                  <Share2 size={18} className="text-[var(--accent)]" /> Share Post to Network
+                </h3>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="p-1.5 rounded-xl neu-btn text-[var(--secondary)]/60 hover:text-[var(--accent)] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(typeof post.content === 'string' ? post.content : "Check out this discussion on Gestalt Arena")}&url=${encodeURIComponent(`${window.location.origin}/feed/${post.id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                >
+                  <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center font-black">𝕏</div>
+                  <span>Twitter / X</span>
+                </a>
+
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/feed/${post.id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                >
+                  <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-blue-600 font-bold">in</div>
+                  <span>LinkedIn</span>
+                </a>
+
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/feed/${post.id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                >
+                  <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-blue-500 font-bold">f</div>
+                  <span>Facebook</span>
+                </a>
+
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out this discussion on Gestalt Arena: ${window.location.origin}/feed/${post.id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                >
+                  <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-emerald-500 font-bold">💬</div>
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--secondary)]/60">Direct Post Link</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/feed/${post.id}`}
+                    className="w-full text-xs font-mono bg-transparent neu-pressed-base p-3 rounded-xl text-[var(--secondary)]/80 focus:outline-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(`${window.location.origin}/feed/${post.id}`);
+                      setSuccessMsg("Link copied to clipboard!");
+                      setTimeout(() => setSuccessMsg(""), 3000);
+                      setShowShareModal(false);
+                    }}
+                    className="neu-btn px-4 py-3 text-xs font-bold text-[var(--accent)] shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* REPOST MODAL (With or Without Commentary) */}
+      <AnimatePresence>
+        {showRepostModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[var(--primary)] border border-[var(--secondary)]/10 p-6 rounded-3xl max-w-lg w-full space-y-6 relative neu-flat-base text-[var(--secondary)] shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
+                <h3 className="text-base font-black text-[var(--secondary)] flex items-center gap-2">
+                  <Repeat size={18} className="text-[var(--accent)]" /> Reshare Post
+                </h3>
+                <button
+                  onClick={() => setShowRepostModal(false)}
+                  className="p-1.5 rounded-xl neu-btn text-[var(--secondary)]/60 hover:text-[var(--accent)] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <textarea
+                  rows={3}
+                  value={repostComment}
+                  onChange={(e) => setRepostComment(e.target.value)}
+                  placeholder="Add your thoughts or commentary (optional)..."
+                  className="w-full rounded-xl border-transparent bg-transparent p-3 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/50 focus:outline-none transition resize-none neu-pressed-base shadow-inner font-medium"
+                  disabled={isSubmittingRepost}
+                />
+
+                <div className="neu-pressed-base p-4 rounded-2xl opacity-75 space-y-2 text-xs">
+                  <span className="font-bold text-[var(--accent)]">Original Post by {post.authorName}:</span>
+                  <p className="line-clamp-2 text-[var(--secondary)]/80">{typeof post.content === 'string' ? post.content : "Media / Discussion post"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--secondary)]/10">
+                <button
+                  onClick={() => handleRepostSubmit(false)}
+                  disabled={isSubmittingRepost}
+                  className="neu-btn px-5 py-2.5 text-xs font-bold text-[var(--secondary)]"
+                >
+                  Repost Instantly
+                </button>
+                <button
+                  onClick={() => handleRepostSubmit(true)}
+                  disabled={isSubmittingRepost}
+                  className="neu-btn px-6 py-2.5 text-xs font-extrabold text-[var(--accent)]"
+                >
+                  {isSubmittingRepost ? "Publishing..." : "Repost with Comment"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.article>

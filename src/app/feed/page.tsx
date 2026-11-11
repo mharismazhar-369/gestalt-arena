@@ -354,7 +354,6 @@ export default async function FeedPage() {
                 </div>
               </div>
 
-              ### Active Startups Block
               <div className="neu-flat-base p-5 space-y-4">
                 <h3 className="text-xs font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
                   <Building size={14} className="text-[var(--accent)]" /> Active Startups

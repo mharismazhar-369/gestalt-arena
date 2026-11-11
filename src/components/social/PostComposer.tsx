@@ -1,13 +1,14 @@
+// Location: SRC/components/social/PostComposer.tsx
+
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUserTier } from "@/components/context/UserTierContext";
-import { Send, AlertTriangle, ShieldCheck, Image as ImageIcon, Lock, X, Loader2 } from "lucide-react";
+import { Send, AlertTriangle, ShieldCheck, Image as ImageIcon, Lock, X, Loader2, AtSign } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 interface PostComposerProps {
-  // Updated to accept an optional mediaUrl
   onPostCreated?: (content: string, mediaUrl?: string) => void;
 }
 
@@ -20,7 +21,13 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Mention State
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
+  const [cursorPosition, setCursorPosition] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const charCount = content.length;
   const maxChars = capabilities.maxCharsPerPost;
@@ -32,11 +39,71 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
+  // Server-side fetch for mentionable users when typing "@query"
+  useEffect(() => {
+    const fetchMentions = async () => {
+      if (mentionQuery === null || !session?.user) {
+        setMentionSuggestions([]);
+        return;
+      }
+
+      const { data, error } = await supabase.rpc("get_mentionable_users", {
+        p_user_id: session.user.id,
+        p_search: mentionQuery,
+      });
+
+      if (!error && data) {
+        setMentionSuggestions(data);
+      }
+    };
+
+    const timer = setTimeout(fetchMentions, 200);
+    return () => clearTimeout(timer);
+  }, [mentionQuery, session]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const pos = e.target.selectionStart;
+    setContent(val);
+    setCursorPosition(pos);
+
+    // Check if user is typing a mention
+    const textBeforeCursor = val.slice(0, pos);
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (match) {
+      setMentionQuery(match[1]); // Text after '@'
+    } else {
+      setMentionQuery(null);
+      setMentionSuggestions([]);
+    }
+  };
+
+  const insertMention = (username: string) => {
+    if (!textareaRef.current) return;
+    const pos = cursorPosition;
+    const textBeforeCursor = content.slice(0, pos);
+    const textAfterCursor = content.slice(pos);
+
+    const updatedBefore = textBeforeCursor.replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+    const newContent = updatedBefore + textAfterCursor;
+
+    setContent(newContent);
+    setMentionQuery(null);
+    setMentionSuggestions([]);
+
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(updatedBefore.length, updatedBefore.length);
+      }
+    }, 50);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type and size (e.g., max 5MB)
     if (!file.type.startsWith("image/")) {
       alert("Only image files are supported at this time.");
       return;
@@ -63,12 +130,11 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
     setIsUploading(true);
     let finalMediaUrl = undefined;
 
-    // 1. Upload image to Supabase Storage if one is selected
     if (selectedFile) {
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('feed_media')
         .upload(fileName, selectedFile);
 
@@ -79,7 +145,6 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         return;
       }
 
-      // Retrieve the public URL for the newly uploaded image
       const { data: { publicUrl } } = supabase.storage
         .from('feed_media')
         .getPublicUrl(fileName);
@@ -87,7 +152,6 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
       finalMediaUrl = publicUrl;
     }
 
-    // 2. Submit Post via Context/Parent callback
     const success = incrementPostCount();
     if (success && onPostCreated) {
       onPostCreated(content, finalMediaUrl);
@@ -138,21 +202,54 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
             </div>
           )}
 
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={!canPostMore || isUploading}
-            placeholder={
-              canPostMore
-                ? `Share startup updates, investment thesis, or market insights (${capabilities.name}: max ${maxChars} chars)...`
-                : "Post limit reached for current tier. Upgrade to post more."
-            }
-            rows={4}
-            className={`w-full rounded-2xl border-transparent bg-transparent p-4 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/40 focus:outline-none transition resize-none neu-pressed-base shadow-inner font-medium ${isOverCharLimit
-              ? "border-rose-600 focus:ring-1 focus:ring-rose-600"
-              : "focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
-              }`}
-          />
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleTextChange}
+              disabled={!canPostMore || isUploading}
+              placeholder={
+                canPostMore
+                  ? `Share startup updates, investment thesis, or market insights (${capabilities.name}: max ${maxChars} chars)... Use @ to mention.`
+                  : "Post limit reached for current tier. Upgrade to post more."
+              }
+              rows={4}
+              className={`w-full rounded-2xl border-transparent bg-transparent p-4 text-sm text-[var(--secondary)] placeholder-[var(--secondary)]/40 focus:outline-none transition resize-none neu-pressed-base shadow-inner font-medium ${isOverCharLimit
+                ? "border-rose-600 focus:ring-1 focus:ring-rose-600"
+                : "focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
+                }`}
+            />
+
+            {/* MENTION DROPDOWN POPUP */}
+            {mentionSuggestions.length > 0 && (
+              <div className="absolute left-4 bottom-full mb-2 w-72 neu-flat-base rounded-2xl shadow-2xl z-50 overflow-hidden border border-[var(--secondary)]/10 bg-[var(--primary)]">
+                <div className="p-2 border-b border-[var(--secondary)]/10 text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider flex items-center gap-1.5">
+                  <AtSign size={12} className="text-[var(--accent)]" /> Connected & Interacted Users
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {mentionSuggestions.map((user) => {
+                    const name = user.nickname || user.company_name || "User";
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => insertMention(user.username)}
+                        className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[var(--secondary)]/5 transition-colors border-b border-[var(--secondary)]/5 last:border-none"
+                      >
+                        <div>
+                          <p className="text-xs font-bold text-[var(--secondary)]">{name}</p>
+                          <p className="text-[10px] font-mono font-bold text-[var(--accent)]">@{user.username}</p>
+                        </div>
+                        <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded neu-pressed-base text-[var(--secondary)]/60">
+                          {user.role}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {isOverCharLimit && (
             <div className="mt-2 rounded-xl bg-transparent border border-rose-600/30 p-2.5 flex items-center justify-between text-xs text-rose-600 font-bold">
@@ -167,7 +264,6 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2 text-[var(--secondary)]/50 text-xs font-bold">
-            {/* Hidden File Input */}
             <input
               type="file"
               ref={fileInputRef}

@@ -1,12 +1,15 @@
+// Location: SRC/components/social/CommentBox.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import Link from "next/link";
 
 interface CommentBoxProps {
   postId: string;
-  currentUserId?: string;
-  postOwnerId?: string; // Required for notifications
+  currentUserId?: string | null;
+  postOwnerId?: string;
   onCommentAdded?: () => void;
 }
 
@@ -27,7 +30,7 @@ export default function CommentBox({ postId, currentUserId, postOwnerId, onComme
       .from("comments")
       .select(`
         id, content, created_at, author_id,
-        author:profiles(nickname, company_name, role)
+        author:profiles(id, nickname, company_name, username, role)
       `)
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
@@ -37,7 +40,10 @@ export default function CommentBox({ postId, currentUserId, postOwnerId, onComme
   };
 
   const submitComment = async () => {
-    if (!currentUserId) return setErrorMsg("You must be signed in to comment.");
+    if (!currentUserId) {
+      window.location.href = "/login?next=/feed";
+      return;
+    }
     if (!comment.trim()) return setErrorMsg("Comment cannot be empty.");
 
     setLoading(true);
@@ -55,7 +61,6 @@ export default function CommentBox({ postId, currentUserId, postOwnerId, onComme
       return;
     }
 
-    // Trigger Notification to Post Owner with reference_id for clickable links
     if (postOwnerId && postOwnerId !== currentUserId) {
       await supabase.from("notifications").insert({
         user_id: postOwnerId,
@@ -79,11 +84,22 @@ export default function CommentBox({ postId, currentUserId, postOwnerId, onComme
       ) : commentsList.length > 0 ? (
         <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
           {commentsList.map((c) => {
-            const authorName = c.author?.nickname || c.author?.company_name || "Arena Member";
+            const authorData = Array.isArray(c.author) ? c.author[0] : c.author;
+            const authorName = authorData?.nickname || authorData?.company_name || "Arena Member";
+            const authorHandle = authorData?.username ? `@${authorData.username}` : `@user`;
+            const authorId = c.author_id || authorData?.id;
+
             return (
               <div key={c.id} className="neu-pressed-base border-transparent p-3 text-sm space-y-1 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[var(--secondary)] text-[11px] uppercase tracking-wider">{authorName}</span>
+                  <div className="flex items-center gap-2">
+                    <Link href={authorId ? `/profile/${authorId}` : "#"} className="font-bold text-[var(--secondary)] text-[11px] uppercase tracking-wider hover:text-[var(--accent)] transition">
+                      {authorName}
+                    </Link>
+                    <Link href={authorId ? `/profile/${authorId}` : "#"} className="font-mono text-[10px] text-[var(--accent)] hover:underline">
+                      {authorHandle}
+                    </Link>
+                  </div>
                   <span className="text-[10px] text-[var(--secondary)]/50 font-bold">
                     {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

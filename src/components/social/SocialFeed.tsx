@@ -1,16 +1,11 @@
-"use client";
+// Location: SRC/components/social/SocialFeed.tsx
 
-import { useState, useEffect, useCallback } from "react";
 import PostComposer from "./PostComposer";
 import PostCard from "./PostCard";
-import { MessageSquare } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-import { useAuth } from "@/components/auth/AuthProvider";
-import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
+import { MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-// Utility helper to make hashtags inside post content clickable
 function formatPostText(content: string) {
   if (!content) return content;
   const parts = content.split(/(#[A-Za-z0-9_]+)/g);
@@ -22,7 +17,6 @@ function formatPostText(content: string) {
           key={index}
           href={`/feed?tag=${tag}`}
           className="text-[var(--accent)] font-bold hover:underline inline-block"
-          onClick={(e) => e.stopPropagation()} // Prevents triggering card click events
         >
           {part}
         </Link>
@@ -32,72 +26,29 @@ function formatPostText(content: string) {
   });
 }
 
-export default function SocialFeed() {
-  const { session, loading: authLoading } = useAuth();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface SocialFeedProps {
+  initialPosts: any[];
+  currentUserId?: string | null;
+}
 
-  const fetchPosts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("posts")
-      .select(`
-        *,
-        author:profiles(*),
-        likes(id, user_id),
-        dislikes(id, user_id),
-        bookmarks(id, user_id),
-        comments(count)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setPosts(data);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading && session) {
-      fetchPosts();
-
-      const channel = supabase
-        .channel('public:posts')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-          fetchPosts();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [authLoading, session, fetchPosts]);
-
-  // FIXED: Now accepts mediaUrl and saves it to the database
-  const handlePostCreated = async (newContent: string, mediaUrl?: string) => {
-    if (!session?.user) return;
-
-    const { error } = await supabase.from("posts").insert({
-      author_id: session.user.id,
-      content: newContent,
-      media_url: mediaUrl, // Pushes the Supabase Storage URL to the row
-    }).select();
-
-    if (!error) {
-      await fetchPosts();
-    } else {
-      console.error("Failed to post to feed:", error.message);
-    }
-  };
-
-  if (authLoading || loading) {
-    return <RoleRoutingLoader message="Loading Live Feed..." />;
-  }
+export default function SocialFeed({ initialPosts = [], currentUserId }: SocialFeedProps) {
+  const safeUserId = currentUserId ?? undefined;
 
   return (
     <div className="space-y-6">
 
-      <PostComposer onPostCreated={handlePostCreated} />
+      {safeUserId ? (
+        <PostComposer />
+      ) : (
+        <div className="neu-flat-base p-6 text-center space-y-3">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-[var(--secondary)]">
+            <Lock size={14} className="text-[var(--accent)]" /> Want to participate in discussions and broadcast updates?
+          </div>
+          <Link href="/login?next=/feed" className="neu-btn inline-block px-6 py-2.5 text-xs font-bold text-[var(--accent)]">
+            Sign In / Register to Post
+          </Link>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-bold text-[var(--secondary)] flex items-center gap-2">
@@ -107,15 +58,16 @@ export default function SocialFeed() {
       </div>
 
       <div className="space-y-4">
-        {posts.map((post) => {
+        {initialPosts.map((post) => {
+          const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
           const formattedPost = {
             id: post.id,
-            authorName: post.author?.nickname || post.author?.company_name || "Unknown User",
-            authorRole: post.author?.role === "investor" ? "Investor" : "Startup Founder",
-            tier: post.author?.tier || "freemium",
+            authorName: authorData?.nickname || authorData?.company_name || "Unknown User",
+            authorRole: authorData?.role === "investor" ? "Investor" : "Startup Founder",
+            tier: authorData?.tier || "freemium",
             timestamp: new Date(post.created_at).toLocaleDateString(),
             content: formatPostText(post.content),
-            mediaUrl: post.media_url, // Extracts the image URL for the card
+            mediaUrl: post.media_url,
             likesCount: post.likes?.length || 0,
             dislikesCount: post.dislikes?.length || 0,
             repostsCount: 0,
@@ -127,13 +79,12 @@ export default function SocialFeed() {
               key={post.id}
               post={formattedPost as any}
               dbPost={post}
-              currentUserId={session?.user?.id}
-              onUpdate={fetchPosts}
+              currentUserId={safeUserId}
             />
           );
         })}
 
-        {posts.length === 0 && (
+        {initialPosts.length === 0 && (
           <div className="neu-flat-base p-12 text-center">
             <p className="text-[var(--secondary)]/50 font-bold text-sm">No posts yet. Be the first to enter the arena.</p>
           </div>

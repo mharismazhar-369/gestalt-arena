@@ -63,14 +63,26 @@ export default async function FeedPage() {
   const role = profile?.role || "visitor";
   const isStartup = role === "startup";
 
-  // Fetch public sidebar content concurrently (available for both guests and members)
+  // Fetch posts and public sidebar content concurrently on the server
   const [
+    postsRes,
     trendArticlesRes,
     investorMatchesRes,
     trendTagsRes,
     startupsRes,
     adsRes
   ] = await Promise.all([
+    supabase
+      .from("posts")
+      .select(`
+        *,
+        author:profiles(*),
+        likes(id, user_id),
+        dislikes(id, user_id),
+        bookmarks(id, user_id),
+        comments(count)
+      `)
+      .order("created_at", { ascending: false }),
     supabase.from("articles").select("id, title, read_time").order("random()").limit(3),
     user && isStartup
       ? supabase.rpc("match_investors_for_startup", { p_startup_id: user.id })
@@ -82,6 +94,7 @@ export default async function FeedPage() {
       : supabase.from("emporium_listings").select("*").eq("status", "active").limit(3)
   ]);
 
+  const initialPosts = postsRes.data || [];
   const trendingArticles = trendArticlesRes.data || [];
   const trendingInvestors = Array.isArray(investorMatchesRes.data)
     ? investorMatchesRes.data.slice(0, 3)
@@ -253,7 +266,7 @@ export default async function FeedPage() {
               <BetaBadge variant="pill" className="hidden sm:inline-flex" />
             </div>
 
-            <SocialFeed />
+            <SocialFeed initialPosts={initialPosts} currentUserId={user?.id} />
           </section>
 
           {/* RIGHT SIDEBAR */}
@@ -341,7 +354,7 @@ export default async function FeedPage() {
                 </div>
               </div>
 
-              {/* Active Startups Block */}
+              ### Active Startups Block
               <div className="neu-flat-base p-5 space-y-4">
                 <h3 className="text-xs font-bold text-[var(--secondary)] flex items-center gap-2 border-b border-[var(--secondary)]/10 pb-3">
                   <Building size={14} className="text-[var(--accent)]" /> Active Startups

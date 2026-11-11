@@ -1,17 +1,16 @@
+// Location: SRC/components/social/PostCard.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Heart, ThumbsDown, MessageSquare, Repeat, Share2, Bookmark, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { toggleLike, toggleDislike, toggleBookmark, createNotification } from "@/lib/api";
 import CommentBox from "./CommentBox";
 import React from "react";
-
-const trackInteraction = (eventType: "CLICK" | "INPUT", element: string, metadata?: any) => {
-  console.log(`[Telemetry] ${eventType} -> ${element}`, metadata);
-};
 
 export interface Post {
   id: string;
@@ -20,8 +19,8 @@ export interface Post {
   authorAvatar?: string;
   tier: "Freemium" | "Gold" | "Platinum";
   timestamp: string;
-  content: React.ReactNode | string; // Updated to support formatted text array
-  mediaUrl?: string; // FIXED: Added mediaUrl to interface
+  content: React.ReactNode | string;
+  mediaUrl?: string;
   likesCount: number;
   dislikesCount: number;
   repostsCount: number;
@@ -32,7 +31,7 @@ export interface Post {
 interface PostCardProps {
   post: Post;
   dbPost?: any;
-  currentUserId?: string;
+  currentUserId?: string | null;
   onUpdate?: () => void;
 }
 
@@ -48,6 +47,10 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   const [showComments, setShowComments] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
+
+  const authorData = dbPost?.author ? (Array.isArray(dbPost.author) ? dbPost.author[0] : dbPost.author) : null;
+  const authorHandle = authorData?.username ? `@${authorData.username}` : `@${post.authorName.toLowerCase().replace(/\s+/g, '_')}`;
+  const authorProfileUrl = `/profile/${dbPost?.author_id || authorData?.id || '#'}`;
 
   useEffect(() => {
     if (dbPost && currentUserId) {
@@ -66,7 +69,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       const shareData = {
         title: "Check out this post on Gestalt ARENA",
         text: typeof post.content === 'string' ? post.content : "View post on Arena",
-        url: `${window.location.origin}/post/${post.id}`,
+        url: `${window.location.origin}/feed/${post.id}`,
       };
       if (navigator.share) {
         await navigator.share(shareData);
@@ -83,25 +86,23 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
   const handleRepost = async () => {
     if (!currentUserId) {
-      setErrorMsg("You must be logged in to reshare.");
-      setTimeout(() => setErrorMsg(""), 3000);
+      router.push("/login?next=/feed");
       return;
     }
 
     try {
-      // Basic text extraction if it's formatted
-      const rawContent = dbPost.content || "reshared a post";
+      const rawContent = dbPost?.content || "reshared a post";
       const reshareContent = `🔄 **Reshared from ${post.authorName}:**\n\n${rawContent}`;
 
       const { error } = await supabase.from("posts").insert({
         author_id: currentUserId,
         content: reshareContent,
-        media_url: post.mediaUrl || null // Carry over media if present
+        media_url: post.mediaUrl || null
       });
 
       if (error) throw error;
 
-      if (dbPost.author_id !== currentUserId) {
+      if (dbPost?.author_id && dbPost.author_id !== currentUserId) {
         await supabase.from("notifications").insert({
           user_id: dbPost.author_id,
           actor_id: currentUserId,
@@ -121,7 +122,11 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   };
 
   const handleToggleLike = async () => {
-    if (!currentUserId || !dbPost) return;
+    if (!currentUserId) {
+      router.push("/login?next=/feed");
+      return;
+    }
+    if (!dbPost) return;
 
     if (liked) {
       setLiked(false);
@@ -152,7 +157,11 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   };
 
   const handleToggleDislike = async () => {
-    if (!currentUserId || !dbPost) return;
+    if (!currentUserId) {
+      router.push("/login?next=/feed");
+      return;
+    }
+    if (!dbPost) return;
 
     if (disliked) {
       setDisliked(false);
@@ -173,7 +182,11 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
   };
 
   const handleToggleBookmark = async () => {
-    if (!currentUserId || !dbPost) return;
+    if (!currentUserId) {
+      router.push("/login?next=/feed");
+      return;
+    }
+    if (!dbPost) return;
     if (bookmarked) {
       setBookmarked(false);
       await toggleBookmark(dbPost.id, currentUserId, true);
@@ -208,21 +221,14 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
         .eq("id", dbPost.id)
         .eq("author_id", currentUserId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setSuccessMsg("Post deleted successfully.");
-
-      if (onUpdate) {
-        onUpdate();
-      }
-
+      if (onUpdate) onUpdate();
       router.push("/feed");
       router.refresh();
     } catch (error) {
       console.error("Delete post error:", error);
-
       setErrorMsg("Failed to delete post. Please try again.");
       setTimeout(() => setErrorMsg(""), 3000);
     }
@@ -239,56 +245,67 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] font-black text-[var(--primary)] text-sm uppercase shadow-inner">
+          <Link href={authorProfileUrl} className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] font-black text-[var(--primary)] text-sm uppercase shadow-inner hover:opacity-90 transition">
             {post.authorName.slice(0, 2)}
-          </div>
+          </Link>
           <div>
             <div className="flex items-center gap-2">
-              {currentUserId === dbPost?.author_id && (
-                <button
-                  type="button"
-                  onClick={handleDeletePost}
-                  className="text-[var(--secondary)]/50 hover:text-rose-600 bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
-                  aria-label="Delete post"
-                  title="Delete post"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleToggleBookmark}
-                className={`transition bg-transparent p-2 rounded-lg ${bookmarked
-                  ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
-                  : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"
-                  }`}
-                aria-label="Save"
-                title="Save post"
-              >
-                <Bookmark
-                  size={14}
-                  className={bookmarked ? "fill-[var(--accent)]" : ""}
-                />
-              </button>
-
-              <button
-                type="button"
-                onClick={sharePost}
-                className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
-                aria-label="Share"
-                title="Share post"
-              >
-                <Share2 size={14} />
-              </button>
+              <Link href={authorProfileUrl} className="font-bold text-[var(--secondary)] text-sm hover:text-[var(--accent)] transition">
+                {post.authorName}
+              </Link>
+              <Link href={authorProfileUrl} className="font-mono text-xs font-bold text-[var(--accent)] hover:underline">
+                {authorHandle}
+              </Link>
             </div>
+            <span className="text-[10px] font-bold text-[var(--secondary)]/60 capitalize block">
+              {post.authorRole} • <span className="font-mono">{post.timestamp}</span>
+            </span>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {currentUserId === dbPost?.author_id && (
+            <button
+              type="button"
+              onClick={handleDeletePost}
+              className="text-[var(--secondary)]/50 hover:text-rose-600 bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
+              aria-label="Delete post"
+              title="Delete post"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleToggleBookmark}
+            className={`transition bg-transparent p-2 rounded-lg ${bookmarked
+              ? "neu-pressed-base border-transparent shadow-inner text-[var(--accent)]"
+              : "text-[var(--secondary)]/50 hover:text-[var(--accent)] neu-btn shadow-none"
+              }`}
+            aria-label="Save"
+            title="Save post"
+          >
+            <Bookmark
+              size={14}
+              className={bookmarked ? "fill-[var(--accent)]" : ""}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={sharePost}
+            className="text-[var(--secondary)]/50 hover:text-[var(--accent)] bg-transparent p-2 rounded-lg neu-btn shadow-none transition"
+            aria-label="Share"
+            title="Share post"
+          >
+            <Share2 size={14} />
+          </button>
         </div>
       </div>
 
       <p className="text-sm text-[var(--secondary)]/90 leading-relaxed whitespace-pre-line font-medium">{post.content}</p>
 
-      {/* FIXED: Media Rendering Block */}
       {post.mediaUrl && (
         <div className="mt-3 rounded-2xl overflow-hidden border border-[var(--secondary)]/10 shadow-sm">
           <img
@@ -333,7 +350,7 @@ export default function PostCard({ post, dbPost, currentUserId, onUpdate }: Post
       </div>
 
       <AnimatePresence>
-        {showComments && onUpdate && (
+        {showComments && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <CommentBox
               postId={post.id}

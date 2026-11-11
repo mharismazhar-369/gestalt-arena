@@ -18,7 +18,7 @@ export interface Post {
   authorName: string;
   authorRole: string;
   authorAvatar?: string;
-  tier: "freemium" | "gold" | "platinum";
+  tier: "Freemium" | "Gold" | "Platinum";
   timestamp: string;
   content: React.ReactNode | string; // Updated to support formatted text array
   mediaUrl?: string; // FIXED: Added mediaUrl to interface

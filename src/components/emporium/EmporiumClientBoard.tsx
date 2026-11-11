@@ -30,7 +30,7 @@ export default function EmporiumClientBoard({
 }: {
     initialCampaigns: any[];
     config: any;
-    currentUserId: string;
+    currentUserId?: string | null;
 }) {
     const router = useRouter();
     const [showBuilder, setShowBuilder] = useState(false);
@@ -74,7 +74,13 @@ export default function EmporiumClientBoard({
                 </div>
 
                 <button
-                    onClick={() => setShowBuilder(!showBuilder)}
+                    onClick={() => {
+                        if (!currentUserId) {
+                            router.push('/login?next=/emporium');
+                            return;
+                        }
+                        setShowBuilder(!showBuilder);
+                    }}
                     className="neu-btn flex items-center gap-2 px-6 py-3 text-xs shrink-0"
                 >
                     <Plus className="w-4 h-4" />
@@ -83,7 +89,7 @@ export default function EmporiumClientBoard({
             </div>
 
             <AnimatePresence>
-                {showBuilder && (
+                {showBuilder && currentUserId && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="pb-8">
                             <EmporiumAdBuilder config={config} onCancel={() => setShowBuilder(false)} />
@@ -133,7 +139,7 @@ export default function EmporiumClientBoard({
                     </div>
                 ) : (
                     filteredCampaigns.map((ad) => {
-                        const isOwner = ad.userId === currentUserId;
+                        const isOwner = currentUserId && ad.userId === currentUserId;
 
                         return (
                             <motion.div variants={itemVariants} key={ad.id} className="flex flex-col justify-between p-6 neu-flat-base transition-all duration-300 group">
@@ -143,8 +149,8 @@ export default function EmporiumClientBoard({
                                             {ad.company_name || 'Sponsored'} • {ad.category}
                                         </span>
                                         <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-md ${ad.status === 'pending_approval' ? 'bg-amber-500/10 text-amber-600' :
-                                                ad.status === 'paused' ? 'bg-blue-500/10 text-blue-600' :
-                                                    'bg-emerald-500/10 text-emerald-600'
+                                            ad.status === 'paused' ? 'bg-blue-500/10 text-blue-600' :
+                                                'bg-emerald-500/10 text-emerald-600'
                                             }`}>
                                             {ad.status.replace('_', ' ')}
                                         </span>

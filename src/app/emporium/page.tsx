@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
 import { getCampaignsFromDB, getEmporiumConfig } from './queries';
 import EmporiumClientBoard from '@/components/emporium/EmporiumClientBoard';
@@ -35,12 +34,7 @@ export default async function EmporiumServerPage() {
         }
     );
 
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    // SECURITY FIX: Redirect unauthenticated/non-registered users to login immediately
-    if (error || !user) {
-        redirect('/login?next=/emporium');
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
     const [campaigns, config] = await Promise.all([
         getCampaignsFromDB(),
@@ -55,7 +49,7 @@ export default async function EmporiumServerPage() {
                 <EmporiumClientBoard
                     initialCampaigns={campaigns}
                     config={config}
-                    currentUserId={user.id}
+                    currentUserId={user?.id || null}
                 />
             </main>
 

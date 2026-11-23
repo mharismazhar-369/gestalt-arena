@@ -7,7 +7,7 @@ import SocialFeed from "@/components/social/SocialFeed";
 import BetaBadge from "@/components/shared/BetaBadge";
 import {
   MessageSquare, Hash,
-  Eye, FileText, Activity, Presentation, Target,
+  FileText, Activity, Presentation, Target,
   ArrowRight, ShieldCheck, DollarSign, Store, Building, RefreshCw, Sparkles
 } from "lucide-react";
 
@@ -26,7 +26,7 @@ export default async function FeedPage() {
   let user: any = null;
   let profile: any = null;
   let deckData: any = null;
-  let metrics = { posts: 0, articles: 0, views: 0 };
+  let metrics = { posts: 0, articles: 0 };
   let initialPosts: any[] = [];
   let trendingArticles: any[] = [];
   let trendingInvestors: any[] = [];
@@ -63,7 +63,6 @@ export default async function FeedPage() {
         metrics = {
           posts: postCountRes.status === "fulfilled" ? postCountRes.value.count || 0 : 0,
           articles: articleCountRes.status === "fulfilled" ? articleCountRes.value.count || 0 : 0,
-          views: profile.profile_views || profile.views || 0
         };
 
         deckData = deckRes.status === "fulfilled" ? deckRes.value.data || null : null;
@@ -87,7 +86,6 @@ export default async function FeedPage() {
           *,
           author:profiles(*),
           likes(id, user_id),
-          dislikes(id, user_id),
           bookmarks(id, user_id),
           comments(count)
         `)
@@ -126,7 +124,7 @@ export default async function FeedPage() {
   const isStartup = role === "startup";
 
   const displayName = profile?.nickname || profile?.company_name || user?.email?.split("@")[0] || "Guest Visitor";
-  const displayNickname = profile?.username ? `@${profile.username}` : user ? `@${displayName.toLowerCase().replace(/\s+/g, '_')}` : "@guest";
+  const displayNickname = profile?.username ? `@${profile.username}` : user ? `@${displayName.toLowerCase().replace(/\s+/g, "_")}` : "@guest";
   const displayRole = isStartup ? "Startup Founder" : role === "investor" ? "Investor" : "Guest Explorer";
 
   const statusColors: Record<string, string> = {
@@ -165,7 +163,7 @@ export default async function FeedPage() {
 
                     {user && (
                       <div className="absolute -bottom-1 -right-1 z-20">
-                        <span className={`h-4 w-4 rounded-full border-2 border-[var(--primary)] flex items-center justify-center transition-all ${statusColors[profile?.presence_status || 'online']}`} />
+                        <span className={`h-4 w-4 rounded-full border-2 border-[var(--primary)] flex items-center justify-center transition-all ${statusColors[profile?.presence_status || "online"]}`} />
                       </div>
                     )}
                   </div>
@@ -184,13 +182,6 @@ export default async function FeedPage() {
 
                 {user ? (
                   <div className="space-y-4">
-                    <Link href="/dashboard/analytics" className="flex items-center justify-between text-[10px] font-bold group cursor-pointer">
-                      <span className="flex items-center gap-1.5 text-[var(--secondary)]/70 group-hover:text-[var(--accent)] transition">
-                        <Eye size={12} className="text-[var(--accent)]" /> Profile Views
-                      </span>
-                      <span className="text-[var(--secondary)]">{metrics.views}</span>
-                    </Link>
-
                     <Link href={`/profile/${user.id}`} className="flex items-center justify-between text-[10px] font-bold group">
                       <span className="flex items-center gap-1.5 text-[var(--secondary)]/75 group-hover:text-[var(--accent)] transition">
                         <MessageSquare size={12} className="text-[var(--accent)]" /> Published Posts
@@ -236,7 +227,7 @@ export default async function FeedPage() {
                           <DollarSign size={10} /> {isStartup ? "Target Raise" : "Allocation"}
                         </span>
                         <span className="text-sm font-mono font-bold text-[var(--secondary)]">
-                          ${(deckData.funding_goal || deckData.max_allocation || 0).toLocaleString()}
+                          ${Number(deckData.funding_goal || deckData.max_allocation || 0).toLocaleString()}
                         </span>
                       </div>
                       <p className="text-[10px] text-[var(--secondary)]/70 line-clamp-3 font-medium leading-relaxed">
@@ -307,8 +298,8 @@ export default async function FeedPage() {
                 </h3>
                 <div className="space-y-3">
                   {eligibleAds.length > 0 ? eligibleAds.map((ad: any) => (
-                    <a href={ad.cta_url || `/emporium`} target="_blank" rel="noopener noreferrer" key={ad.id} className="block group neu-pressed-base p-3 rounded-xl">
-                      <span className="text-[9px] uppercase tracking-wider text-[var(--accent)] font-bold">{ad.category || 'Solution'}</span>
+                    <a href={ad.cta_url || ad.external_purchase_url || "/emporium"} target="_blank" rel="noopener noreferrer" key={ad.id} className="block group neu-pressed-base p-3 rounded-xl">
+                      <span className="text-[9px] uppercase tracking-wider text-[var(--accent)] font-bold">{ad.category || "Solution"}</span>
                       <h4 className="text-xs font-bold text-[var(--secondary)] group-hover:text-[var(--accent)] transition truncate mt-0.5">
                         {ad.title}
                       </h4>

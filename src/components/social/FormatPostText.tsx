@@ -1,5 +1,7 @@
-import Link from 'next/link';
-import React from 'react';
+"use client";
+
+import Link from "next/link";
+import React from "react";
 
 export function formatPostText(content: string) {
     if (!content) return content;
@@ -8,7 +10,7 @@ export function formatPostText(content: string) {
     const parts = content.split(/(#[A-Za-z0-9_]+)/g);
 
     return parts.map((part, index) => {
-        if (part.startsWith('#')) {
+        if (part.startsWith("#")) {
             const tag = part.substring(1); // remove the # for the search query
             return (
                 <Link

@@ -1,5 +1,3 @@
-// Location: SRC/components/social/PostComposer.tsx
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";

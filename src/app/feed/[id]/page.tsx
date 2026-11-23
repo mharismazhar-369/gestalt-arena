@@ -49,7 +49,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             };
         }
 
-        // Handle author whether Supabase returns an array or object
         const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
         const authorName =
             authorData?.nickname ||
@@ -58,32 +57,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
         const cleanContent = (post.content || "").replace(/\s+/g, " ").trim();
         const snippet =
-            cleanContent.length > 120
-                ? `${cleanContent.slice(0, 120)}...`
+            cleanContent.length > 110
+                ? `${cleanContent.slice(0, 107)}...`
                 : cleanContent || "Shared a post on Gestalt Arena";
 
-        const ogImage = resolveImageUrl(post.media_url);
+        const postTitle = `${authorName}: "${snippet}"`;
         const postUrl = `${SITE_URL}/feed/${id}`;
+        const customImage = post.media_url ? resolveImageUrl(post.media_url) : null;
 
         return {
-            title: `${authorName} on Gestalt Arena: "${snippet}"`,
+            title: `${postTitle} | Gestalt Arena`,
             description: cleanContent || snippet,
             alternates: {
                 canonical: `/feed/${id}`,
             },
             openGraph: {
-                title: `${authorName} on Gestalt Arena`,
-                description: snippet,
+                title: postTitle,
+                description: cleanContent || snippet,
                 url: postUrl,
                 siteName: "Gestalt Arena",
-                images: [{ url: ogImage }],
+                ...(customImage ? { images: [{ url: customImage }] } : {}),
                 type: "article",
             },
             twitter: {
                 card: "summary_large_image",
-                title: `${authorName} on Gestalt Arena`,
-                description: snippet,
-                images: [ogImage],
+                title: postTitle,
+                description: cleanContent || snippet,
+                ...(customImage ? { images: [customImage] } : {}),
             },
         };
     } catch {

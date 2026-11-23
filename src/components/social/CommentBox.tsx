@@ -1,5 +1,3 @@
-// Location: SRC/components/social/CommentBox.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";

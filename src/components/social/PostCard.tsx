@@ -1,5 +1,3 @@
-// Location: SRC/components/social/PostCard.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";

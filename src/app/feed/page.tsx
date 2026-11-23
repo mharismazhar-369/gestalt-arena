@@ -23,89 +23,107 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function FeedPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let profile = null;
-  let deckData = null;
+  let user: any = null;
+  let profile: any = null;
+  let deckData: any = null;
   let metrics = { posts: 0, articles: 0, views: 0 };
+  let initialPosts: any[] = [];
+  let trendingArticles: any[] = [];
+  let trendingInvestors: any[] = [];
+  let trendingTags: any[] = [];
+  let activeStartups: any[] = [];
+  let eligibleAds: any[] = [];
+  let serverErrorMessage: string | null = null;
 
-  if (user) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (profileData) {
-      profile = profileData;
-      const isStartup = profile.role === "startup";
+    if (!authError && authData?.user) {
+      user = authData.user;
 
-      const [postCountRes, articleCountRes, deckRes] = await Promise.all([
-        supabase.from("posts").select("*", { count: "exact", head: true }).eq("author_id", user.id),
-        supabase.from("articles").select("*", { count: "exact", head: true }).eq("author_id", user.id),
-        isStartup
-          ? supabase.from("pitch_decks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
-          : supabase.from("investor_bid_decks").select("*").eq("investor_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
-      ]);
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      metrics = {
-        posts: postCountRes.count || 0,
-        articles: articleCountRes.count || 0,
-        views: profile.profile_views || profile.views || 0
-      };
+      if (profileData) {
+        profile = profileData;
+        const isStartup = profile.role === "startup";
 
-      deckData = deckRes.data || null;
+        const [postCountRes, articleCountRes, deckRes] = await Promise.allSettled([
+          supabase.from("posts").select("*", { count: "exact", head: true }).eq("author_id", user.id),
+          supabase.from("articles").select("*", { count: "exact", head: true }).eq("author_id", user.id),
+          isStartup
+            ? supabase.from("pitch_decks").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
+            : supabase.from("investor_bid_decks").select("*").eq("investor_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
+        ]);
+
+        metrics = {
+          posts: postCountRes.status === "fulfilled" ? postCountRes.value.count || 0 : 0,
+          articles: articleCountRes.status === "fulfilled" ? articleCountRes.value.count || 0 : 0,
+          views: profile.profile_views || profile.views || 0
+        };
+
+        deckData = deckRes.status === "fulfilled" ? deckRes.value.data || null : null;
+      }
     }
+
+    const role = profile?.role || "visitor";
+    const isStartup = role === "startup";
+
+    const [
+      postsRes,
+      trendArticlesRes,
+      investorMatchesRes,
+      trendTagsRes,
+      startupsRes,
+      adsRes
+    ] = await Promise.allSettled([
+      supabase
+        .from("posts")
+        .select(`
+          *,
+          author:profiles(*),
+          likes(id, user_id),
+          dislikes(id, user_id),
+          bookmarks(id, user_id),
+          comments(count)
+        `)
+        .order("created_at", { ascending: false }),
+      supabase.from("articles").select("id, title, read_time").order("random()").limit(3),
+      user && isStartup
+        ? supabase.rpc("match_investors_for_startup", { p_startup_id: user.id })
+        : supabase.from("profiles").select("id, nickname, company_name, ownership_type, role, username").eq("role", "investor").order("random()").limit(3),
+      supabase.rpc("get_trending_tags"),
+      supabase.rpc("get_active_startups"),
+      user
+        ? supabase.rpc("get_eligible_ads", { p_user_id: user.id })
+        : supabase.from("emporium_listings").select("*").eq("status", "active").limit(3)
+    ]);
+
+    initialPosts =
+      postsRes.status === "fulfilled" && !postsRes.value.error ? postsRes.value.data || [] : [];
+    trendingArticles =
+      trendArticlesRes.status === "fulfilled" && !trendArticlesRes.value.error ? trendArticlesRes.value.data || [] : [];
+    const rawInvestors =
+      investorMatchesRes.status === "fulfilled" && !investorMatchesRes.value.error ? investorMatchesRes.value.data : [];
+    trendingInvestors = Array.isArray(rawInvestors) ? rawInvestors.slice(0, 3) : [];
+    trendingTags =
+      trendTagsRes.status === "fulfilled" && !trendTagsRes.value.error ? trendTagsRes.value.data || [] : [];
+    activeStartups =
+      startupsRes.status === "fulfilled" && !startupsRes.value.error ? (startupsRes.value.data || []).slice(0, 3) : [];
+    const rawAds =
+      adsRes.status === "fulfilled" && !adsRes.value.error ? adsRes.value.data : [];
+    eligibleAds = Array.isArray(rawAds) ? [...rawAds].sort(() => Math.random() - 0.5) : [];
+  } catch (err: any) {
+    console.error("FeedPage server error:", err);
+    serverErrorMessage = err?.message || "Unable to load feed data on server.";
   }
 
   const role = profile?.role || "visitor";
   const isStartup = role === "startup";
-
-  const [
-    postsRes,
-    trendArticlesRes,
-    investorMatchesRes,
-    trendTagsRes,
-    startupsRes,
-    adsRes
-  ] = await Promise.allSettled([
-    supabase
-      .from("posts")
-      .select(`
-        *,
-        author:profiles(*),
-        likes(id, user_id),
-        dislikes(id, user_id),
-        bookmarks(id, user_id),
-        comments(count)
-      `)
-      .order("created_at", { ascending: false }),
-    supabase.from("articles").select("id, title, read_time").order("random()").limit(3),
-    user && isStartup
-      ? supabase.rpc("match_investors_for_startup", { p_startup_id: user.id })
-      : supabase.from("profiles").select("id, nickname, company_name, ownership_type, role, username").eq("role", "investor").order("random()").limit(3),
-    supabase.rpc("get_trending_tags"),
-    supabase.rpc("get_active_startups"),
-    user
-      ? supabase.rpc("get_eligible_ads", { p_user_id: user.id })
-      : supabase.from("emporium_listings").select("*").eq("status", "active").limit(3)
-  ]);
-
-  const initialPosts =
-    postsRes.status === "fulfilled" && !postsRes.value.error ? postsRes.value.data || [] : [];
-  const trendingArticles =
-    trendArticlesRes.status === "fulfilled" && !trendArticlesRes.value.error ? trendArticlesRes.value.data || [] : [];
-  const rawInvestors =
-    investorMatchesRes.status === "fulfilled" && !investorMatchesRes.value.error ? investorMatchesRes.value.data : [];
-  const trendingInvestors = Array.isArray(rawInvestors) ? rawInvestors.slice(0, 3) : [];
-  const trendingTags =
-    trendTagsRes.status === "fulfilled" && !trendTagsRes.value.error ? trendTagsRes.value.data || [] : [];
-  const activeStartups =
-    startupsRes.status === "fulfilled" && !startupsRes.value.error ? (startupsRes.value.data || []).slice(0, 3) : [];
-  const rawAds =
-    adsRes.status === "fulfilled" && !adsRes.value.error ? adsRes.value.data : [];
-  const eligibleAds = Array.isArray(rawAds) ? [...rawAds].sort(() => Math.random() - 0.5) : [];
 
   const displayName = profile?.nickname || profile?.company_name || user?.email?.split("@")[0] || "Guest Visitor";
   const displayNickname = profile?.username ? `@${profile.username}` : user ? `@${displayName.toLowerCase().replace(/\s+/g, '_')}` : "@guest";
@@ -124,6 +142,13 @@ export default async function FeedPage() {
       <Navbar />
 
       <main className="pt-32 pb-24 px-4 md:px-6 mx-auto max-w-[1400px] w-full relative z-10">
+        {serverErrorMessage && (
+          <div className="mb-6 neu-flat-base p-4 border border-rose-500/30 text-xs font-bold text-rose-500 flex items-center justify-between">
+            <span>Feed notice: {serverErrorMessage}</span>
+            <a href="/feed" className="neu-btn px-3 py-1 text-[10px] text-[var(--accent)]">Retry</a>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT SIDEBAR */}

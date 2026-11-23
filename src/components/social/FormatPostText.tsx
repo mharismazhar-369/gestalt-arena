@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import React from "react";
 
@@ -17,7 +15,6 @@ export function formatPostText(content: string) {
                     key={index}
                     href={`/feed?tag=${tag}`}
                     className="text-[var(--accent)] font-bold hover:underline inline-block"
-                    onClick={(e) => e.stopPropagation()} // Prevent card click conflicts
                 >
                     {part}
                 </Link>

@@ -8,6 +8,7 @@ import Footer from "@/components/landing/Footer";
 import RoleRoutingLoader from "@/components/shared/RoleRoutingLoader";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Calendar, ArrowLeft, Clock, ThumbsUp, ThumbsDown, Share2, Trash2, CheckCircle2 } from "lucide-react";
 
 export default function ArticleClient({ articleId }: { articleId: string }) {
@@ -22,6 +23,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
     const [dislikesCount, setDislikesCount] = useState(0);
     const [userAction, setUserAction] = useState<'like' | 'dislike' | null>(null);
     const [isSharing, setIsSharing] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
@@ -68,11 +70,17 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
         fetchData();
     }, [articleId, session]);
 
-    const handleShare = async () => {
+    const handleShare = () => {
+        setShowShareModal(true);
+    };
+
+    const handleCopyLink = async () => {
         try {
-            await navigator.clipboard.writeText(window.location.href);
+            const shareUrl = `${window.location.origin}/research/${articleId}`;
+            await navigator.clipboard.writeText(shareUrl);
             setIsSharing(true);
             setTimeout(() => setIsSharing(false), 2000);
+            setShowShareModal(false);
         } catch (err) {
             console.error("Failed to copy URL");
         }
@@ -207,6 +215,9 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
 
     const authorDisplayName = article.author?.nickname || article.author?.company_name || "Arena Member";
     const isAuthor = session?.user?.id === article.author_id;
+    const shareUrl = typeof window !== "undefined"
+        ? `${window.location.origin}/research/${articleId}`
+        : `https://www.gestalt-arena.com/research/${articleId}`;
 
     return (
         <div className="min-h-screen bg-[var(--primary)] text-[var(--secondary)] flex flex-col justify-between relative transition-colors duration-300">
@@ -309,6 +320,92 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
                 </div>
 
             </main>
+
+            {/* IN-APP SHARE MODAL */}
+            <AnimatePresence>
+                {showShareModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-[var(--primary)] border border-[var(--secondary)]/10 p-6 rounded-3xl max-w-md w-full space-y-6 relative neu-flat-base text-[var(--secondary)] shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between border-b border-[var(--secondary)]/10 pb-4">
+                                <h3 className="text-base font-black text-[var(--secondary)] flex items-center gap-2">
+                                    <Share2 size={18} className="text-[var(--accent)]" /> Share Research Paper
+                                </h3>
+                                <button
+                                    onClick={() => setShowShareModal(false)}
+                                    className="p-1.5 rounded-xl neu-btn text-[var(--secondary)]/60 hover:text-[var(--accent)] transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <a
+                                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${article.title} — by ${authorDisplayName}`)}&url=${encodeURIComponent(shareUrl)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                                >
+                                    <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center font-black">𝕏</div>
+                                    <span>Twitter / X</span>
+                                </a>
+
+                                <a
+                                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                                >
+                                    <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-blue-600 font-bold">in</div>
+                                    <span>LinkedIn</span>
+                                </a>
+
+                                <a
+                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                                >
+                                    <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-blue-500 font-bold">f</div>
+                                    <span>Facebook</span>
+                                </a>
+
+                                <a
+                                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Read "${article.title}" on Gestalt Arena: ${shareUrl}`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="neu-btn p-3 flex items-center gap-3 text-xs font-bold text-[var(--secondary)] hover:text-[var(--accent)] transition-all rounded-xl"
+                                >
+                                    <div className="w-8 h-8 rounded-lg neu-pressed-base flex items-center justify-center text-emerald-500 font-bold">💬</div>
+                                    <span>WhatsApp</span>
+                                </a>
+                            </div>
+
+                            <div className="space-y-2 pt-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--secondary)]/60">Direct Article Link</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={shareUrl}
+                                        className="w-full text-xs font-mono bg-transparent neu-pressed-base p-3 rounded-xl text-[var(--secondary)]/80 focus:outline-none"
+                                    />
+                                    <button
+                                        onClick={handleCopyLink}
+                                        className="neu-btn px-4 py-3 text-xs font-bold text-[var(--accent)] shrink-0"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <Footer />
         </div>

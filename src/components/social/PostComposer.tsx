@@ -6,7 +6,6 @@ import { useUserTier } from "@/components/context/UserTierContext";
 import { Send, AlertTriangle, ShieldCheck, Image as ImageIcon, Lock, X, Loader2, AtSign } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { createFeedPost } from "@/app/feed/actions";
 
 interface PostComposerProps {
   onPostCreated?: (content: string, mediaUrl?: string) => void;
@@ -15,7 +14,7 @@ interface PostComposerProps {
 export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const router = useRouter();
   const { session } = useAuth();
-  const { tier, capabilities, postsToday, incrementPostCount, canPostMore } = useUserTier();
+  const { capabilities, postsToday, incrementPostCount, canPostMore } = useUserTier();
 
   const [content, setContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -148,30 +147,45 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         return;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("feed_media")
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("feed_media").getPublicUrl(fileName);
 
       finalMediaUrl = publicUrl;
     }
 
-    const result = await createFeedPost(content, finalMediaUrl);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          mediaUrl: finalMediaUrl,
+        }),
+      });
 
-    if (result?.error) {
-      setSubmitError(result.error);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data?.error || "Failed to publish post.");
+        setIsUploading(false);
+        return;
+      }
+
+      incrementPostCount();
+      if (onPostCreated) {
+        onPostCreated(content, finalMediaUrl);
+      }
+
+      setContent("");
+      removeFile();
+      router.refresh();
+    } catch (err) {
+      console.error("Post submit error:", err);
+      setSubmitError("Network error while publishing post.");
+    } finally {
       setIsUploading(false);
-      return;
     }
-
-    incrementPostCount();
-    if (onPostCreated) {
-      onPostCreated(content, finalMediaUrl);
-    }
-
-    setContent("");
-    removeFile();
-    router.refresh();
-    setIsUploading(false);
   };
 
   return (
@@ -187,14 +201,20 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         </div>
 
         <div className="text-xs text-[var(--secondary)]/60 font-bold">
-          Daily Posts: <strong className="text-[var(--secondary)]">{postsToday} / {capabilities.maxPostsPer24h >= 9999 ? "∞" : capabilities.maxPostsPer24h}</strong>
+          Daily Posts:{" "}
+          <strong className="text-[var(--secondary)]">
+            {postsToday} / {capabilities.maxPostsPer24h >= 9999 ? "∞" : capabilities.maxPostsPer24h}
+          </strong>
         </div>
       </div>
 
       {!canPostMore && (
         <div className="mb-4 rounded-xl neu-pressed-base border-transparent shadow-inner p-4 flex items-center gap-3 text-rose-600 text-xs font-bold">
           <Lock size={18} className="shrink-0" />
-          <span>You have reached your 24-hour post limit ({capabilities.maxPostsPer24h} posts). Upgrade to a higher tier to expand daily limits.</span>
+          <span>
+            You have reached your 24-hour post limit ({capabilities.maxPostsPer24h} posts). Upgrade to a higher tier to
+            expand daily limits.
+          </span>
         </div>
       )}
 
@@ -208,7 +228,11 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         <div className="relative">
           {previewUrl && (
             <div className="relative w-max mb-4">
-              <img src={previewUrl} alt="Preview" className="max-h-48 rounded-xl object-cover border border-[var(--secondary)]/20 shadow-sm" />
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="max-h-48 rounded-xl object-cover border border-[var(--secondary)]/20 shadow-sm"
+              />
               <button
                 type="button"
                 onClick={removeFile}
@@ -240,7 +264,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
             {mentionSuggestions.length > 0 && (
               <div className="absolute left-4 bottom-full mb-2 w-72 neu-flat-base rounded-2xl shadow-2xl z-50 overflow-hidden border border-[var(--secondary)]/10 bg-[var(--primary)]">
                 <div className="p-2 border-b border-[var(--secondary)]/10 text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider flex items-center gap-1.5">
-                  <AtSign size={12} className="text-[var(--accent)]" /> Connected & Interacted Users
+                  <AtSign size={12} className="text-[var(--accent)]" /> Connected &amp; Interacted Users
                 </div>
                 <div className="max-h-48 overflow-y-auto">
                   {mentionSuggestions.map((user) => {
@@ -296,21 +320,46 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
             >
               <ImageIcon size={16} />
             </button>
-            <span className="hidden sm:inline">Supports Markdown & Images</span>
+            <span className="hidden sm:inline">Supports Markdown &amp; Images</span>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="relative flex items-center justify-center">
                 <svg className="h-10 w-10 transform -rotate-90">
-                  <circle cx="20" cy="20" r={radius} className="stroke-[var(--secondary)]/10" strokeWidth="3" fill="transparent" />
                   <circle
-                    cx="20" cy="20" r={radius} strokeWidth="3" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
-                    className={`transition-all duration-300 ${isOverCharLimit ? "stroke-rose-600" : percentage > 80 ? "stroke-amber-500" : "stroke-[var(--accent)]"}`}
+                    cx="20"
+                    cy="20"
+                    r={radius}
+                    className="stroke-[var(--secondary)]/10"
+                    strokeWidth="3"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r={radius}
+                    strokeWidth="3"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    className={`transition-all duration-300 ${isOverCharLimit
+                      ? "stroke-rose-600"
+                      : percentage > 80
+                        ? "stroke-amber-500"
+                        : "stroke-[var(--accent)]"
+                      }`}
                     fill="transparent"
                   />
                 </svg>
-                <span className={`absolute text-[10px] font-mono font-bold ${isOverCharLimit ? "text-rose-600" : percentage > 80 ? "text-amber-500" : "text-[var(--secondary)]"}`}>
+                <span
+                  className={`absolute text-[10px] font-mono font-bold ${isOverCharLimit
+                    ? "text-rose-600"
+                    : percentage > 80
+                      ? "text-amber-500"
+                      : "text-[var(--secondary)]"
+                    }`}
+                >
                   {charsRemaining}
                 </span>
               </div>

@@ -6,7 +6,7 @@ import Footer from "@/components/landing/Footer";
 import SocialFeed from "@/components/social/SocialFeed";
 import BetaBadge from "@/components/shared/BetaBadge";
 import {
-  MessageSquare, Users, Hash,
+  MessageSquare, Hash,
   Eye, FileText, Activity, Presentation, Target,
   ArrowRight, ShieldCheck, DollarSign, Store, Building, RefreshCw, Sparkles
 } from "lucide-react";
@@ -26,7 +26,6 @@ export default async function FeedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If user is logged in, fetch their profile and specific data
   let profile = null;
   let deckData = null;
   let metrics = { posts: 0, articles: 0, views: 0 };
@@ -36,7 +35,7 @@ export default async function FeedPage() {
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileData) {
       profile = profileData;
@@ -63,7 +62,6 @@ export default async function FeedPage() {
   const role = profile?.role || "visitor";
   const isStartup = role === "startup";
 
-  // Fetch posts and public sidebar content concurrently on the server
   const [
     postsRes,
     trendArticlesRes,
@@ -71,7 +69,7 @@ export default async function FeedPage() {
     trendTagsRes,
     startupsRes,
     adsRes
-  ] = await Promise.all([
+  ] = await Promise.allSettled([
     supabase
       .from("posts")
       .select(`
@@ -94,16 +92,20 @@ export default async function FeedPage() {
       : supabase.from("emporium_listings").select("*").eq("status", "active").limit(3)
   ]);
 
-  const initialPosts = postsRes.data || [];
-  const trendingArticles = trendArticlesRes.data || [];
-  const trendingInvestors = Array.isArray(investorMatchesRes.data)
-    ? investorMatchesRes.data.slice(0, 3)
-    : [];
-  const trendingTags = trendTagsRes.data || [];
-  const activeStartups = (startupsRes.data || []).slice(0, 3);
-  const eligibleAds = Array.isArray(adsRes.data)
-    ? [...adsRes.data].sort(() => Math.random() - 0.5)
-    : [];
+  const initialPosts =
+    postsRes.status === "fulfilled" && !postsRes.value.error ? postsRes.value.data || [] : [];
+  const trendingArticles =
+    trendArticlesRes.status === "fulfilled" && !trendArticlesRes.value.error ? trendArticlesRes.value.data || [] : [];
+  const rawInvestors =
+    investorMatchesRes.status === "fulfilled" && !investorMatchesRes.value.error ? investorMatchesRes.value.data : [];
+  const trendingInvestors = Array.isArray(rawInvestors) ? rawInvestors.slice(0, 3) : [];
+  const trendingTags =
+    trendTagsRes.status === "fulfilled" && !trendTagsRes.value.error ? trendTagsRes.value.data || [] : [];
+  const activeStartups =
+    startupsRes.status === "fulfilled" && !startupsRes.value.error ? (startupsRes.value.data || []).slice(0, 3) : [];
+  const rawAds =
+    adsRes.status === "fulfilled" && !adsRes.value.error ? adsRes.value.data : [];
+  const eligibleAds = Array.isArray(rawAds) ? [...rawAds].sort(() => Math.random() - 0.5) : [];
 
   const displayName = profile?.nickname || profile?.company_name || user?.email?.split("@")[0] || "Guest Visitor";
   const displayNickname = profile?.username ? `@${profile.username}` : user ? `@${displayName.toLowerCase().replace(/\s+/g, '_')}` : "@guest";

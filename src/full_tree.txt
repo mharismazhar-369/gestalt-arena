@@ -1,0 +1,316 @@
+Folder PATH listing for volume MHM - Personal
+Volume serial number is 90F3-714E
+E:.
+|   full_tree.txt
+|   middleware.ts
+|   
++---actions
+|       connections.ts
+|       
++---app
+|   |   actions.ts
+|   |   favicon.ico
+|   |   globals.css
+|   |   layout.tsx
+|   |   page.tsx
+|   |   
+|   +---(public)
+|   +---about
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---admin
+|   |   |   actions.ts
+|   |   |   layout.tsx
+|   |   |   
+|   |   \---dashboard
+|   |           page.tsx
+|   |           
+|   +---api
+|   |   +---health
+|   |   |       route.ts
+|   |   |       
+|   |   \---webhooks
+|   |       \---lemonsqueezy
+|   |               route.ts
+|   |               
+|   +---auth
+|   |   \---callback
+|   |           route.ts
+|   |           
+|   +---bids
+|   |   \---[id]
+|   |       |   page.tsx
+|   |       |   
+|   |       \---apply
+|   |               page.tsx
+|   |               
+|   +---browse
+|   |   +---bids
+|   |   |       page.tsx
+|   |   |       
+|   |   +---investors
+|   |   |       layout.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   \---startups
+|   |           layout.tsx
+|   |           page.tsx
+|   |           
+|   +---checkout
+|   |   \---[id]
+|   |           route.ts
+|   |           
+|   +---dashboard
+|   |   |   page.tsx
+|   |   |   
+|   |   +---analytics
+|   |   |       page.tsx
+|   |   |       
+|   |   \---preferences
+|   |           layout.tsx
+|   |           page.tsx
+|   |           
+|   +---disclaimer
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---emporium
+|   |   |   actions.ts
+|   |   |   page.tsx
+|   |   |   queries.ts
+|   |   |   
+|   |   +---checkout
+|   |   |   |   actions.ts
+|   |   |   |   
+|   |   |   \---[id]
+|   |   |           page.tsx
+|   |   |           
+|   |   \---[id]
+|   |           page.tsx
+|   |           
+|   +---feed
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   \---[id]
+|   |           page.tsx
+|   |           
+|   +---forgot-password
+|   |       page.tsx
+|   |       
+|   +---investor
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   +---bids
+|   |   |   \---create
+|   |   |           page.tsx
+|   |   |           
+|   |   +---dashboard
+|   |   |       page.tsx
+|   |   |       
+|   |   \---[id]
+|   |           page.tsx
+|   |           
+|   +---invoice
+|   |   \---[id]
+|   |           page.tsx
+|   |           
+|   +---login
+|   |       page.tsx
+|   |       
+|   +---negotiations
+|   |   \---[id]
+|   |           layout.tsx
+|   |           page.tsx
+|   |           
+|   +---post
+|   |   \---[id]
+|   |           page.tsx
+|   |           
+|   +---pricing
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---privacy
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---profile
+|   |   \---[id]
+|   |       |   layout.tsx
+|   |       |   page.tsx
+|   |       |   
+|   |       \---network
+|   |               page.tsx
+|   |               
+|   +---register
+|   |       page.tsx
+|   |       
+|   +---research
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   \---[id]
+|   |           ArticleClient.tsx
+|   |           page.tsx
+|   |           
+|   +---settings
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---startup
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   +---dashboard
+|   |   |       page.tsx
+|   |   |       
+|   |   +---pitch
+|   |   |   \---build
+|   |   |           page.tsx
+|   |   |           
+|   |   \---[id]
+|   |       |   page.tsx
+|   |       |   
+|   |       \---pitch
+|   |               page.tsx
+|   |               
+|   +---terms
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   +---update-password
+|   |       page.tsx
+|   |       
+|   \---warning
+|           layout.tsx
+|           page.tsx
+|           
++---components
+|   +---admin
+|   +---aninamtions
+|   +---auth
+|   |       AuthProvider.tsx
+|   |       ForgotPasswordForm.tsx
+|   |       LoginForm.tsx
+|   |       LogoutButton.tsx
+|   |       RegisterForm.tsx
+|   |       ServiceAgreementGate.tsx
+|   |       UpdatePasswordForm.tsx
+|   |       
+|   +---bids
+|   |       CancelDealButton.tsx
+|   |       MandateApplicationForm.tsx
+|   |       SubmitPitchButton.tsx
+|   |       
+|   +---chat
+|   |       EncryptedChatPopup.tsx
+|   |       
+|   +---context
+|   |       ChatContext.tsx
+|   |       ThemeProvider.tsx
+|   |       UserTierContext.tsx
+|   |       
+|   +---dashboard
+|   |       RoleSelector.tsx
+|   |       
+|   +---directory
+|   |       InvestorProfileCard.tsx
+|   |       StartupProfileCard.tsx
+|   |       
+|   +---emporium
+|   |       CampaignConfiguration.tsx
+|   |       CampaignManagementBoard.tsx
+|   |       EmporiumAdBuilder.tsx
+|   |       EmporiumClientBoard.tsx
+|   |       PerformanceAnalytics.tsx
+|   |       
+|   +---investor
+|   |       BidDeckBuilder.tsx
+|   |       InvestorProfileBuilder.tsx
+|   |       
+|   +---landing
+|   |       Background.tsx
+|   |       CameraRig.tsx
+|   |       ChoiceCard.tsx
+|   |       FeatureCards.tsx
+|   |       Footer.tsx
+|   |       Hero.tsx
+|   |       LandingPage.tsx
+|   |       Navbar.tsx
+|   |       StatsSection.tsx
+|   |       Universe.tsx
+|   |       
+|   +---negotiations
+|   |       TermSheetPanel.tsx
+|   |       
+|   +---notifications
+|   |       NotificationDropdown.tsx
+|   |       
+|   +---onboarding
+|   |       OnboardingWrapper.tsx
+|   |       
+|   +---pitch
+|   |       EmbeddedInvestorActions.tsx
+|   |       PitchDeckViewer.tsx
+|   |       
+|   +---research
+|   |       ArticlePublishModal.tsx
+|   |       
+|   +---shared
+|   |       BetaBadge.tsx
+|   |       CookieConsent.tsx
+|   |       DeleteResourceButton.tsx
+|   |       RoleRoutingLoader.tsx
+|   |       TierSwitcherBar.tsx
+|   |       
+|   +---social
+|   |       CommentBox.tsx
+|   |       FormatPostText.tsx
+|   |       PostCard.tsx
+|   |       PostComposer.tsx
+|   |       SocialFeed.tsx
+|   |       
+|   +---startup
+|   |       PitchDeckActionBar.tsx
+|   |       PitchDeckBuilder.tsx
+|   |       StartupProfileBuilder.tsx
+|   |       
+|   \---ui
+|           GestaltCoin.tsx
+|           PrintReceiptButton.tsx
+|           
++---hooks
++---lib
+|   |   api.ts
+|   |   
+|   +---auth
+|   +---constants
+|   |       site.ts
+|   |       
+|   +---emporium
+|   |       lifecycle.ts
+|   |       
+|   +---payments
+|   |       mockGateway.ts
+|   |       
+|   +---security
+|   +---supabase
+|   |       client.ts
+|   |       server.ts
+|   |       
+|   +---utils
+|   |       cn.ts
+|   |       
+|   \---validators
++---services
+|       auth.service.ts
+|       
++---store
+\---types
+        schema.ts
+        supabase.ts
+        user.ts
+        

@@ -1,30 +1,9 @@
-// Location: SRC/components/social/SocialFeed.tsx
-
 import PostComposer from "./PostComposer";
 import PostCard from "./PostCard";
+import { formatPostText } from "./FormatPostText";
 import { MessageSquare, Lock } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-
-function formatPostText(content: string) {
-  if (!content) return content;
-  const parts = content.split(/(#[A-Za-z0-9_]+)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('#')) {
-      const tag = part.substring(1);
-      return (
-        <Link
-          key={index}
-          href={`/feed?tag=${tag}`}
-          className="text-[var(--accent)] font-bold hover:underline inline-block"
-        >
-          {part}
-        </Link>
-      );
-    }
-    return part;
-  });
-}
 
 interface SocialFeedProps {
   initialPosts: any[];

@@ -3,16 +3,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useUserTier } from "@/components/context/UserTierContext";
 import { Send, AlertTriangle, ShieldCheck, Image as ImageIcon, Lock, X, Loader2, AtSign } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { createFeedPost } from "@/app/feed/actions";
 
 interface PostComposerProps {
   onPostCreated?: (content: string, mediaUrl?: string) => void;
 }
 
 export default function PostComposer({ onPostCreated }: PostComposerProps) {
+  const router = useRouter();
   const { session } = useAuth();
   const { tier, capabilities, postsToday, incrementPostCount, canPostMore } = useUserTier();
 
@@ -20,6 +23,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Mention State
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -66,13 +70,13 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
     const pos = e.target.selectionStart;
     setContent(val);
     setCursorPosition(pos);
+    if (submitError) setSubmitError(null);
 
-    // Check if user is typing a mention
     const textBeforeCursor = val.slice(0, pos);
     const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
 
     if (match) {
-      setMentionQuery(match[1]); // Text after '@'
+      setMentionQuery(match[1]);
     } else {
       setMentionQuery(null);
       setMentionSuggestions([]);
@@ -128,37 +132,47 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
     if ((!content.trim() && !selectedFile) || isOverCharLimit || !canPostMore || !session?.user) return;
 
     setIsUploading(true);
-    let finalMediaUrl = undefined;
+    setSubmitError(null);
+    let finalMediaUrl: string | undefined = undefined;
 
     if (selectedFile) {
-      const fileExt = selectedFile.name.split('.').pop();
+      const fileExt = selectedFile.name.split(".").pop();
       const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('feed_media')
+        .from("feed_media")
         .upload(fileName, selectedFile);
 
       if (uploadError) {
         console.error("Upload failed:", uploadError);
-        alert("Failed to upload image. Please try again.");
+        setSubmitError("Failed to upload image. Please try again.");
         setIsUploading(false);
         return;
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('feed_media')
+        .from("feed_media")
         .getPublicUrl(fileName);
 
       finalMediaUrl = publicUrl;
     }
 
-    const success = incrementPostCount();
-    if (success && onPostCreated) {
-      onPostCreated(content, finalMediaUrl);
-      setContent("");
-      removeFile();
+    const result = await createFeedPost(content, finalMediaUrl);
+
+    if (result?.error) {
+      setSubmitError(result.error);
+      setIsUploading(false);
+      return;
     }
 
+    incrementPostCount();
+    if (onPostCreated) {
+      onPostCreated(content, finalMediaUrl);
+    }
+
+    setContent("");
+    removeFile();
+    router.refresh();
     setIsUploading(false);
   };
 
@@ -186,9 +200,14 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
         </div>
       )}
 
+      {submitError && (
+        <div className="mb-4 rounded-xl bg-transparent border border-rose-600/30 p-3 text-xs text-rose-600 font-bold">
+          {submitError}
+        </div>
+      )}
+
       <form onSubmit={handlePost} className="space-y-4">
         <div className="relative">
-          {/* Image Preview Block */}
           {previewUrl && (
             <div className="relative w-max mb-4">
               <img src={previewUrl} alt="Preview" className="max-h-48 rounded-xl object-cover border border-[var(--secondary)]/20 shadow-sm" />
@@ -220,7 +239,6 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
                 }`}
             />
 
-            {/* MENTION DROPDOWN POPUP */}
             {mentionSuggestions.length > 0 && (
               <div className="absolute left-4 bottom-full mb-2 w-72 neu-flat-base rounded-2xl shadow-2xl z-50 overflow-hidden border border-[var(--secondary)]/10 bg-[var(--primary)]">
                 <div className="p-2 border-b border-[var(--secondary)]/10 text-[10px] font-bold text-[var(--secondary)]/60 uppercase tracking-wider flex items-center gap-1.5">
@@ -312,7 +330,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
                 }`}
             >
               {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              {isUploading ? "Uploading..." : "Post Feed"}
+              {isUploading ? "Publishing..." : "Post Feed"}
             </button>
           </div>
         </div>
